@@ -1,0 +1,605 @@
+\documentclass[11pt]{article}
+
+\usepackage[a4paper,margin=28mm]{geometry}
+\usepackage{amsmath,amssymb,amsthm,mathtools}
+\usepackage{booktabs,array,longtable}
+\usepackage{microtype}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+\usepackage{lmodern}
+\usepackage[T1]{fontenc}
+
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{remark}[theorem]{Remark}
+
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\Sph}{\mathbb{S}}
+\newcommand{\Vol}{\operatorname{Vol}}
+\newcommand{\Li}{\operatorname{Li}}
+\newcommand{\atanh}{\operatorname{artanh}}
+\newcommand{\dd}{\,\mathrm{d}}
+\newcommand{\ip}[2]{\left\langle #1,#2\right\rangle}
+\newcommand{\norm}[1]{\left\lVert #1\right\rVert}
+
+\title{\small\textsc{Particular Theory I: Body Series}\\
+\textsc{1. Ellipsoid Series - 1. Sphere}\\[1.2em]
+\LARGE\textbf{Geometric Dual Topology of the Sphere}\\[0.4em]
+\large A Complete Analytic Classification for a Cone-Volume-Weighted Radial-Normal Angle Functional}
+\author{Katsushi Furuta\\
+\small Independent Researcher\\
+\small ORCID: 0009-0005-3129-8043}
+\date{July 2026}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+For a convex body $K\subset\R^3$ and an interior base point $p$, consider the squared angle between the radial direction $x-p$ and the outer unit normal $\nu(x)$, averaged with respect to the cone-volume probability measure based at $p$.  This paper gives a complete analytic classification for the Euclidean ball.  After reducing to the unit ball and writing $a=\norm p$, the functional is shown to admit an exact closed form involving the odd dilogarithm
+\[
+\chi_2(a)=\frac12\bigl(\Li_2(a)-\Li_2(-a)\bigr).
+\]
+A direct positive-integral formula proves strict radial monotonicity on $0<a<1$.  Consequently, the center is the unique stationary point and the unique global minimum.  Its Hessian is the isotropic positive matrix $\frac43 I_3$, so the center is a nondegenerate Morse minimum with local degree $+1$.  Every nonzero level set is a concentric sphere, every proper sublevel set is a Euclidean ball, and the continuous boundary value is $\frac{3\pi^2}{32}-\frac12$.  Thus the sphere provides the exact, nonnumerical base case for the ellipsoid series: one stationary orbit, no interior transition, no secondary critical branch, and a completely trivial sublevel topology.
+\end{abstract}
+
+\noindent\textbf{Keywords.}
+cone-volume measure; radial-normal angle; sphere; stationary point; Morse index; dilogarithm; geometric dual topology.
+
+\section{Introduction}
+
+The sphere is the maximally symmetric member of the ellipsoid family.  It is therefore the natural first object in a classification of stationary base points for the cone-volume-weighted radial-normal angle functional.  The purpose of this paper is not merely to record the stationary center forced by symmetry, but to settle the entire interior classification analytically.
+
+For the unit ball $B\subset\R^3$, rotational invariance reduces the functional to a scalar function $E_B(a)$ of the normalized base-point distance $a=\norm p\in[0,1)$.  The principal results are:
+
+\begin{enumerate}[label=(\roman*)]
+\item an exact angular formula and Fourier expansion;
+\item a closed form for $E_B(a)$ in terms of $\chi_2$ and $\atanh$;
+\item a positive-integral identity proving $E_B'(a)>0$ for $0<a<1$;
+\item the local expansion $E_B(a)=\frac23a^2-\frac29a^4+O(a^6)$ and the isotropic Hessian $D^2E_B(0)=\frac43I_3$;
+\item uniqueness of the stationary point and global minimum;
+\item complete classification of all level and sublevel sets;
+\item an exact boundary value and an outward-pointing boundary gradient.
+\end{enumerate}
+
+No interval arithmetic or numerical root isolation is needed.  The sphere is therefore the analytic calibration object for the later spheroidal and triaxial members of the ellipsoid series.
+
+\section{The functional and similarity reduction}
+
+Let $K\subset\R^3$ be a convex body with sufficiently regular boundary, and let $p\in\operatorname{int}K$.  At a regular boundary point $x\in\partial K$, let $\nu(x)$ denote the outer unit normal.  Define the radial-normal angle
+\begin{equation}
+\theta_{K,p}(x)
+=
+\arccos\!\left(
+\frac{\ip{x-p}{\nu(x)}}{\norm{x-p}}
+\right).
+\label{eq:angle-def}
+\end{equation}
+Because $p$ is interior, $\ip{x-p}{\nu(x)}>0$ at every supporting point, and hence $0\leq\theta_{K,p}(x)<\pi/2$.
+
+The cone-volume probability measure based at $p$ is
+\begin{equation}
+\dd\mu_{K,p}(x)
+=
+\frac{\ip{x-p}{\nu(x)}}{3\Vol(K)}\,\dd A(x).
+\label{eq:cone-measure}
+\end{equation}
+The normalization follows from the divergence theorem:
+\[
+\int_{\partial K}\ip{x-p}{\nu(x)}\dd A(x)=3\Vol(K).
+\]
+The functional is
+\begin{equation}
+E_K(p)
+=
+\int_{\partial K}\theta_{K,p}(x)^2\,\dd\mu_{K,p}(x).
+\label{eq:functional}
+\end{equation}
+
+\begin{proposition}[Similarity invariance]
+Let $T(x)=c+\lambda Qx$, where $\lambda>0$ and $Q\in O(3)$.  Then
+\[
+E_{T(K)}(T(p))=E_K(p).
+\]
+In particular, every Euclidean ball is reduced by translation and scaling to the unit ball.
+\end{proposition}
+
+\begin{proof}
+The radial-normal angle is unchanged by translations, orthogonal maps, and positive homotheties.  Under the homothety, the numerator in \eqref{eq:cone-measure} scales as $\lambda$, the area element as $\lambda^2$, and the volume as $\lambda^3$.  Thus the probability measure and the integral are invariant.
+\end{proof}
+
+Henceforth let
+\[
+B=\{x\in\R^3:\norm x\leq1\}.
+\]
+By rotational invariance, $E_B(p)$ depends only on $a=\norm p$.  We write
+\[
+E_B(p)=E(a),\qquad 0\leq a<1.
+\]
+
+\section{Exact spherical reduction}
+
+Choose coordinates so that $p=ae_3$, with $0\leq a<1$, and parameterize the boundary by
+\[
+x=(\sin\psi\cos\phi,\sin\psi\sin\phi,\cos\psi),
+\qquad 0\leq\psi\leq\pi.
+\]
+On the unit sphere, $\nu(x)=x$.  Set
+\begin{equation}
+D(a,\psi)=1-2a\cos\psi+a^2.
+\label{eq:D}
+\end{equation}
+Then
+\begin{equation}
+\cos\theta(a,\psi)
+=
+\frac{1-a\cos\psi}{\sqrt{D(a,\psi)}},
+\qquad
+\sin\theta(a,\psi)
+=
+\frac{a\sin\psi}{\sqrt{D(a,\psi)}}.
+\label{eq:sin-cos-theta}
+\end{equation}
+
+\begin{lemma}[Exact angle formula]
+For $0\leq a<1$ and $0\leq\psi\leq\pi$,
+\begin{equation}
+\theta(a,\psi)
+=
+\arctan\!\left(
+\frac{1+a}{1-a}\tan\frac{\psi}{2}
+\right)
+-
+\frac{\psi}{2}.
+\label{eq:theta-half-angle}
+\end{equation}
+For $0<a<1$ and $0<\psi<\pi$ it is strictly positive.
+\end{lemma}
+
+\begin{proof}
+The two terms on the right are the arguments of the directions from the origin and from $ae_3$ to the boundary point in the meridian plane.  The tangent subtraction formula gives
+\[
+\tan\theta
+=
+\frac{a\sin\psi}{1-a\cos\psi},
+\]
+which agrees with \eqref{eq:sin-cos-theta}.  The branch is fixed by $\theta(a,0)=\theta(a,\pi)=0$ and positivity in the open meridian.
+\end{proof}
+
+\begin{lemma}[Fourier representation and derivatives]
+For $0\leq a<1$,
+\begin{equation}
+\theta(a,\psi)
+=
+\sum_{n=1}^{\infty}\frac{a^n}{n}\sin(n\psi),
+\label{eq:theta-Fourier}
+\end{equation}
+with locally uniform convergence in $a<1$.  Moreover,
+\begin{equation}
+\frac{\partial\theta}{\partial a}
+=
+\frac{\sin\psi}{D(a,\psi)},
+\qquad
+\frac{\partial\theta}{\partial\psi}
+=
+\frac{a(\cos\psi-a)}{D(a,\psi)}.
+\label{eq:theta-derivatives}
+\end{equation}
+The maximum over $\psi$ occurs at $\cos\psi=a$ and equals
+\begin{equation}
+\max_{\psi}\theta(a,\psi)=\arcsin a.
+\label{eq:max-angle}
+\end{equation}
+\end{lemma}
+
+\begin{proof}
+The imaginary part of the absolutely convergent series
+\[
+-\log(1-ae^{i\psi})
+=
+\sum_{n=1}^{\infty}\frac{a^n e^{in\psi}}{n}
+\]
+is \eqref{eq:theta-Fourier}.  Direct differentiation of \eqref{eq:theta-half-angle} yields \eqref{eq:theta-derivatives}.  The second identity shows that the unique interior maximum satisfies $\cos\psi=a$.  Substitution into \eqref{eq:sin-cos-theta} gives $\sin\theta=a$, proving \eqref{eq:max-angle}.
+\end{proof}
+
+Integrating in the azimuthal variable gives the one-dimensional reduction
+\begin{equation}
+E(a)
+=
+\frac12\int_0^\pi
+(1-a\cos\psi)\,\theta(a,\psi)^2\sin\psi\,\dd\psi.
+\label{eq:E-reduced}
+\end{equation}
+Since the cone-volume measure is a probability measure, \eqref{eq:max-angle} immediately implies
+\begin{equation}
+0\leq E(a)\leq\arcsin^2 a.
+\label{eq:rough-bound}
+\end{equation}
+
+\section{Closed form}
+
+Define the odd dilogarithm
+\begin{equation}
+\chi_2(a)
+=
+\frac12\bigl(\Li_2(a)-\Li_2(-a)\bigr)
+=
+\sum_{m=0}^{\infty}\frac{a^{2m+1}}{(2m+1)^2},
+\qquad |a|\leq1.
+\label{eq:chi2}
+\end{equation}
+It satisfies
+\begin{equation}
+\chi_2'(a)=\frac{\atanh a}{a}.
+\label{eq:chi-derivative}
+\end{equation}
+
+\begin{theorem}[Exact radial formula]
+For $0<a<1$,
+\begin{equation}
+\boxed{
+E(a)
+=
+\frac{a(4-a^2)}{4}\,\chi_2(a)
++
+\frac{(1-a^2)(a^2+5)}{16a}\,\atanh a
+-
+\frac{3a^2+5}{16}.
+}
+\label{eq:E-closed}
+\end{equation}
+The right-hand side has a removable singularity at $a=0$ and extends real-analytically there with $E(0)=0$.
+\end{theorem}
+
+\begin{proof}
+Insert the absolutely convergent Fourier expansion \eqref{eq:theta-Fourier} into \eqref{eq:E-reduced}.  Termwise integration is justified on every compact subinterval $0\leq a\leq a_0<1$.  Product-to-sum identities reduce the coefficient sums to the two odd series
+\[
+\sum_{m\geq0}\frac{a^{2m+1}}{2m+1}=\atanh a,
+\qquad
+\sum_{m\geq0}\frac{a^{2m+1}}{(2m+1)^2}=\chi_2(a).
+\]
+Collecting the rational prefactors gives \eqref{eq:E-closed}.  Equivalently, differentiating the resulting expression and using \eqref{eq:chi-derivative} gives
+\begin{equation}
+E'(a)
+=
+\left(1-\frac{3a^2}{4}\right)\chi_2(a)
++
+\frac{(1-a^2)(7a^2-5)}{16a^2}\atanh a
++
+\frac{5(1-a^2)}{16a},
+\label{eq:Eprime-closed}
+\end{equation}
+and the constant is fixed by $E(0)=0$.  The power series in \eqref{eq:chi2} and the corresponding series for $\atanh a$ show that all apparent singular terms cancel at the origin.
+\end{proof}
+
+\begin{remark}
+Formula \eqref{eq:E-closed} is exact.  All stationary and topological conclusions below are analytic consequences of this identity and of the positive-integral formula in the next section.
+\end{remark}
+
+\section{Strict radial monotonicity}
+
+The closed derivative \eqref{eq:Eprime-closed} is useful for evaluation, but its positivity is not transparent term by term.  The original integral yields a stronger representation.
+
+\begin{theorem}[Positive-integral derivative]
+For $0<a<1$,
+\begin{equation}
+\boxed{
+E'(a)
+=
+\frac12\int_0^\pi
+\frac{\theta(a,\psi)\sin^2\psi}{D(a,\psi)}
+\bigl(2-a^2-a\cos\psi\bigr)\,\dd\psi.
+}
+\label{eq:Eprime-positive}
+\end{equation}
+Consequently,
+\begin{equation}
+E'(a)>0\qquad(0<a<1).
+\label{eq:strict-monotonicity}
+\end{equation}
+\end{theorem}
+
+\begin{proof}
+Differentiate \eqref{eq:E-reduced} under the integral sign and use $\theta_a=\sin\psi/D$:
+\[
+E'(a)
+=
+-\frac12\int_0^\pi\cos\psi\sin\psi\,\theta^2\dd\psi
++
+\int_0^\pi
+\frac{(1-a\cos\psi)\theta\sin^2\psi}{D}\dd\psi.
+\]
+Integrating the first term by parts and using $\theta_\psi=a(\cos\psi-a)/D$ gives
+\[
+-\frac12\int_0^\pi\cos\psi\sin\psi\,\theta^2\dd\psi
+=
+\frac12\int_0^\pi\sin^2\psi\,\theta\theta_\psi\dd\psi.
+\]
+Combining the two integrals yields \eqref{eq:Eprime-positive}.  For $0<a<1$ and $0<\psi<\pi$, one has
+\[
+\theta(a,\psi)>0,
+\qquad
+D(a,\psi)>0,
+\qquad
+\sin^2\psi>0,
+\]
+and
+\[
+2-a^2-a\cos\psi
+\geq
+2-a^2-a
+=(1-a)(a+2)>0.
+\]
+Thus the integrand is strictly positive on the open meridian, proving \eqref{eq:strict-monotonicity}.
+\end{proof}
+
+\begin{corollary}[Sharp radial ordering]
+For $0\leq a_1<a_2<1$,
+\[
+E(a_1)<E(a_2).
+\]
+Thus the functional orders all spherical base-point orbits exactly by their Euclidean distance from the center.
+\end{corollary}
+
+\section{Local structure at the center}
+
+Expanding \eqref{eq:E-closed} at $a=0$ gives
+\begin{equation}
+E(a)
+=
+\frac23a^2
+-
+\frac29a^4
+-
+\frac{22}{1575}a^6
+-
+\frac{34}{11025}a^8
+-
+\frac{46}{43659}a^{10}
++O(a^{12}).
+\label{eq:E-series}
+\end{equation}
+
+\begin{theorem}[Isotropic nondegenerate minimum]
+As a function on $B\subset\R^3$,
+\begin{equation}
+E_B(p)
+=
+\frac23\norm p^2
+-
+\frac29\norm p^4
++O(\norm p^6).
+\label{eq:local-jet}
+\end{equation}
+Hence
+\begin{equation}
+\nabla E_B(0)=0,
+\qquad
+D^2E_B(0)=\frac43I_3.
+\label{eq:hessian}
+\end{equation}
+The center is a nondegenerate Morse critical point of index $0$ and local gradient degree $+1$.
+\end{theorem}
+
+\begin{proof}
+Rotational invariance gives $E_B(p)=E(\norm p)$.  Substituting $a=\norm p$ into \eqref{eq:E-series} gives \eqref{eq:local-jet}.  The quadratic term is $\frac12\ip{(\frac43I_3)p}{p}$, proving \eqref{eq:hessian}.  Positive definiteness gives Morse index $0$, and the local degree of a nondegenerate positive-definite gradient zero is $+1$.
+\end{proof}
+
+\begin{remark}
+The quartic correction is negative, but this does not create a secondary stationary radius.  Strict positivity of $E'(a)$ controls the full interval and rules out any nonlocal reversal.
+\end{remark}
+
+\section{Complete stationary classification}
+
+For $p\neq0$, radiality gives
+\begin{equation}
+\nabla E_B(p)
+=
+\frac{E'(\norm p)}{\norm p}\,p.
+\label{eq:gradient-radial}
+\end{equation}
+
+\begin{theorem}[Unique stationary point and unique global minimum]
+The stationary set in the open ball is
+\begin{equation}
+\operatorname{Crit}(E_B)=\{0\}.
+\label{eq:crit-set}
+\end{equation}
+Moreover, the center is the unique global minimizer and
+\[
+E_B(0)=0<E_B(p)
+\qquad
+(p\in B\setminus\{0\}).
+\]
+There are no noncentral stationary orbits, no saddle points, and no interior local maxima.
+\end{theorem}
+
+\begin{proof}
+Equation \eqref{eq:gradient-radial} and strict monotonicity imply that $\nabla E_B(p)\neq0$ for every $p\neq0$.  The value at the center is zero because radial and normal directions coincide.  Positivity away from the center follows either from strict monotonicity or directly from the positivity of the squared angle on a set of positive cone-volume measure.
+\end{proof}
+
+\begin{corollary}[Global degree]
+For every $0<r<1$, the gradient points strictly outward on $\partial B_r$, and
+\[
+\deg(\nabla E_B,B_r,0)=+1.
+\]
+The unique center accounts for the entire degree.
+\end{corollary}
+
+\section{Boundary value and sublevel topology}
+
+\begin{theorem}[Continuous boundary value]
+The radial function extends continuously to $a=1$, and
+\begin{equation}
+E(1)
+=
+\frac{3\pi^2}{32}-\frac12
+\approx
+0.4252754126021273705.
+\label{eq:boundary-value}
+\end{equation}
+Moreover,
+\begin{equation}
+\lim_{a\uparrow1}E'(a)=\frac{\pi^2}{32}>0.
+\label{eq:boundary-derivative}
+\end{equation}
+\end{theorem}
+
+\begin{proof}
+Since $\chi_2(1)=\pi^2/8$ and
+\[
+(1-a^2)\atanh a\longrightarrow0,
+\]
+formula \eqref{eq:E-closed} gives \eqref{eq:boundary-value}.  Formula \eqref{eq:Eprime-closed} gives \eqref{eq:boundary-derivative}; the terms carrying a factor $1-a^2$ vanish.
+\end{proof}
+
+Set
+\begin{equation}
+E_\partial=\frac{3\pi^2}{32}-\frac12.
+\label{eq:Eboundary}
+\end{equation}
+Strict monotonicity implies that $E:[0,1]\to[0,E_\partial]$ is a continuous bijection.
+
+\begin{theorem}[Complete level-set and sublevel classification]
+For every $c\in(0,E_\partial)$ there is a unique radius $r(c)\in(0,1)$ such that
+\[
+E(r(c))=c.
+\]
+The corresponding level and sublevel sets are
+\begin{align}
+\{p\in B:E_B(p)=c\}&=\{p:\norm p=r(c)\}\cong\Sph^2,
+\label{eq:level-set}\\
+\{p\in B:E_B(p)\leq c\}&=\{p:\norm p\leq r(c)\}\cong B^3.
+\label{eq:sublevel-set}
+\end{align}
+At $c=0$ the level set is the single center, and at $c=E_\partial$ the closed sublevel set is the entire closed ball.  No positive level contains a stationary point, and there is no topology change after the initial birth of the index-zero center.
+\end{theorem}
+
+\begin{proof}
+Existence and uniqueness of $r(c)$ follow from the continuous strict increase of $E$.  Radiality then gives \eqref{eq:level-set} and \eqref{eq:sublevel-set}.  The stationary classification shows that no further critical level exists.
+\end{proof}
+
+\section{Geometric dual topology of the sphere}
+
+The sphere has two relevant orbit types under $O(3)$:
+\[
+\{0\},
+\qquad
+\{p:\norm p=a\}\cong O(3)/O(2)\cong\Sph^2
+\quad(0<a<1).
+\]
+The functional separates these orbits strictly by radius.  Its stationary skeleton consists only of the fixed point at the center.  In the terminology of the body classification, the sphere therefore has the following exact profile:
+
+\begin{enumerate}[label=(\alph*)]
+\item one interior stationary orbit, namely the $O(3)$-fixed center;
+\item Morse index $0$ and local degree $+1$;
+\item no stationary circle, no finite noncentral orbit, and no symmetry-broken branch;
+\item no interior Maxwell transition and no competing local minimum;
+\item one regular spherical level orbit for each value $0<c<E_\partial$;
+\item ball-type sublevels throughout the entire filtration.
+\end{enumerate}
+
+Thus the geometric dual topology is completely rigid: the center is born as a nondegenerate minimum, and every subsequent level is a regular concentric sphere.
+
+\section{Position in the ellipsoid series}
+
+The sphere is the isotropic anchor of the ellipsoid series.  Its role is threefold.
+
+First, it fixes the normalization.  The center value is exactly zero and the center Hessian is exactly $\frac43I_3$.  Any ellipsoidal calculation must recover these values in the spherical limit.
+
+Second, it separates forced symmetry from genuine bifurcation.  The center is stationary by $O(3)$ invariance, but the nondegeneracy and global uniqueness are not consequences of symmetry alone.  They follow from the exact local coefficient and strict radial monotonicity.
+
+Third, it provides the unbroken reference phase.  Axisymmetric and triaxial deformations may split isotropic eigenspaces, create stationary circles, or unfold them into finite orbits.  None of those phenomena is already present in the sphere.  They must therefore be attributed to shape deformation rather than to the base functional itself.
+
+\section{Classification table}
+
+\begin{longtable}{>{\raggedright\arraybackslash}p{0.25\textwidth} >{\raggedright\arraybackslash}p{0.31\textwidth} >{\raggedright\arraybackslash}p{0.12\textwidth} >{\raggedright\arraybackslash}p{0.22\textwidth}}
+\toprule
+Item & Exact value or classification & Layer & Basis \\
+\midrule
+\endfirsthead
+\toprule
+Item & Exact value or classification & Layer & Basis \\
+\midrule
+\endhead
+Symmetry & $O(3)$ & L & Rotational invariance \\
+Stationary set & $\{0\}$ & G & $E'(a)>0$ on $(0,1)$ \\
+Center value & $E_B(0)=0$ & L & Radial and normal directions coincide \\
+Center Hessian & $D^2E_B(0)=\frac43I_3$ & L & Exact Taylor expansion \\
+Morse index & $0$ & L & Positive-definite Hessian \\
+Local degree & $+1$ & L & Nondegenerate minimum \\
+Global minimizer & Unique center & G & Strict radial monotonicity \\
+Noncentral critical orbit & None & G & Positive-integral derivative \\
+Boundary value & $\frac{3\pi^2}{32}-\frac12$ & G & Closed form at $a=1$ \\
+Boundary radial derivative & $\frac{\pi^2}{32}$ & G & Closed derivative limit \\
+Regular level set & One sphere $\Sph^2$ & G & Radial bijection \\
+Proper sublevel set & One ball $B^3$ & G & Radial bijection \\
+Numerical certification & Not required & N & Entire classification is analytic \\
+\bottomrule
+\end{longtable}
+
+Here L denotes the local layer, G the global layer, and N the numerical or certification layer.  The N layer is vacuous for the sphere because all required signs, values, and uniqueness statements are exact.
+
+\section{Conclusion}
+
+The cone-volume-weighted radial-normal angle functional on a Euclidean ball is completely classified.  Up to similarities, the functional is the radial scalar function \eqref{eq:E-closed}.  Its derivative has the strictly positive representation \eqref{eq:Eprime-positive}.  Therefore the center is the only stationary base point and the only global minimizer.  It is an isotropic nondegenerate Morse minimum with Hessian $\frac43I_3$ and degree $+1$.  The boundary value is $\frac{3\pi^2}{32}-\frac12$, every nonzero level is a concentric sphere, and every proper sublevel is a ball.
+
+This establishes the first entry of Particular Theory I, Ellipsoid Series: the sphere is the exact isotropic reference object against which all later symmetry breaking and stationary-orbit bifurcation in spheroids and triaxial ellipsoids must be measured.
+
+\appendix
+
+\section{Series checks}
+
+Using
+\[
+\atanh a
+=a+\frac{a^3}{3}+\frac{a^5}{5}+\frac{a^7}{7}+\cdots
+\]
+and
+\[
+\chi_2(a)
+=a+\frac{a^3}{3^2}+\frac{a^5}{5^2}+\frac{a^7}{7^2}+\cdots,
+\]
+substitution into \eqref{eq:E-closed} gives \eqref{eq:E-series}.  In particular,
+\[
+E'(a)
+=
+\frac43a
+-
+\frac89a^3
+-
+\frac{44}{525}a^5
+-
+\frac{272}{11025}a^7
++O(a^9),
+\]
+and hence
+\[
+\frac{E'(a)}{a}\longrightarrow\frac43
+\qquad(a\downarrow0),
+\]
+consistent with the Hessian calculation.
+
+\section{A scale-free statement for arbitrary balls}
+
+Let $B_R(c)=\{x:\norm{x-c}\leq R\}$.  For $p\in B_R(c)$ set
+\[
+a=\frac{\norm{p-c}}{R}.
+\]
+Similarity invariance gives
+\[
+E_{B_R(c)}(p)=E(a),
+\]
+with $E$ given by \eqref{eq:E-closed}.  Thus
+\[
+\operatorname{Crit}(E_{B_R(c)})=\{c\},
+\qquad
+D^2E_{B_R(c)}(c)=\frac{4}{3R^2}I_3.
+\]
+The factor $R^{-2}$ in the Hessian is the coordinate scaling of the same dimensionless profile.
+
+\end{document}
