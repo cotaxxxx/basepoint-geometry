@@ -50,6 +50,75 @@ At 30 decimal digits, direct evaluation of the integral formula for
 
 This is an implementation audit only. It does not prove positivity on a box.
 
+## Center Hessian kernel
+
+At \(w=0\), put
+
+\[
+L=1+(\lambda^2-1)c^2,
+\qquad
+W^2=\lambda^2(1-c^2)+c^2,
+\qquad
+C_0=\frac{\lambda}{\sqrt L\,W}.
+\]
+
+The first two \(w\)-derivatives of the cosine are
+
+\[
+C_{w,0}
+=
+\frac{\lambda c(\lambda^2-1)(1-c^2)}{L^{3/2}W},
+\]
+
+and
+
+\[
+C_{ww,0}
+=
+\frac{\lambda^3(1-c^2)\left(2(\lambda^2-1)c^2-1\right)}{L^{5/2}W}.
+\]
+
+Therefore
+
+\[
+Q_\parallel(\lambda)=A_\lambda''(0)
+=\int_{-1}^{1}q_\lambda(c)\,dc,
+\]
+
+with
+
+\[
+q_\lambda(c)
+=
+\frac12\left[
+-2c\,h'(C_0)C_{w,0}
++h''(C_0)C_{w,0}^2
++h'(C_0)C_{ww,0}
+\right].
+\]
+
+The removable endpoint values are
+
+\[
+h'(1)=-2,
+\qquad
+h''(1)=\frac23.
+\]
+
+For the sphere \(\lambda=1\), the kernel reduces exactly to
+
+\[
+q_1(c)=1-c^2,
+\]
+
+and hence
+
+\[
+Q_\parallel(1)=\int_{-1}^{1}(1-c^2)\,dc=\frac43.
+\]
+
+`prolate_axis_center_symbolic_audit.py` verifies all of these identities exactly. `prolate_axis_center_reference.py` finds positive values at the recorded samples through \(\lambda=10^6\), and the center-tail decade slope agrees with \(3\pi\) to relative error below \(1.7\times10^{-6}\). These numerical values do not certify \(Q_\parallel(\lambda)>0\) on an interval.
+
 ## Aspect-ratio tail coefficient
 
 Put
@@ -134,6 +203,8 @@ w\in\{0.1,0.2,0.35,0.5,0.65,0.8,0.9\}.
 
 All seven relative errors are below \(1.7\times10^{-6}\), exceeding the requested five-significant-digit agreement. This remains floating-point reference evidence, not interval certification.
 
-## Remaining proof obligation
+## Remaining proof obligations
+
+Region C is not certified until \(Q_\parallel(\lambda)>0\) is interval-certified for all \(\lambda\ge1\) and a finite-\(w\) center-cap remainder is enclosed.
 
 Region T is not certified until a rational tail strip is covered and a uniform validated lower bound for \(\widehat B(\mu,s)\) is proved. Near \(s=1\), where \(\widehat A(s)\) vanishes, the tail strip must overlap the independent pole-cap argument.
