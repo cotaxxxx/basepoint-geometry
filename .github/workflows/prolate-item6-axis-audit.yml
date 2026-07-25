@@ -70,6 +70,8 @@ jobs:
           prolate_axis_pole_boundary_combine.py
           prolate_axis_pole_transfer_block_arb.py
           prolate_axis_pole_transfer_combine.py
+          prolate_axis_tail_H_block_arb.py
+          prolate_axis_tail_H_combine.py
       - name: Upload audit outputs
         uses: actions/upload-artifact@v4
         with:
