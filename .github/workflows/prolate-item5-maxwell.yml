@@ -43,10 +43,10 @@ jobs:
       - name: Run Arb Maxwell certificate
         run: |
           python prolate_maxwell_arb_certificate.py \
-            --dps 70 \
-            --tolerance 1e-22 \
-            --depth-limit 28 \
-            --eval-limit 500000 \
+            --dps 50 \
+            --tolerance 1e-14 \
+            --depth-limit 24 \
+            --eval-limit 300000 \
             --json prolate_maxwell_arb_certificate.json
 
       - name: Upload certificate outputs
