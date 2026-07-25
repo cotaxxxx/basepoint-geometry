@@ -34,6 +34,9 @@ jobs:
       - name: Run regularized tail-kernel audit
         working-directory: CERTIFICATES/prolate/item6_axis
         run: python prolate_axis_tail_regularized_symbolic_audit.py
+      - name: Run pole-boundary symbolic audit
+        working-directory: CERTIFICATES/prolate/item6_axis
+        run: python prolate_axis_pole_boundary_symbolic_audit.py
       - name: Run non-certified reference scout
         working-directory: CERTIFICATES/prolate/item6_axis
         run: python prolate_axis_reference.py --dps 50
@@ -52,15 +55,19 @@ jobs:
           prolate_axis_center_cap_symbolic_audit.py
           prolate_axis_tail_symbolic_audit.py
           prolate_axis_tail_regularized_symbolic_audit.py
+          prolate_axis_pole_boundary_symbolic_audit.py
           prolate_axis_reference.py
           prolate_axis_center_reference.py
           prolate_axis_tail_reference.py
+          prolate_axis_tail_remainder_reference.py
           prolate_axis_center_compact_arb.py
           prolate_axis_center_cap_arb.py
           prolate_axis_center_cap_block_arb.py
           prolate_axis_center_cap_combine.py
           prolate_axis_interior_block_arb.py
           prolate_axis_interior_combine.py
+          prolate_axis_pole_boundary_block_arb.py
+          prolate_axis_pole_boundary_combine.py
       - name: Upload audit outputs
         uses: actions/upload-artifact@v4
         with:
@@ -71,6 +78,7 @@ jobs:
             CERTIFICATES/prolate/item6_axis/prolate_axis_center_cap_symbolic_audit.json
             CERTIFICATES/prolate/item6_axis/prolate_axis_tail_symbolic_audit.json
             CERTIFICATES/prolate/item6_axis/prolate_axis_tail_regularized_symbolic_audit.json
+            CERTIFICATES/prolate/item6_axis/prolate_axis_pole_boundary_symbolic_audit.json
             CERTIFICATES/prolate/item6_axis/prolate_axis_reference.json
             CERTIFICATES/prolate/item6_axis/prolate_axis_center_reference.json
             CERTIFICATES/prolate/item6_axis/prolate_axis_tail_reference.json
