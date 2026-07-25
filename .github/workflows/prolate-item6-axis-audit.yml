@@ -88,6 +88,8 @@ jobs:
           prolate_axis_tail_M_scaled_block_arb.py
           prolate_axis_pole_second_boundary_block_arb.py
           prolate_axis_pole_second_boundary_combine.py
+          prolate_axis_second_rectangle_arb.py
+          prolate_axis_grid_combine.py
       - name: Upload audit outputs
         uses: actions/upload-artifact@v4
         with:
