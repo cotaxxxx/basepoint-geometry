@@ -54,9 +54,13 @@ coverage, not a disjoint partition.
 
 - `certificate_0b_combined.json` — compact machine-readable theorem record.
 - `AUDIT.md` — independent hash, leaf, coverage, and syntax audit.
-- `SHA256SUMS.txt` — hashes of the delivered ZIP and extracted files.
-- `item0b_certified.zip.parts/` — exact Base64 representation of the uploaded ZIP.
-- `reconstruct_zip.py` — reconstructs the original ZIP and verifies size and SHA-256.
+- `SHA256SUMS.txt` — hashes of the delivered ZIP and all seven original files.
+
+The uploaded `item0b_certified.zip` was independently extracted and verified
+against SHA-256
+`7a07e9c687ed59bec40103daf6b55c348f9c2cac5dcecf61bc7de64655b8d9be`.
+The repository stores the compact certificate and audit record; the original
+ZIP remains the immutable delivery artifact identified by that hash.
 
 The final certificate uses three leaf labels. The analytic corner-cap method
 was part of the certification search and is documented in the certificate,
