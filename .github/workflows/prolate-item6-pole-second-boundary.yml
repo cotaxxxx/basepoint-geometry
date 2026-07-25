@@ -1,6 +1,9 @@
 name: Prolate item 6 pole second-boundary certificate
 
 on:
+  pull_request:
+    paths:
+      - ".github/workflows/prolate-item6-pole-second-boundary.yml"
   workflow_dispatch:
 
 concurrency:
@@ -8,8 +11,29 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  pole-second-audit:
+    name: pole-second-symbolic-audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install symbolic audit environment
+        run: python -m pip install sympy==1.14.0
+      - name: Verify corrected positive-branch boundary formulas
+        working-directory: CERTIFICATES/prolate/item6_axis
+        run: python prolate_axis_pole_second_boundary_symbolic_audit.py
+      - name: Upload symbolic audit
+        uses: actions/upload-artifact@v4
+        with:
+          name: prolate-item6-pole-second-boundary-symbolic-audit
+          path: CERTIFICATES/prolate/item6_axis/prolate_axis_pole_second_boundary_symbolic_audit.json
+
   pole-second-boundary-block:
     name: pole-second-${{ matrix.lo }}-${{ matrix.hi }}
+    needs: pole-second-audit
     runs-on: ubuntu-latest
     timeout-minutes: 90
     strategy:
