@@ -8,6 +8,10 @@ on:
       - ".github/workflows/prolate-item6-axis-audit.yml"
   workflow_dispatch:
 
+concurrency:
+  group: prolate-item6-axis-audit-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   audit:
     runs-on: ubuntu-latest
