@@ -7,47 +7,63 @@
 - moving-layer quadrature split at `c=w`: **IMPLEMENTED / NON-CERTIFIED**
 - exact center Hessian kernel: **FROZEN / SYMBOLIC AUDIT PASSED**
 - sphere endpoint `Q_parallel(1)=4/3`: **EXACTLY VERIFIED**
-- compact center Hessian `Q_parallel(lambda)>0`, `1<=lambda<=10`: **CERTIFIED**
-- compact center certificate: **80 LEAVES / 151 EVALUATIONS / TERMINAL 0 / EXACT COVERAGE**
-- center Hessian extension to `lambda=100`: **ARB COVER RUNNING**
+- compact center Hessian `Q_parallel(lambda)>0`, `1<=lambda<=10`: **CERTIFIED / ARCHIVED SUBCERTIFICATE**
+- extended center Hessian `Q_parallel(lambda)>0`, `1<=lambda<=100`: **CERTIFIED**
+- extended center certificate: **2117 LEAVES / 4135 EVALUATIONS / TERMINAL 0 / EXACT COVERAGE**
+- finite/tail junction: **FIXED AT `lambda_0=100`, `mu_0=1/100`**
 - sampled center Hessian values through `lambda=1e6`: **POSITIVE / NON-CERTIFIED**
 - exact finite center-cap second-derivative kernel: **SYMBOLIC AUDIT IMPLEMENTED**
-- finite center-cap Arb driver on `0<=w<=1/20`, `1<=lambda<=10`: **RUNNING**
+- finite center-cap Arb driver on `0<=w<=1/20`, `1<=lambda<=10`: **PREVIOUS RUN CANCELLED / NO THEOREM CLAIMED**
 - tail normalization by the positive factor `mu*w`: **CORRECTED**
 - logarithmic coefficient `3*pi*sqrt(1-s)`: **EXACT OUTER/LAURENT AUDIT PASSED**
 - seven-point tail regression: **PASSED TO BETTER THAN FIVE SIGNIFICANT DIGITS / NON-CERTIFIED**
-- center-cap interval proof: **PARTIAL — HESSIAN `[1,10]` CERTIFIED; FINITE-`w` COVER RUNNING**
+- center-cap interval proof: **PARTIAL — HESSIAN `[1,100]` CERTIFIED; FINITE-`w` COVER OPEN**
 - compact interior interval cover: **NOT STARTED**
 - pole-cap interval proof: **NOT STARTED**
 - uniform lower bound for the tail remainder: **NOT STARTED**
 - unbounded aspect-ratio tail: **PARTIAL — LEADING COEFFICIENT ONLY**
 - final theorem: **NOT CERTIFIED**
 
-Certified compact statement:
+## Certified compact center-Hessian statement
 
 \[
 Q_\parallel(\lambda)>0
-\qquad(1\le\lambda\le10).
+\qquad(1\le\lambda\le100).
 \]
 
-The worst certified leaf is `[79/8,10]`, with rigorous lower endpoint
+The `[1,100]` certificate has:
+
+- 4135 evaluated boxes;
+- 2117 certified exact-rational leaves;
+- zero terminal boxes;
+- exact contiguous rational coverage.
+
+The worst certified leaf is
 
 \[
-Q_\parallel([79/8,10])
->
-0.48955236624670122276879181945444644042425864613135.
+\lambda\in[231/4,925/16],
 \]
 
-Full integrity data are recorded in `CENTER_COMPACT_CERTIFICATE.md` and `prolate_axis_center_compact_arb_summary.json`.
+with rigorous lower endpoint
 
-The finite center-cap route is
+\[
+Q_\parallel([231/4,925/16])
+>
+0.00020046868958001537682007201789783354707398439156606.
+\]
+
+Full integrity data are recorded in `CENTER_EXTENDED_CERTIFICATE.md` and `prolate_axis_center_extended_arb_summary.json`. The earlier `[1,10]` certificate remains independently archived in `CENTER_COMPACT_CERTIFICATE.md`.
+
+## Finite center-cap route
+
+The finite center-cap implication remains
 
 \[
 A_\lambda''(v)>0
-\quad(0\le v\le1/20,\ 1\le\lambda\le10),
+\quad(0\le v\le1/20)
 \]
 
-which would imply
+which gives
 
 \[
 \frac{\Psi_\lambda(w)}{w}
@@ -56,13 +72,33 @@ which would imply
 \quad(0<w\le1/20).
 \]
 
-This derived statement is not marked certified until the two-parameter Arb artifact is reviewed.
+The previous two-parameter Arb job was cancelled before certification. No finite-`w` theorem is claimed from it. The rerun should be split into smaller exact rational parameter blocks rather than one monolithic job.
+
+## Tail interface
+
+The compact Hessian method stops at
+
+\[
+\lambda_0=100,
+\qquad
+\mu_0=1/100.
+\]
+
+For `lambda>=100`, the proof is assigned to the normalized tail quantity
+
+\[
+H(\mu,s)
+=
+\frac{\Psi_{1/\mu}(\sqrt{s})}{\mu\sqrt{s}}
+=
+3\pi\sqrt{1-s}\log(1/\mu)+\widehat B(\mu,s).
+\]
 
 Target:
 
 \[
 A_\lambda'(w)>0
-\qquad (\lambda\ge1,\ 0<w<1).
+\qquad(\lambda\ge1,\ 0<w<1).
 \]
 
 No tail positivity theorem is claimed until the tail remainder is bounded uniformly and Region T is joined to the pole cap.
