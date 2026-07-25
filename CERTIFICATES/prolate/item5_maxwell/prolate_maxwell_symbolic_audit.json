@@ -1,0 +1,16 @@
+{
+  "status": "PASSED",
+  "checks": {
+    "center_c_lambda": true,
+    "boundary_R2_lambda": true,
+    "boundary_eta2_lambda": true,
+    "boundary_c_lambda": true
+  },
+  "formulas": {
+    "center_c": "lam/sqrt((lam**2*(1 - x**2) + x**2)*(x**2*(lam**2 - 1) + 1))",
+    "center_c_lambda": "lam*(-lam*x**2/(x**2*(lam**2 - 1) + 1) - lam*(1 - x**2)/(lam**2*(1 - x**2) + x**2) + 1/lam)/sqrt((lam**2*(1 - x**2) + x**2)*(x**2*(lam**2 - 1) + 1))",
+    "boundary_c": "t/sqrt((t**2 + (1 - t**2)*(lam**2*s2 - s2 + 1))*(4*t**2*(1 - t**2)*(-s2 + 1 + s2/lam**2) + (1 - 2*t**2)**2))",
+    "boundary_c_lambda": "-t*(2*lam*s2*(1 - t**2)/(t**2 + (1 - t**2)*(lam**2*s2 - s2 + 1)) - 8*s2*t**2*(1 - t**2)/(lam**3*(4*t**2*(1 - t**2)*(-s2 + 1 + s2/lam**2) + (1 - 2*t**2)**2)))/(2*sqrt((t**2 + (1 - t**2)*(lam**2*s2 - s2 + 1))*(4*t**2*(1 - t**2)*(-s2 + 1 + s2/lam**2) + (1 - 2*t**2)**2)))"
+  },
+  "script_sha256": "31fa7a906ab7a01194dcc7e90fc3900f61d2830e42b98b1dea1419ea83e4b239"
+}
