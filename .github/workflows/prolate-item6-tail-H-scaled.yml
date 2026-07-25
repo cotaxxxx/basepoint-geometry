@@ -1,9 +1,6 @@
 name: Prolate item 6 mu-scaled tail H slab certificate
 
 on:
-  pull_request:
-    paths:
-      - ".github/workflows/prolate-item6-tail-H-scaled.yml"
   workflow_dispatch:
 
 concurrency:
