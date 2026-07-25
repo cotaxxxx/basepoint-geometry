@@ -8,48 +8,74 @@ on:
   workflow_dispatch:
 
 jobs:
-  certify:
+  symbolic:
     runs-on: ubuntu-latest
-    timeout-minutes: 120
-    defaults:
-      run:
-        working-directory: CERTIFICATES/prolate/item5_maxwell
-
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
+      - run: python -m pip install sympy==1.14.0
+      - name: Run exact symbolic audit
+        working-directory: CERTIFICATES/prolate/item5_maxwell
+        run: python prolate_maxwell_symbolic_audit.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: prolate-item5-symbolic
+          path: CERTIFICATES/prolate/item5_maxwell/prolate_maxwell_symbolic_audit.json
 
-      - name: Install exact certificate environment
+  components:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [lower, upper, midpoint, derivative]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install Arb environment
         run: |
           python -m pip install --upgrade pip
-          python -m pip install python-flint==0.9.0 sympy==1.14.0
-
-      - name: Display versions
+          python -m pip install python-flint==0.9.0
+      - name: Run ${{ matrix.mode }} component
+        working-directory: CERTIFICATES/prolate/item5_maxwell
         run: |
-          python --version
-          python - <<'PY'
-          import flint, sympy
-          print("python-flint", flint.__version__)
-          print("FLINT", flint.__FLINT_VERSION__)
-          print("SymPy", sympy.__version__)
-          PY
+          python prolate_maxwell_component.py "${{ matrix.mode }}" \
+            --dps 40 --tolerance 1e-10 \
+            --depth-limit 20 --eval-limit 200000
+      - name: Upload component
+        uses: actions/upload-artifact@v4
+        with:
+          name: prolate-item5-component-${{ matrix.mode }}
+          path: CERTIFICATES/prolate/item5_maxwell/component_${{ matrix.mode }}.json
 
-      - name: Run exact symbolic audit
-        run: python prolate_maxwell_symbolic_audit.py
-
-      - name: Run Arb Maxwell certificate
-        run: |
-          python prolate_maxwell_arb_certificate.py \
-            --dps 40 \
-            --tolerance 1e-10 \
-            --depth-limit 20 \
-            --eval-limit 200000 \
-            --json prolate_maxwell_arb_certificate.json
-
-      - name: Upload certificate outputs
+  combine:
+    needs: [symbolic, components]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: python -m pip install python-flint==0.9.0
+      - name: Download component enclosures
+        uses: actions/download-artifact@v4
+        with:
+          pattern: prolate-item5-component-*
+          path: CERTIFICATES/prolate/item5_maxwell/components
+          merge-multiple: true
+      - name: Download symbolic audit
+        uses: actions/download-artifact@v4
+        with:
+          name: prolate-item5-symbolic
+          path: CERTIFICATES/prolate/item5_maxwell
+      - name: Combine certificate
+        working-directory: CERTIFICATES/prolate/item5_maxwell
+        run: python prolate_maxwell_combine.py
+      - name: Upload final certificate
         if: always()
         uses: actions/upload-artifact@v4
         with:
