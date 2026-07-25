@@ -49,3 +49,35 @@ At 30 decimal digits, direct evaluation of the integral formula for
 | 10 | 0.8 | \(1.87\times10^{-30}\) |
 
 This is an implementation audit only. It does not prove positivity on a box.
+
+## Non-certified tail reference
+
+Exploratory high-aspect-ratio calculations indicate that the leading logarithmic coefficient of the axial derivative is
+
+\[
+A(w)=3\pi w\sqrt{1-w^2}.
+\]
+
+Equivalently, after writing
+
+\[
+\Psi_\lambda(w)=w\widehat\Psi_\lambda(w^2),
+\qquad
+s=w^2,
+\]
+
+the corresponding quotient coefficient is
+
+\[
+\widehat A(s)=3\pi\sqrt{1-s}.
+\]
+
+The formula agrees with numerical data at seven audit points to approximately five significant digits. It is recorded only as a reference target for the Region T implementation: the analytic derivation and interval certification are still pending.
+
+In particular,
+
+\[
+\widehat A(0)=3\pi>0,
+\]
+
+which indicates that the center-tail corner remains nondegenerate after removing the odd factor \(w\). No theorem is claimed from this numerical agreement.
