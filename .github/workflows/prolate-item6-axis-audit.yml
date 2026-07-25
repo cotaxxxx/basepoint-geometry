@@ -85,6 +85,7 @@ jobs:
           prolate_axis_tail_H_block_arb.py
           prolate_axis_tail_H_scaled_block_arb.py
           prolate_axis_tail_H_combine.py
+          prolate_axis_tail_M_scaled_block_arb.py
           prolate_axis_pole_second_boundary_block_arb.py
           prolate_axis_pole_second_boundary_combine.py
       - name: Upload audit outputs
