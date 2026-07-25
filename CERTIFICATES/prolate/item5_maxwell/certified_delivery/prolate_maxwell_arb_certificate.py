@@ -193,6 +193,7 @@ def boundary_values(
     def energy_kernel(t: acb, phi: acb, analytic: bool) -> acb:
         g = geometry(t, phi, analytic)
         f, _ = regular_angle_data(g["c"])
+        # Desired boundary energy is (8/pi) int int t^3 f dt dphi.
         return 8 * t**3 * f / acb(arb.pi())
 
     def derivative_kernel(t: acb, phi: acb, analytic: bool) -> acb:
@@ -228,9 +229,9 @@ def run(dps: int, tolerance: str, depth: int, eval_limit: int) -> dict:
     ctx.dps = dps
     tol = arb(tolerance)
 
-    lam_lo = arb(fmpq(171743, 50000))
-    lam_hi = arb(fmpq(85872, 25000))
-    lam_mid = arb(fmpq(343487, 100000))
+    lam_lo = arb(fmpq(171743, 50000))   # 3.43486
+    lam_hi = arb(fmpq(85872, 25000))    # 3.43488
+    lam_mid = arb(fmpq(343487, 100000)) # 3.43487
     lam_I = closed_rational_interval(171743, 50000, 85872, 25000)
 
     D_lo, _, E0_lo, E1_lo = D_values(lam_lo, tol, depth, eval_limit)
