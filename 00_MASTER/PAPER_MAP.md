@@ -9,6 +9,15 @@
 - File Library 原稿台帳：`00_MASTER/LIBRARY_PAPER_ARCHIVE.md`
 - 体系配置：本ファイル
 
+## 原点研究：4-π研究
+
+- 入口：`00_4_MINUS_PI_RESEARCH/README.md`
+- 中心定理と厳密導出：`00_4_MINUS_PI_RESEARCH/THEOREM_NOTE_JA.md`
+- 先行研究との接点：`00_4_MINUS_PI_RESEARCH/PRIOR_WORK.md`
+- 一般化・論文化計画：`00_4_MINUS_PI_RESEARCH/RESEARCH_PROGRAM.md`
+
+4-π研究は、正方形と内接円の面積差 `4-π` が動径–法線角エネルギーと一致する理由を扱う。総論・各論の上流に位置し、幾何双対位相の二次元原型を記録する。
+
 ## 総論
 
 - 概要：`01_GENERAL_THEORY/OVERVIEW_JA.md`
@@ -56,10 +65,11 @@
 
 ## 配置規則
 
-1. 単一立体または同一構造を保つ体族の分類は各論 I に置く。
-2. 複数の形状系列・対称群・分岐機構を横断する研究は各論 II に置く。
-3. 体系番号と投稿順序は別に管理し、投稿順序は `STATUS.md` に記録する。
-4. 完成稿は `manuscript.pdf`、原稿は `manuscript.tex` に統一する。
-5. 投稿時の原名ファイルは `submission/` に保存する。
-6. 認証コード・JSON・実行記録・SHA-256 manifest は `supplement/` に保存する。
-7. 旧版は `archive/` に隔離し、最新版と混在させない。
+1. 4-π研究は研究体系の原点として総論・各論の上流に置く。
+2. 単一立体または同一構造を保つ体族の分類は各論 I に置く。
+3. 複数の形状系列・対称群・分岐機構を横断する研究は各論 II に置く。
+4. 体系番号と投稿順序は別に管理し、投稿順序は `STATUS.md` に記録する。
+5. 完成稿は `manuscript.pdf`、原稿は `manuscript.tex` に統一する。
+6. 投稿時の原名ファイルは `submission/` に保存する。
+7. 認証コード・JSON・実行記録・SHA-256 manifest は `supplement/` に保存する。
+8. 旧版は `archive/` に隔離し、最新版と混在させない。
