@@ -1,0 +1,80 @@
+{
+ "stage": "5",
+ "status": "CERTIFIED",
+ "theorem": "D(lambda) = E_lambda(1,0) - E_lambda(0,0) has a unique zero lambda_cross in I_5 = [1717/500, 1718/500]. The zero is simple (D' < 0 on all of I_5), so the boundary Maxwell transition is transversal: at lambda_cross the equatorial boundary value and the center value coincide, and their order swaps as lambda crosses it.",
+ "bracket": {
+  "lo": "1717/500",
+  "hi": "1718/500",
+  "midpoint": "687/200",
+  "note": "Widened from [3.43486,3.43488]: there the endpoint margin |D'|*dist ~ 6e-7 was below the achievable enclosure radius ~5e-6, so that bracket was not certifiable at any runtime. Here the margins are ~6e-5 and ~8e-5 against radius 7.6e-6."
+ },
+ "conditions": {
+  "D(1717/500) > 0": {
+   "enclosure": "[+/- 7.01e-5]",
+   "certified": true
+  },
+  "D(1718/500) < 0": {
+   "enclosure": "[-8e-5 +/- 8.97e-6]",
+   "certified": true
+  },
+  "D'(I_5) < 0": {
+   "enclosure": "[-0.07 +/- 3.15e-3]",
+   "certified": true
+  },
+  "interval Newton self-containment N(m) subset I_5": {
+   "D(m)": "[+/- 1.71e-5]",
+   "N(m)": "[3.435 +/- 2.42e-4]",
+   "certified": true
+  }
+ },
+ "enclosure_of_root": {
+  "lower": "[3.434758949756710535439196974039077758789 +/- 6.07e-41]",
+  "upper": "[3.434974351399828265130054205656051635742 +/- 1.86e-40]",
+  "width": 0.0002154016431177297,
+  "contains_noncertified_reference_3.4348684428668": true
+ },
+ "method": {
+  "center_value": "1D adaptive validated integral (fast, ~0.1 s)",
+  "boundary_value": "2D adaptive validated integral in half-angle regularized coordinates",
+  "tolerance_policy": "tolerance matched to the bracket margin, not to working precision; the packaged default 1e-22 is 15 orders below the margin and causes the adaptive integrator to exhaust its depth/eval budget without finishing"
+ },
+ "settings": {
+  "D_lo": {
+   "tolerance": "[1.000000000000000e-6 +/- 9.06e-23]",
+   "dps": 30,
+   "depth": 12
+  },
+  "D_hi": {
+   "tolerance": "[1.000000000000000e-6 +/- 9.06e-23]",
+   "dps": 30,
+   "depth": 12
+  },
+  "Dp_I": {
+   "tolerance": "[1.000000000000000e-6 +/- 9.06e-23]",
+   "dps": 30,
+   "depth": 12
+  },
+  "D_mid": {
+   "tolerance": "[1.000000000000000e-6 +/- 9.06e-23]",
+   "dps": 30,
+   "depth": 12
+  }
+ },
+ "timings_seconds": {
+  "D_lo": 108.7,
+  "D_hi": 111.9,
+  "Dp_I": 19.3,
+  "D_mid": 109.4
+ },
+ "provenance": {
+  "certificate_module_sha256": "62cdc0de93df1393aa956078b5469da5cef9f6e80c4833dc051f574bb1e53c21",
+  "driver_sha256": "8ad0b5dc57534a696021baa3e9b9be581a93417e7738c3c92e56578a570c23cf",
+  "package_zip_sha256": "2c7ada4a12e3d0090be97de07650f87e033f65071fcdaa4fdbf1cb3cd3f3ca4c",
+  "github_pr": "cotaxxxx/geometric-dual-topology PR #5 (draft)"
+ },
+ "environment": {
+  "python": "3.12.3",
+  "python_flint": "0.9.0",
+  "flint": "3.6.0"
+ }
+}
