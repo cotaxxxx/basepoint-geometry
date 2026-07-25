@@ -1,0 +1,52 @@
+{
+ "stage": "0b",
+ "status": "CERTIFIED",
+ "certified_statement": "For every lambda in [1, 206539/100000] and every r in [3/4, 1], Fr(r,lambda) = d^2/dr^2 E_lambda(r,0) < 0. Combined with F(1,lambda) > 0 (items 0a and Stage 1), right-anchored monotonicity gives F(r,lambda) >= F(1,lambda) > 0 on the whole band for lambda < lambda_partial. Coverage: exact-rational cell sweep, 28 x 101 cells, 0 uncovered.",
+ "leaves": {
+  "total": 435,
+  "labels": {
+   "Fr_negative_riemann": 226,
+   "Fr_negative": 155,
+   "Fr_negative_infsup": 54
+  }
+ },
+ "methods": {
+  "acb_integral": "adaptive validated integration on the v3 cancelled kernels (Fr_negative)",
+  "interval_riemann": "whole-cell interval Riemann sums, mid-rad arithmetic (Fr_negative_riemann)",
+  "corner_cap": "Riemann over t in [T0,1] plus the analytic cap bound |cap| <= 2*B*T0/kappa, using the exact identity L2 = 1 + m*s2 which gives |P| = b2(r+a*m*s2)/rho^2 <= (r+a*m*s2)/(1+m*s2) <= 1 (Fr_negative_corner)",
+  "infsup_v5": "endpoint (inf-sup) interval arithmetic with the W-form W = d^2/b2 + L2, which preserves the correlation rho^2 >= b2*L2, plus endpoint-and-monotonicity evaluation of f' and f''. Cures three failure modes of ball arithmetic near r=1: (i) x*x straddling 0, (ii) product of wide positive intervals straddling 0, (iii) P and 1-e1^2 overestimated by four orders of magnitude (Fr_negative_infsup)"
+ },
+ "monotonicity_lemma": {
+  "statement": "With u = arccos(c) in [0,pi/2]: f'(c) = -2u/sin u is increasing in c from -pi to -2; f''(c) = 2(sin u - u cos u)/sin^3 u is decreasing in c from 2 to 2/3.",
+  "role": "justifies endpoint evaluation of the angle data over a z-interval",
+  "numerical_agreement": "implementation returns f' in [-pi,-2], f'' in [2/3,2] on z=[0,1/2]"
+ },
+ "provenance": {
+  "kernel_v3_sha256": "ef065381abd802239f5fb107c3e87f64a12259deccbf98d6909bcd975da7157d",
+  "kernel_v5_sha256": "ac0505c2fb91d9ef29c7b5dc0ce92c64593655f4125567e1386570273214bad0",
+  "driver_sha256": "d3f9a2fdadf59864a8a3684dd11506150b7b606198b24a5b0d57ca2ae9342080",
+  "events": [
+   {
+    "action": "reband_interior_boxes_at_511_512",
+    "n_split": 17,
+    "n_already_corner": 11,
+    "rationale": "interior kernel loses rho enclosure for r_hi close to 1 (rho lower bound ~2.3e-4 at r_hi=4095/4096); boxes with r_hi>511/512 are routed to the corner cap method"
+   },
+   {
+    "action": "rescue_terminals_v5_infsup",
+    "rescued": 8,
+    "remaining": 0
+   },
+   {
+    "action": "rescue_last_terminal_v5",
+    "n": 1
+   }
+  ],
+  "github_head_at_emission": "b7c1582933532a358e3db63fcf6a2b5c4b7ca033"
+ },
+ "environment": {
+  "python": "3.12.3",
+  "python_flint": "0.9.0",
+  "flint": "3.6.0"
+ }
+}
