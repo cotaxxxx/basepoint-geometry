@@ -30,10 +30,18 @@ Set
 s=w^2.
 \]
 
-The direct \(\mu=0\) limiting kernel vanishes, so it does not supply a fixed positive margin. Instead separate the logarithmic leading term in the odd-factor quotient:
+The unscaled derivative tends to zero as \(\mu\to0\); its leading size is \(\mu\log(1/\mu)\). Remove both positive factors by defining, for \(0<s<1\),
 
 \[
-\widehat\Psi_{1/\mu}(s)
+H(\mu,s)
+=
+\frac{\Psi_{1/\mu}(\sqrt{s})}{\mu\sqrt{s}},
+\]
+
+with the \(s=0\) value supplied by odd analyticity. The correct tail decomposition is
+
+\[
+H(\mu,s)
 =
 \log(1/\mu)\,\widehat A(s)
 +
@@ -42,7 +50,25 @@ The direct \(\mu=0\) limiting kernel vanishes, so it does not supply a fixed pos
 \widehat A(s)=3\pi\sqrt{1-s}.
 \]
 
-The certification target is therefore
+Equivalently,
+
+\[
+\Psi_{1/\mu}(w)
+=
+\mu w\left[
+3\pi\sqrt{1-w^2}\log(1/\mu)
++
+\widehat B(\mu,w^2)
+\right].
+\]
+
+The formal outer/Laurent audit proves the coefficient \(\widehat A\): the opposite \((c-w)^{-2}\) terms cancel in the two-sided matching, while the two \((c-w)^{-1}\) residues add to
+
+\[
+3\pi w\sqrt{1-w^2}.
+\]
+
+The remaining certification target is therefore
 
 \[
 \log(1/\mu)\,3\pi\sqrt{1-s}
@@ -50,15 +76,15 @@ The certification target is therefore
 \widehat B(\mu,s)>0,
 \]
 
-with an analytic derivation of the leading coefficient and a uniform validated lower bound for the remainder \(\widehat B\) on the tail strip. Region T is joined to Region P before \(s=1\), where the leading coefficient vanishes.
+using a uniform validated lower bound for \(\widehat B\) on a rational tail strip. Region T must join Region P before \(s=1\), where the leading coefficient vanishes.
 
-At the center-tail corner, however,
+At the center-tail corner,
 
 \[
 \widehat A(0)=3\pi>0,
 \]
 
-so the apparent \((w,\mu)\to(0,0)\) corner obstruction disappears after the odd factor \(w\) is removed. The remaining finite-\(\lambda\) domain is compact.
+so the apparent \((w,\mu)\to(0,0)\) obstruction disappears after division by the positive factor \(\mu w\). The remaining finite-\(\lambda\) domain is compact.
 
 ## Assembly D — dependency DAG
 
