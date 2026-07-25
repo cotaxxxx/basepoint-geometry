@@ -33,12 +33,21 @@ def lower_fraction(text: str) -> Fraction:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--pattern", default="prolate_axis_tail_H_block_*.json")
-    parser.add_argument("--json", default="prolate_axis_tail_H_combined.json")
+    parser.add_argument("--value-key", choices=("H", "M"), default="H")
+    parser.add_argument("--mu-lo", default="1/200")
+    parser.add_argument("--mu-hi", default="1/100")
+    parser.add_argument("--w-lo", default="1/20")
+    parser.add_argument("--w-hi", default="3/4")
+    parser.add_argument("--expected-blocks", type=int, default=3)
+    parser.add_argument("--json", default="prolate_axis_tail_combined.json")
     args = parser.parse_args()
 
-    paths = sorted(Path(p) for p in glob.glob(args.pattern))
+    paths = sorted(Path(path) for path in glob.glob(args.pattern))
     if not paths:
         raise FileNotFoundError(f"no block certificates match {args.pattern}")
+
+    target_mu = (Fraction(args.mu_lo), Fraction(args.mu_hi))
+    target_w = (Fraction(args.w_lo), Fraction(args.w_hi))
 
     blocks = []
     for path in paths:
@@ -48,19 +57,27 @@ def main() -> None:
         blocks.append((w_lo, w_hi, mu_lo, mu_hi, path, data))
     blocks.sort(key=lambda item: item[0])
 
-    common_mu = all(
-        (block[2], block[3]) == (blocks[0][2], blocks[0][3])
-        for block in blocks
+    common_requested_mu = all(
+        (block[2], block[3]) == target_mu for block in blocks
     )
     adjacent = all(
         blocks[index][1] == blocks[index + 1][0]
         for index in range(len(blocks) - 1)
     )
-    endpoints = bool(
+    requested_w_endpoints = bool(
         blocks
-        and blocks[0][0] == Fraction(1, 20)
-        and blocks[-1][1] == Fraction(3, 4)
+        and blocks[0][0] == target_w[0]
+        and blocks[-1][1] == target_w[1]
     )
+    nonoverlapping = bool(
+        blocks
+        and all(block[0] < block[1] for block in blocks)
+        and all(
+            blocks[index][1] <= blocks[index + 1][0]
+            for index in range(len(blocks) - 1)
+        )
+    )
+    expected_count = len(blocks) == args.expected_blocks
     all_certified = all(block[5]["status"] == "CERTIFIED" for block in blocks)
     exact_block_coverage = all(
         block[5]["conditions"].get("exact rational coverage of block", False)
@@ -69,14 +86,22 @@ def main() -> None:
     zero_terminal = all(
         block[5]["counts"]["terminal_boxes"] == 0 for block in blocks
     )
+    value_present = all(
+        block[5].get("worst_certified_leaf") is not None
+        and args.value_key in block[5]["worst_certified_leaf"]
+        for block in blocks
+    )
 
     worst_candidates = [
         (
-            lower_fraction(block[5]["worst_certified_leaf"]["H"]["real_lower"]),
+            lower_fraction(
+                block[5]["worst_certified_leaf"][args.value_key]["real_lower"]
+            ),
             block,
         )
         for block in blocks
         if block[5].get("worst_certified_leaf")
+        and args.value_key in block[5]["worst_certified_leaf"]
     ]
     worst_block = (
         min(worst_candidates, key=lambda item: item[0])[1]
@@ -85,23 +110,31 @@ def main() -> None:
     )
 
     conditions = {
+        "expected number of w blocks present": expected_count,
         "all blocks certified": all_certified,
-        "all blocks use the same mu interval": common_mu,
+        "all blocks use the requested mu interval": common_requested_mu,
+        "combined w endpoints equal the requested interval": requested_w_endpoints,
         "w blocks are exactly adjacent": adjacent,
-        "combined w endpoints equal [1/20,3/4]": endpoints,
+        "w block interiors do not overlap": nonoverlapping,
         "every block has exact rational coverage": exact_block_coverage,
         "zero terminal boxes across all blocks": zero_terminal,
+        "requested value key is present": value_present,
     }
     status = "CERTIFIED" if all(conditions.values()) else "INCOMPLETE"
 
     result = {
         "status": status,
+        "value_key": args.value_key,
         "certified_statement": (
-            f"H(mu,w)>0 for {blocks[0][2]}<=mu<={blocks[0][3]}, "
-            "1/20<=w<=3/4"
+            f"{args.value_key}(mu,w)>0 for {target_mu[0]}<=mu<={target_mu[1]}, "
+            f"{target_w[0]}<=w<={target_w[1]}"
             if status == "CERTIFIED"
             else None
         ),
+        "target_rectangle": {
+            "mu": f"[{target_mu[0]},{target_mu[1]}]",
+            "w": f"[{target_w[0]},{target_w[1]}]",
+        },
         "conditions": conditions,
         "counts": {
             "blocks": len(blocks),
@@ -130,11 +163,11 @@ def main() -> None:
             worst_block[5]["worst_certified_leaf"] if worst_block else None
         ),
         "limitations": (
-            "This covers only one compact mu slab. The limit mu->0, the center "
-            "tail w<1/20, and the pole tail w>3/4 remain separate stages."
+            "This covers only the requested compact mu-w rectangle. Endpoint "
+            "or monotonic transfers require their own certified nodes."
         ),
+        "combiner_sha256": sha256_file(Path(__file__)),
     }
-    result["combiner_sha256"] = sha256_file(Path(__file__))
 
     output = Path(args.json)
     output.write_text(json.dumps(result, indent=2), encoding="utf-8")
