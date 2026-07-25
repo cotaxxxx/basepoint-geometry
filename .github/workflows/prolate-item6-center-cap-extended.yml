@@ -96,6 +96,11 @@ jobs:
         run: >-
           python prolate_axis_center_cap_combine.py
           --pattern "extended_block_outputs/prolate_axis_center_cap_extended_block_*.json"
+          --v-lo 0
+          --v-hi 1/20
+          --lambda-lo 10
+          --lambda-hi 100
+          --expected-blocks 13
           --json prolate_axis_center_cap_combined_10_100.json
       - name: Upload combined extended certificate
         if: always()
