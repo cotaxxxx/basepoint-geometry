@@ -1,0 +1,70 @@
+{
+ "D_lo": {
+  "key": "D_lo",
+  "lambda": "[3.43400000000000000000000000000 +/- 5.40e-31]",
+  "derivative": false,
+  "value_lower": "[5.49407911702238925979776817061e-5 +/- 1.20e-35]",
+  "value_upper": "[7.00795876550720641287347810961e-5 +/- 1.80e-35]",
+  "radius": 7.569398242424086e-06,
+  "positive_certified": true,
+  "negative_certified": false,
+  "center_seconds": 0.0,
+  "boundary_seconds": 108.7,
+  "settings": {
+   "tolerance": "[1.000000000000000e-6 +/- 9.06e-23]",
+   "dps": 30,
+   "depth": 12
+  }
+ },
+ "D_hi": {
+  "key": "D_hi",
+  "lambda": "[3.43600000000000000000000000000 +/- 7.39e-31]",
+  "derivative": false,
+  "value_lower": "[-8.89657658163860473240765261025e-5 +/- 8.66e-36]",
+  "value_upper": "[-7.38296240186746585340278672547e-5 +/- 1.75e-35]",
+  "radius": 7.568070898855694e-06,
+  "positive_certified": false,
+  "negative_certified": true,
+  "center_seconds": 0.0,
+  "boundary_seconds": 111.9,
+  "settings": {
+   "tolerance": "[1.000000000000000e-6 +/- 9.06e-23]",
+   "dps": 30,
+   "depth": 12
+  }
+ },
+ "Dp_I": {
+  "key": "Dp_I",
+  "lambda": "[3.43 +/- 6.01e-3]",
+  "derivative": true,
+  "value_lower": "[-0.0731485524918583427536414248342 +/- 1.22e-32]",
+  "value_upper": "[-0.0707600815474337172675059420461 +/- 1.90e-33]",
+  "radius": 0.0011942354722123127,
+  "positive_certified": false,
+  "negative_certified": true,
+  "center_seconds": 0.0,
+  "boundary_seconds": 19.3,
+  "settings": {
+   "tolerance": "[1.000000000000000e-6 +/- 9.06e-23]",
+   "dps": 30,
+   "depth": 12
+  }
+ },
+ "D_mid": {
+  "key": "D_mid",
+  "lambda": "[3.43500000000000000000000000000 +/- 4.42e-31]",
+  "derivative": false,
+  "value_lower": "[-1.70567347549378038164021597645e-5 +/- 4.98e-35]",
+  "value_upper": "[-1.87615805879898937547376020161e-6 +/- 4.54e-36]",
+  "radius": 7.590288348069407e-06,
+  "positive_certified": false,
+  "negative_certified": true,
+  "center_seconds": 0.0,
+  "boundary_seconds": 109.4,
+  "settings": {
+   "tolerance": "[1.000000000000000e-6 +/- 9.06e-23]",
+   "dps": 30,
+   "depth": 12
+  }
+ }
+}
