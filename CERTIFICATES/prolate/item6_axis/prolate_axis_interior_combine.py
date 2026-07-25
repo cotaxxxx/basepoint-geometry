@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Combine exact compact-interior lambda-block certificates."""
+"""Combine exact adjacent compact-interior lambda-block certificates."""
 from __future__ import annotations
 
 import argparse
@@ -27,21 +27,28 @@ def parse_interval(text: str) -> tuple[Fraction, Fraction]:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--root", default=".")
-    parser.add_argument("--json", default="prolate_axis_interior_1_10_combined.json")
+    parser.add_argument("--pattern", default="prolate_axis_interior_block_*.json")
+    parser.add_argument("--w-lo", default="1/20")
+    parser.add_argument("--w-hi", default="3/4")
+    parser.add_argument("--lambda-lo", default="1")
+    parser.add_argument("--lambda-hi", default="10")
+    parser.add_argument("--expected-blocks", type=int, default=9)
+    parser.add_argument("--json", default="prolate_axis_interior_combined.json")
     args = parser.parse_args()
 
     root = Path(args.root)
-    paths = sorted(root.rglob("prolate_axis_interior_block_*.json"))
-    expected = [(Fraction(k), Fraction(k + 1)) for k in range(1, 10)]
-    target_w = (Fraction(1, 20), Fraction(3, 4))
+    paths = sorted(root.rglob(args.pattern))
+    target_w = (Fraction(args.w_lo), Fraction(args.w_hi))
+    target_lambda = (Fraction(args.lambda_lo), Fraction(args.lambda_hi))
 
     records = []
     seen = []
     total_evaluations = 0
     total_leaves = 0
     total_terminal = 0
-    all_certified = True
-    same_w_interval = True
+    all_certified = bool(paths)
+    same_w_interval = bool(paths)
+    exact_block_coverage = bool(paths)
     worst_lower = None
     worst_record = None
 
@@ -56,16 +63,16 @@ def main() -> None:
         total_terminal += int(counts.get("terminal_boxes", 0))
         all_certified = all_certified and data.get("status") == "CERTIFIED"
         same_w_interval = same_w_interval and w_interval == target_w
+        exact_block_coverage = exact_block_coverage and data.get("conditions", {}).get(
+            "exact rational coverage of block", False
+        )
 
         leaf = data.get("worst_certified_leaf")
         if leaf is not None:
             lower = Fraction(leaf["Psi"]["real_lower"])
             if worst_lower is None or lower < worst_lower:
                 worst_lower = lower
-                worst_record = {
-                    "source": str(path),
-                    "leaf": leaf,
-                }
+                worst_record = {"source": str(path), "leaf": leaf}
 
         records.append({
             "path": str(path),
@@ -78,20 +85,27 @@ def main() -> None:
         })
 
     ordered = sorted(seen)
-    exact_block_set = ordered == expected
     exact_adjacency = bool(
         ordered
-        and ordered[0][0] == Fraction(1)
-        and ordered[-1][1] == Fraction(10)
+        and ordered[0][0] == target_lambda[0]
+        and ordered[-1][1] == target_lambda[1]
         and all(ordered[i][1] == ordered[i + 1][0] for i in range(len(ordered) - 1))
     )
+    no_duplicate_or_overlapping_blocks = bool(
+        ordered
+        and all(ordered[i][0] < ordered[i][1] for i in range(len(ordered)))
+        and all(ordered[i][1] <= ordered[i + 1][0] for i in range(len(ordered) - 1))
+    )
     zero_terminal = total_terminal == 0
+    expected_count = len(paths) == args.expected_blocks
 
     conditions = {
-        "nine expected lambda blocks present": len(paths) == 9 and exact_block_set,
+        "expected number of lambda blocks present": expected_count,
         "all block certificates are CERTIFIED": all_certified,
-        "all blocks use w=[1/20,3/4]": same_w_interval,
-        "lambda blocks have exact adjacency from 1 to 10": exact_adjacency,
+        "all blocks use the requested w interval": same_w_interval,
+        "lambda blocks have exact requested adjacency": exact_adjacency,
+        "lambda block interiors do not overlap": no_duplicate_or_overlapping_blocks,
+        "every block has exact rational coverage": exact_block_coverage,
         "zero terminal boxes across all blocks": zero_terminal,
     }
     status = "CERTIFIED" if all(conditions.values()) else "INCOMPLETE"
@@ -99,10 +113,14 @@ def main() -> None:
     result = {
         "status": status,
         "certified_statement": (
-            "Psi_lambda(w)>0 for 1<=lambda<=10 and 1/20<=w<=3/4"
-            if status == "CERTIFIED"
-            else None
+            f"Psi_lambda(w)>0 for {target_lambda[0]}<=lambda<={target_lambda[1]} "
+            f"and {target_w[0]}<=w<={target_w[1]}"
+            if status == "CERTIFIED" else None
         ),
+        "target_rectangle": {
+            "w": f"[{target_w[0]},{target_w[1]}]",
+            "lambda": f"[{target_lambda[0]},{target_lambda[1]}]",
+        },
         "conditions": conditions,
         "counts": {
             "block_files": len(paths),
@@ -112,10 +130,7 @@ def main() -> None:
         },
         "worst_certified_leaf": worst_record,
         "blocks": records,
-        "limitations": (
-            "This is the first compact-interior tranche only. It does not cover "
-            "lambda>10, w>3/4, the pole cap, tail, or full item 6 theorem."
-        ),
+        "limitations": "This certificate covers only the stated compact rectangle.",
     }
     result["combiner_sha256"] = sha256_file(Path(__file__))
 
