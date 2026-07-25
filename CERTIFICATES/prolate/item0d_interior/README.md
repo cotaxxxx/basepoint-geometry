@@ -34,10 +34,24 @@ Every accepted leaf proves the direct strict inequality `F>0`; no induction or m
 
 ## Archived files
 
-- `item0d_certified.zip` — immutable delivery archive
+- `item0d_certified.zip.parts/` — exact Base64-encoded byte ranges of the immutable delivery ZIP
+- `reconstruct_zip.py` — reconstructs the original `item0d_certified.zip` and rejects any size or SHA mismatch
 - `certificate_0d_combined.json` — combined theorem statement and provenance
 - `MANIFEST.sha256` — SHA-256 snapshot
 - `AUDIT.md` — independent structural audit and signature analysis
+
+Reconstruction:
+
+```bash
+python3 reconstruct_zip.py
+```
+
+Expected output:
+
+- size: `29502` bytes
+- ZIP SHA-256: `db1c68e4bbf43fcb49bd5f27de5d45a36b44f1f8e77141477832ce16ae68df2a`
+
+The multipart representation is necessary because the GitHub text-contents connector used for ingestion cannot write binary ZIP data directly. Each Base64 part was checked by Git blob SHA against the locally generated source text.
 
 ## Consequence with item 0c
 
