@@ -42,6 +42,19 @@ Using exact rational midpoint membership:
 
 Thus the leaves form an exact disjoint cover of the claimed rectangle.
 
+## Multipart ZIP integrity
+
+The 29,502-byte uploaded ZIP was divided into exact byte ranges and each range was Base64-encoded independently. The first four ranges contain 6,000 raw bytes each; the remaining ranges contain 1,000 bytes each except the final 502-byte range.
+
+For every part, the Git blob SHA returned after upload equals the Git blob SHA computed locally from the source Base64 text. The checked SHA values and byte ranges are recorded in `item0d_certified.zip.parts/README.md`.
+
+`reconstruct_zip.py` decodes the parts in byte-offset order and terminates unless both conditions hold:
+
+- reconstructed size = `29502`
+- reconstructed SHA-256 = `db1c68e4bbf43fcb49bd5f27de5d45a36b44f1f8e77141477832ce16ae68df2a`
+
+Thus the GitHub text representation is a lossless, independently checkable encoding of the original delivery archive.
+
 ## Run-signature analysis
 
 `checkpoint_0d.json` stores the run signature
