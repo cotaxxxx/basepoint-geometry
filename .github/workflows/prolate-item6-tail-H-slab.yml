@@ -89,6 +89,12 @@ jobs:
         run: >-
           python prolate_axis_tail_H_combine.py
           --pattern "tail_H_outputs/prolate_axis_tail_H_block_*.json"
+          --value-key H
+          --mu-lo 1/200
+          --mu-hi 1/100
+          --w-lo 1/20
+          --w-hi 3/4
+          --expected-blocks 3
           --json prolate_axis_tail_H_combined_mu_1_200_1_100.json
       - name: Upload combined tail H slab certificate
         if: always()
