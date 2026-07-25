@@ -31,6 +31,9 @@ jobs:
       - name: Run exact tail coefficient audit
         working-directory: CERTIFICATES/prolate/item6_axis
         run: python prolate_axis_tail_symbolic_audit.py
+      - name: Run regularized tail-kernel audit
+        working-directory: CERTIFICATES/prolate/item6_axis
+        run: python prolate_axis_tail_regularized_symbolic_audit.py
       - name: Run non-certified reference scout
         working-directory: CERTIFICATES/prolate/item6_axis
         run: python prolate_axis_reference.py --dps 50
@@ -48,6 +51,7 @@ jobs:
           prolate_axis_center_symbolic_audit.py
           prolate_axis_center_cap_symbolic_audit.py
           prolate_axis_tail_symbolic_audit.py
+          prolate_axis_tail_regularized_symbolic_audit.py
           prolate_axis_reference.py
           prolate_axis_center_reference.py
           prolate_axis_tail_reference.py
@@ -66,6 +70,7 @@ jobs:
             CERTIFICATES/prolate/item6_axis/prolate_axis_center_symbolic_audit.json
             CERTIFICATES/prolate/item6_axis/prolate_axis_center_cap_symbolic_audit.json
             CERTIFICATES/prolate/item6_axis/prolate_axis_tail_symbolic_audit.json
+            CERTIFICATES/prolate/item6_axis/prolate_axis_tail_regularized_symbolic_audit.json
             CERTIFICATES/prolate/item6_axis/prolate_axis_reference.json
             CERTIFICATES/prolate/item6_axis/prolate_axis_center_reference.json
             CERTIFICATES/prolate/item6_axis/prolate_axis_tail_reference.json
