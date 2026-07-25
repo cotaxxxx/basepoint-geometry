@@ -25,6 +25,9 @@ jobs:
       - name: Run exact center Hessian audit
         working-directory: CERTIFICATES/prolate/item6_axis
         run: python prolate_axis_center_symbolic_audit.py
+      - name: Run exact center-cap kernel audit
+        working-directory: CERTIFICATES/prolate/item6_axis
+        run: python prolate_axis_center_cap_symbolic_audit.py
       - name: Run exact tail coefficient audit
         working-directory: CERTIFICATES/prolate/item6_axis
         run: python prolate_axis_tail_symbolic_audit.py
@@ -43,6 +46,7 @@ jobs:
           python -m py_compile
           prolate_axis_symbolic_audit.py
           prolate_axis_center_symbolic_audit.py
+          prolate_axis_center_cap_symbolic_audit.py
           prolate_axis_tail_symbolic_audit.py
           prolate_axis_reference.py
           prolate_axis_center_reference.py
@@ -56,6 +60,7 @@ jobs:
           path: |
             CERTIFICATES/prolate/item6_axis/prolate_axis_symbolic_audit.json
             CERTIFICATES/prolate/item6_axis/prolate_axis_center_symbolic_audit.json
+            CERTIFICATES/prolate/item6_axis/prolate_axis_center_cap_symbolic_audit.json
             CERTIFICATES/prolate/item6_axis/prolate_axis_tail_symbolic_audit.json
             CERTIFICATES/prolate/item6_axis/prolate_axis_reference.json
             CERTIFICATES/prolate/item6_axis/prolate_axis_center_reference.json
