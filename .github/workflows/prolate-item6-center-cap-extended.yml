@@ -1,0 +1,110 @@
+name: Prolate item 6 extended center-cap certificate
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/prolate-item6-center-cap-extended.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: prolate-item6-center-cap-extended-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  center-cap-extended-block:
+    name: center-cap-${{ matrix.lo }}-${{ matrix.hi }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        include:
+          - lo: 10
+            hi: 12
+          - lo: 12
+            hi: 14
+          - lo: 14
+            hi: 16
+          - lo: 16
+            hi: 20
+          - lo: 20
+            hi: 24
+          - lo: 24
+            hi: 30
+          - lo: 30
+            hi: 36
+          - lo: 36
+            hi: 44
+          - lo: 44
+            hi: 52
+          - lo: 52
+            hi: 62
+          - lo: 62
+            hi: 72
+          - lo: 72
+            hi: 84
+          - lo: 84
+            hi: 100
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install validated arithmetic
+        run: python -m pip install python-flint==0.9.0
+      - name: Certify extended center-cap block
+        working-directory: CERTIFICATES/prolate/item6_axis
+        run: >-
+          python prolate_axis_center_cap_block_arb.py
+          --dps 50
+          --tolerance 1e-18
+          --integration-depth 22
+          --eval-limit 200000
+          --max-split-depth 16
+          --max-boxes 32768
+          --w-num 1
+          --w-den 20
+          --lambda-lo ${{ matrix.lo }}
+          --lambda-hi ${{ matrix.hi }}
+          --json prolate_axis_center_cap_extended_block_${{ matrix.lo }}_${{ matrix.hi }}.json
+      - name: Upload extended block certificate
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: prolate-item6-center-cap-extended-block-${{ matrix.lo }}-${{ matrix.hi }}
+          path: |
+            CERTIFICATES/prolate/item6_axis/prolate_axis_center_cap_extended_block_${{ matrix.lo }}_${{ matrix.hi }}.json
+            CERTIFICATES/prolate/item6_axis/prolate_axis_center_cap_extended_block_${{ matrix.lo }}_${{ matrix.hi }}.json.sha256
+
+  combine:
+    name: center-cap-combine-10-100
+    needs: center-cap-extended-block
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Download all extended block certificates
+        uses: actions/download-artifact@v4
+        with:
+          pattern: prolate-item6-center-cap-extended-block-*
+          path: CERTIFICATES/prolate/item6_axis/extended_block_outputs
+          merge-multiple: true
+      - name: Combine exact adjacent extended blocks
+        working-directory: CERTIFICATES/prolate/item6_axis
+        run: >-
+          python prolate_axis_center_cap_combine.py
+          --pattern "extended_block_outputs/prolate_axis_center_cap_extended_block_*.json"
+          --json prolate_axis_center_cap_combined_10_100.json
+      - name: Upload combined extended certificate
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: prolate-item6-center-cap-combined-10-100
+          path: |
+            CERTIFICATES/prolate/item6_axis/prolate_axis_center_cap_combined_10_100.json
+            CERTIFICATES/prolate/item6_axis/prolate_axis_center_cap_combined_10_100.json.sha256
