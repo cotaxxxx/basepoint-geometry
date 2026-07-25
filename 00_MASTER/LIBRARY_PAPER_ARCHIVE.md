@@ -1,6 +1,13 @@
 # Library Paper Archive
 
-ChatGPT File Library で確認した立体関連論文の整理台帳。体系番号と投稿順序は別管理とする。
+ChatGPT File Library で確認した立体関連論文および上流研究稿の整理台帳。体系番号と投稿順序は別管理とする。
+
+## 上流研究
+
+| 研究 | 論文・資料 | 状態 | GitHub 配置先 |
+|---|---|---|---|
+| 4-π研究 | `THEOREM_NOTE_JA.md` / `PRIOR_WORK.md` / `RESEARCH_PROGRAM.md` | 中心恒等式の解析的導出完了・先行研究調査継続中 | `00_4_MINUS_PI_RESEARCH/` |
+| 双対位相欠損研究 | `dual_phase_defect_functional_rectangles_v1.4.pdf` / `.tex` / `.md` | 数学監査反映済み・証明補強完全改訂版 | `00_DUAL_PHASE_DEFECT_RESEARCH/` |
 
 ## 各論 I　体系列
 
@@ -32,4 +39,4 @@ ChatGPT File Library で確認した立体関連論文の整理台帳。体系�
 
 ## 現在の制約
 
-このコミットでは配置先、論文情報、状態、原ファイル名を確定した。File Library の PDF・ZIP バイナリは GitHub Contents API から直接転送できないため、バイナリ本体は各フォルダの `README.md` に記した原名で後続取込する。
+完全ファイルを取得できたものから GitHub へ移管する。双対位相欠損研究 v1.4 は体系配置、証明状態、原ファイル名および SHA-256 を収録済みである。PDF・TeX・Markdown 本体は元成果物を改変せず、記録済みハッシュを照合して後続取込する。
