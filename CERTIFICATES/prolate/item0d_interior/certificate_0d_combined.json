@@ -1,0 +1,33 @@
+{
+ "stage": "0d",
+ "status": "CERTIFIED",
+ "certified_statement": "For every lambda in [1,206539/100000] and every r in [9/20,3/4], F(r,lambda) > 0 (equatorial radial derivative of the prolate functional). All leaves carry the direct inequality F>0; no induction needed. Coverage: exact-rational cell sweep, 0 uncovered.",
+ "leaf_collections": {
+  "driver_F": {
+   "n": 118,
+   "tolerance": "5e-2",
+   "file": "checkpoint_0d.json"
+  },
+  "mixed": {
+   "n": 80,
+   "file": "mixed_queue_0d.json"
+  },
+  "riemann_harvests": {
+   "n": 26,
+   "files": [
+    "riemann_0d.json",
+    "riemann_patch_0d.json"
+   ]
+  }
+ },
+ "provenance": {
+  "kernel_module_sha256": "ef065381abd802239f5fb107c3e87f64a12259deccbf98d6909bcd975da7157d",
+  "transfer_and_harvest_events": "checkpoint_0d.json events",
+  "github_head_at_emission": "b7c1582933532a358e3db63fcf6a2b5c4b7ca033"
+ },
+ "environment": {
+  "python": "3.12.3",
+  "python_flint": "0.9.0",
+  "flint": "3.6.0"
+ }
+}
