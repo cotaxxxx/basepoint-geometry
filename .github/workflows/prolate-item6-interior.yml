@@ -1,11 +1,6 @@
 name: Prolate item 6 compact interior certificate
 
 on:
-  pull_request:
-    paths:
-      - "CERTIFICATES/prolate/item6_axis/prolate_axis_interior_block_arb.py"
-      - "CERTIFICATES/prolate/item6_axis/prolate_axis_interior_combine.py"
-      - ".github/workflows/prolate-item6-interior.yml"
   workflow_dispatch:
 
 concurrency:
