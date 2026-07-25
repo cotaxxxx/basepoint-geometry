@@ -1,0 +1,61 @@
+name: Prolate item 5 Maxwell certificate
+
+on:
+  pull_request:
+    paths:
+      - "CERTIFICATES/prolate/item5_maxwell/**"
+      - ".github/workflows/prolate-item5-maxwell.yml"
+  workflow_dispatch:
+
+jobs:
+  certify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    defaults:
+      run:
+        working-directory: CERTIFICATES/prolate/item5_maxwell
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install exact certificate environment
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install python-flint==0.9.0 sympy==1.14.0
+
+      - name: Display versions
+        run: |
+          python --version
+          python - <<'PY'
+          import flint, sympy
+          print("python-flint", flint.__version__)
+          print("FLINT", flint.__FLINT_VERSION__)
+          print("SymPy", sympy.__version__)
+          PY
+
+      - name: Run exact symbolic audit
+        run: python prolate_maxwell_symbolic_audit.py
+
+      - name: Run Arb Maxwell certificate
+        run: |
+          python prolate_maxwell_arb_certificate.py \
+            --dps 70 \
+            --tolerance 1e-22 \
+            --depth-limit 28 \
+            --eval-limit 500000 \
+            --json prolate_maxwell_arb_certificate.json
+
+      - name: Upload certificate outputs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: prolate-item5-maxwell-certificate
+          path: |
+            CERTIFICATES/prolate/item5_maxwell/prolate_maxwell_symbolic_audit.json
+            CERTIFICATES/prolate/item5_maxwell/prolate_maxwell_arb_certificate.json
+            CERTIFICATES/prolate/item5_maxwell/prolate_maxwell_arb_certificate.json.sha256
+          if-no-files-found: warn
