@@ -55,6 +55,8 @@ jobs:
           prolate_axis_center_cap_arb.py
           prolate_axis_center_cap_block_arb.py
           prolate_axis_center_cap_combine.py
+          prolate_axis_interior_block_arb.py
+          prolate_axis_interior_combine.py
       - name: Upload audit outputs
         uses: actions/upload-artifact@v4
         with:
