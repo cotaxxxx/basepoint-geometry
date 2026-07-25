@@ -1,9 +1,6 @@
 name: Prolate item 6 pole-boundary anchor certificate
 
 on:
-  pull_request:
-    paths:
-      - ".github/workflows/prolate-item6-pole-boundary.yml"
   workflow_dispatch:
 
 concurrency:
