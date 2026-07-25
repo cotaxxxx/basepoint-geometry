@@ -57,16 +57,15 @@ def main() -> None:
 
     derivative_excludes_zero = bool(0 not in Dp)
     newton = mid - D_mid / Dp if derivative_excludes_zero else box
-    newton_intersection = newton.intersection(box)
+    newton_inside = bool(
+        derivative_excludes_zero
+        and newton.lower() > box.lower()
+        and newton.upper() < box.upper()
+    )
     stage_5b_conditions = {
         "D(3.435) real": bool(midpoint["D"]["imag_contains_zero"]),
         "D'(I5) excludes zero": derivative_excludes_zero,
-        "Newton image intersects I5": bool(newton_intersection is not None),
-        "Newton image strictly inside I5": bool(
-            derivative_excludes_zero
-            and newton.lower() > box.lower()
-            and newton.upper() < box.upper()
-        ),
+        "Newton image strictly inside I5": newton_inside,
     }
     stage_5b_certified = stage_5a_certified and all(stage_5b_conditions.values())
 
@@ -91,9 +90,6 @@ def main() -> None:
             "D_at_midpoint": midpoint["D"],
             "D_prime_on_stage_5a_interval": derivative["D_prime"],
             "interval_newton_image": arb_record(newton),
-            "interval_newton_intersection_with_I5": (
-                arb_record(newton_intersection) if newton_intersection is not None else None
-            ),
             "E_center_at_midpoint": midpoint["E_center"],
             "E_boundary_at_midpoint": midpoint["E_boundary"],
             "E_center_prime_on_interval": derivative["E_center_prime"],
