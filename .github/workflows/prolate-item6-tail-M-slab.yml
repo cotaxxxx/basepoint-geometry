@@ -1,9 +1,6 @@
 name: Prolate item 6 tail monotonicity slab certificate
 
 on:
-  pull_request:
-    paths:
-      - ".github/workflows/prolate-item6-tail-M-slab.yml"
   workflow_dispatch:
 
 concurrency:
