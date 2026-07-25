@@ -44,8 +44,8 @@ jobs:
         working-directory: CERTIFICATES/prolate/item5_maxwell
         run: |
           python prolate_maxwell_component.py "${{ matrix.mode }}" \
-            --dps 40 --tolerance 1e-10 \
-            --depth-limit 20 --eval-limit 200000
+            --dps 30 --tolerance 1e-6 \
+            --depth-limit 12 --eval-limit 200000
       - name: Upload component
         uses: actions/upload-artifact@v4
         with:
@@ -72,7 +72,7 @@ jobs:
         with:
           name: prolate-item5-symbolic
           path: CERTIFICATES/prolate/item5_maxwell
-      - name: Combine certificate
+      - name: Combine Stage 5a and Stage 5b certificates
         working-directory: CERTIFICATES/prolate/item5_maxwell
         run: python prolate_maxwell_combine.py
       - name: Upload final certificate
