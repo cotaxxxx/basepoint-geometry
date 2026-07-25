@@ -1,154 +1,169 @@
 # Item 6 status
 
+## Final target
+
+\[
+\Psi_\lambda(w)=A_\lambda'(w)>0
+\qquad(\lambda\ge1,\ 0<w<1).
+\]
+
+Item 6 as a whole remains **NOT CERTIFIED**.
+
+## Exact formulas and audits
+
 - exact 1D energy reduction: **FROZEN**
 - exact axial derivative formula: **FROZEN**
 - reflection/evenness audit: **PASSED**
-- independent high-precision scout: **POSITIVE ON ALL SAMPLED POINTS**
-- moving-layer quadrature split at `c=w`: **IMPLEMENTED / SYMBOLIC CHART AUDIT PASSED**
-- exact center Hessian kernel: **FROZEN / SYMBOLIC AUDIT PASSED**
-- sphere endpoint `Q_parallel(1)=4/3`: **EXACTLY VERIFIED**
-- compact center Hessian `Q_parallel(lambda)>0`, `1<=lambda<=10`: **CERTIFIED / ARCHIVED SUBCERTIFICATE**
-- extended center Hessian `Q_parallel(lambda)>0`, `1<=lambda<=100`: **CERTIFIED**
-- extended center certificate: **2117 LEAVES / 4135 EVALUATIONS / TERMINAL 0 / EXACT COVERAGE**
-- finite/tail junction: **FIXED AT `lambda_0=100`, `mu_0=1/100`**
-- finite center cap `Psi_lambda(w)>0`, `1<=lambda<=10`, `0<w<=1/20`: **CERTIFIED**
-- finite center-cap certificate: **9 BLOCKS / 6203 EVALUATIONS / 3106 LEAVES / TERMINAL 0 / EXACT ADJACENCY**
-- finite center-cap extension `10<=lambda<=100`: **13-BLOCK ARB RUN ACTIVE**
-- compact interior direct driver: **IMPLEMENTED WITH CORRELATION-PRESERVING MOVING-LAYER CHART**
-- compact interior first tranche `1<=lambda<=10`, `1/20<=w<=3/4`: **9-BLOCK ARB RUN ACTIVE**
-- pole-boundary symbolic reduction: **PASSED**
-- pole-boundary anchor `Phi(lambda)>0`, `1<=lambda<=100`: **CERTIFIED**
-- pole-boundary certificate: **16 BLOCKS / 48 EVALUATIONS / 32 LEAVES / TERMINAL 0 / EXACT ADJACENCY**
-- finite pole transfer `A_lambda''(w)<0`, `3/4<=w<=63/64`, `1<=lambda<=100`: **16-BLOCK ARB RUN ACTIVE**
-- final thin pole layer `63/64<w<1`: **BLOW-UP PROOF NOT YET CERTIFIED**
-- tail normalization by the positive factor `mu*w`: **CORRECTED**
+- moving-layer charts at `c=w`: **EXACTLY AUDITED**
+- center Hessian and finite center-cap kernels: **EXACTLY AUDITED**
+- pole-boundary reduction: **EXACTLY AUDITED**
+- pole second-boundary reduction with `d=2t^2`: **FORMULA FIXED / LATEST CI PENDING**
+- tail normalization by `mu*w`: **CORRECTED**
 - logarithmic coefficient `3*pi*sqrt(1-s)`: **EXACT OUTER/LAURENT AUDIT PASSED**
-- cancellation-regularized scaled tail kernel: **EXACT SYMBOLIC AUDIT PASSED**
-- proposed tail remainder target on `mu<=1/100`, `w<=3/4`: **`Bhat>-7` / NON-CERTIFIED REFERENCE SUPPORT**
-- first compact tail slab `1/200<=mu<=1/100`, `1/20<=w<=3/4`: **3-BLOCK ARB RUN ACTIVE**
-- uniform lower bound for the tail remainder down to `mu=0`: **NOT CERTIFIED**
-- dependency-DAG assembly: **NOT STARTED**
-- final theorem: **NOT CERTIFIED**
+- cancellation-regularized tail kernel: **EXACTLY AUDITED**
+- tail log derivative `M=-mu*partial_mu H`: **FACTORED EXACT AUDIT IMPLEMENTED / LATEST CI PENDING**
+- all current Arb drivers and combiners: **IN AUDIT COMPILE SET**
 
-## Certified compact center-Hessian statement
+## Certified nodes
+
+### `C-HESSIAN`
 
 \[
 Q_\parallel(\lambda)>0
 \qquad(1\le\lambda\le100).
 \]
 
-The `[1,100]` certificate has 4135 evaluated boxes, 2117 exact-rational leaves, zero terminal boxes, and exact contiguous coverage. The worst certified leaf is
+- 4135 evaluations
+- 2117 exact-rational leaves
+- terminal 0
+- exact coverage
+- worst rigorous lower endpoint:
+  `0.00020046868958001537682007201789783354707398439156606`
+
+Records: `CENTER_EXTENDED_CERTIFICATE.md`, `prolate_axis_center_extended_arb_summary.json`.
+
+### `C-1`
 
 \[
-\lambda\in[231/4,925/16]
+\Psi_\lambda(w)>0
+\qquad
+\left(1\le\lambda\le10,\ 0<w\le\frac1{20}\right).
 \]
 
-with
-
-\[
-Q_\parallel([231/4,925/16])
->
-0.00020046868958001537682007201789783354707398439156606.
-\]
-
-Integrity data are recorded in `CENTER_EXTENDED_CERTIFICATE.md` and `prolate_axis_center_extended_arb_summary.json`.
-
-## Certified finite center cap on `[1,10]`
-
-The validated blockwise computation proves
+Certified through
 
 \[
 A_\lambda''(v)>0
 \qquad
-\left(0\le v\le\frac1{20},\ 1\le\lambda\le10\right),
+\left(0\le v\le\frac1{20},\ 1\le\lambda\le10\right).
 \]
 
-hence
+- 9 exact adjacent lambda blocks
+- 6203 evaluations
+- 3106 leaves
+- terminal 0
+- worst rigorous lower endpoint:
+  `0.00012893655173892051421755471961636338423925380545573`
+
+Records: `CENTER_CAP_CERTIFICATE_1_10.md`, `prolate_axis_center_cap_1_10_summary.json`.
+
+### `P-BOUNDARY`
 
 \[
-\boxed{
-\Psi_\lambda(w)>0
-\qquad
-\left(1\le\lambda\le10,\ 0<w\le\frac1{20}\right).
-}
-\]
-
-The certificate has 6203 evaluated boxes, 3106 leaves, zero terminal boxes, and exact adjacency across nine lambda blocks. The worst lower endpoint is
-
-\[
-A_\lambda''(v)
->
-0.00012893655173892051421755471961636338423925380545573.
-\]
-
-Integrity data are recorded in `CENTER_CAP_CERTIFICATE_1_10.md` and `prolate_axis_center_cap_1_10_summary.json`.
-
-## Certified pole-boundary anchor on `[1,100]`
-
-Define
-
-\[
-\Phi(\lambda)=\lim_{w\to1^-}\Psi_\lambda(w).
-\]
-
-After factoring `d=1-c` and combining `N C_w` before taking the boundary limit, `Phi` is represented by a regular one-dimensional integral. Arb certification proves
-
-\[
-\boxed{
-\Phi(\lambda)>0
+\Phi(\lambda)
+=
+\lim_{w\to1^-}\Psi_\lambda(w)>0
 \qquad(1\le\lambda\le100).
-}
 \]
 
-The certificate has 16 exact adjacent blocks, 48 interval evaluations, 32 leaves, and zero terminal intervals. The worst lower endpoint occurs on `[1,9/8]` and is
+- 16 exact adjacent lambda blocks
+- 48 evaluations
+- 32 leaves
+- terminal 0
+- worst rigorous lower endpoint:
+  `0.0086853328086197058499308881284935494330221451543475`
+
+Records: `POLE_BOUNDARY_CERTIFICATE_1_100.md`, `prolate_axis_pole_boundary_1_100_summary.json`.
+
+## Active finite-domain proof
+
+The preferred finite decomposition is now
 
 \[
-\Phi([1,9/8])
->
-0.0086853328086197058499308881284935494330221451543475.
+0<w\le\frac12,
+\qquad
+\frac12\le w\le\frac34,
+\qquad
+\frac34\le w<1.
 \]
 
-Integrity data are recorded in `POLE_BOUNDARY_CERTIFICATE_1_100.md` and `prolate_axis_pole_boundary_1_100_summary.json`.
+### Center half
 
-## Active finite-domain assembly
+Target:
 
-The compact interior target is
+\[
+A_\lambda''(w)>0
+\qquad
+\left(0\le w\le\frac12,\ 1\le\lambda\le100\right).
+\]
+
+This implies `Psi>0` on `0<w<=1/2`. The 16-block run is active; block `[2,3]` is already certified with terminal 0.
+
+### Middle interior
+
+Target:
 
 \[
 \Psi_\lambda(w)>0
 \qquad
-\left(1\le\lambda\le10,\ \frac1{20}\le w\le\frac34\right).
+\left(\frac12\le w\le\frac34,\ 1\le\lambda\le100\right).
 \]
 
-The integral is split at `c=w` and mapped to
+The correlation-preserving direct driver and strict generic combiner are implemented. The heavy run is queued/active subject to runner capacity.
+
+The earlier direct tranche
 
 \[
-c=-1+(1+w)t,
+1\le\lambda\le10,
 \qquad
-c=w+(1-w)t,
+\frac1{20}\le w\le\frac34
 \]
 
-preserving the correlation among `c-w`, `1-wc`, and `R^2`.
+remains valid supporting work. Block `[1,2]` is certified with 7299 leaves and terminal 0.
 
-The pole transfer target is
+### Pole transfer
+
+The boundary anchor is certified. The active transfer target is
 
 \[
 A_\lambda''(w)<0
 \qquad
-\left(1\le\lambda\le100,\ \frac34\le w\le\frac{63}{64}\right).
+\left(\frac34\le w\le\frac{63}{64},\ 1\le\lambda\le100\right).
 \]
 
-Together with the certified boundary anchor this would imply
+Together with `P-BOUNDARY`, this gives
 
 \[
-\Psi_\lambda(w)\ge\Phi(\lambda)>0
+\Psi_\lambda(w)\ge\Phi(\lambda)>0.
 \]
 
-on that strip. The remaining final pole layer is `63/64<w<1`.
+Block `[2,3]` is already certified with 1479 leaves and terminal 0. The remaining final pole layer is
 
-## Tail interface
+\[
+\frac{63}{64}<w<1.
+\]
 
-The compact method stops at
+The boundary second-derivative anchor
+
+\[
+\Theta(\lambda)=\lim_{w\to1^-}A_\lambda''(w)<0
+\]
+
+has successful Arb blocks through the currently completed parameter ranges, but the final archived certificate must be rebound to the corrected positive-branch symbolic audit.
+
+## Tail proof
+
+The exact finite/tail junction is
 
 \[
 \lambda_0=100,
@@ -156,29 +171,66 @@ The compact method stops at
 \mu_0=1/100.
 \]
 
-For `lambda>=100`, use
+Define
 
 \[
-H(\mu,s)
-=
-\frac{\Psi_{1/\mu}(\sqrt{s})}{\mu\sqrt{s}}
-=
-3\pi\sqrt{1-s}\log(1/\mu)+\widehat B(\mu,s).
+H(\mu,w)=\frac{\Psi_{1/\mu}(w)}{\mu w}.
 \]
 
-The constant angle term `h(0)=pi^2/4` is removed exactly using `integral_{-1}^1 c dc=0`. The first compact tail slab currently under Arb evaluation is
+### Positive interface slab
+
+The first direct target is
 
 \[
+H(\mu,w)>0
+\qquad
+\left(
 \frac1{200}\le\mu\le\frac1{100},
+\frac1{20}\le w\le\frac34
+\right).
+\]
+
+Both the original moving split and the faster three-chart split
+
+\[
+[-1,w-4\mu],
+\quad[w-4\mu,w+4\mu],
+\quad[w+4\mu,1]
+\]
+
+are implemented. The direct Arb runs are active.
+
+### Log-parameter transfer
+
+Define
+
+\[
+M(\mu,w)=-\mu\,\partial_\mu H(\mu,w).
+\]
+
+If `M>0`, then `H` increases when `mu` decreases. A first three-block certificate has been started on
+
+\[
+\frac1{400}\le\mu\le\frac1{200},
 \qquad
 \frac1{20}\le w\le\frac34.
 \]
 
-No theorem for `mu->0` is claimed until the logarithmic remainder is bounded uniformly.
-
-Target:
+The intended unbounded-tail edge is
 
 \[
-A_\lambda'(w)>0
-\qquad(\lambda\ge1,\ 0<w<1).
+H(\mu,w)\ge H(1/200,w)>0
+\qquad(0<\mu\le1/200).
 \]
+
+A final blow-up estimate is still required to include `mu=0` and to certify the center and pole overlaps.
+
+## Exact assembly
+
+`DEPENDENCY_DAG.md` now records every proof node, transfer edge, exact interface, and acceptance condition. The full theorem may be marked `CERTIFIED` only after:
+
+1. all finite center, middle, and pole nodes are certified;
+2. the final thin pole layer is closed;
+3. the positive tail interface and log-parameter transfer are certified;
+4. center and pole tail overlaps are certified;
+5. all strict combiners report requested endpoints, exact adjacency, non-overlap, exact coverage, and terminal 0.
