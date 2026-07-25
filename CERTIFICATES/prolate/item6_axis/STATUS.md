@@ -13,11 +13,13 @@
 - finite/tail junction: **FIXED AT `lambda_0=100`, `mu_0=1/100`**
 - sampled center Hessian values through `lambda=1e6`: **POSITIVE / NON-CERTIFIED**
 - exact finite center-cap second-derivative kernel: **SYMBOLIC AUDIT IMPLEMENTED**
-- finite center-cap Arb driver on `0<=w<=1/20`, `1<=lambda<=10`: **PREVIOUS RUN CANCELLED / NO THEOREM CLAIMED**
+- previous monolithic finite center-cap run: **CANCELLED / NO THEOREM CLAIMED**
+- blockwise finite center-cap run on `0<=w<=1/20`, `1<=lambda<=10`: **9 EXACT BLOCKS / RUNNING**
+- blockwise assembly: **EXACT ADJACENCY + ZERO-TERMINAL COMBINER IMPLEMENTED**
 - tail normalization by the positive factor `mu*w`: **CORRECTED**
 - logarithmic coefficient `3*pi*sqrt(1-s)`: **EXACT OUTER/LAURENT AUDIT PASSED**
 - seven-point tail regression: **PASSED TO BETTER THAN FIVE SIGNIFICANT DIGITS / NON-CERTIFIED**
-- center-cap interval proof: **PARTIAL — HESSIAN `[1,100]` CERTIFIED; FINITE-`w` COVER OPEN**
+- center-cap interval proof: **PARTIAL — HESSIAN `[1,100]` CERTIFIED; FINITE-`w` BLOCK RUN ACTIVE**
 - compact interior interval cover: **NOT STARTED**
 - pole-cap interval proof: **NOT STARTED**
 - uniform lower bound for the tail remainder: **NOT STARTED**
@@ -56,7 +58,7 @@ Full integrity data are recorded in `CENTER_EXTENDED_CERTIFICATE.md` and `prolat
 
 ## Finite center-cap route
 
-The finite center-cap implication remains
+The finite center-cap implication is
 
 \[
 A_\lambda''(v)>0
@@ -72,7 +74,11 @@ which gives
 \quad(0<w\le1/20).
 \]
 
-The previous two-parameter Arb job was cancelled before certification. No finite-`w` theorem is claimed from it. The rerun should be split into smaller exact rational parameter blocks rather than one monolithic job.
+The current `[1,10]` certificate is split into nine exact adjacent lambda blocks:
+
+`[1,2]`, `[2,3]`, `[3,4]`, `[4,5]`, `[5,6]`, `[6,7]`, `[7,8]`, `[8,9]`, `[9,10]`.
+
+Each block preserves an exact recursive-bisection partition invariant. The final combiner accepts only if every block is certified, every terminal count is zero, the `v` intervals agree, and the lambda intervals are exactly adjacent.
 
 ## Tail interface
 
