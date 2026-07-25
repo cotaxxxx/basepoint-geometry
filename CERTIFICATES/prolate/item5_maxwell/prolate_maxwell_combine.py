@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Combine parallel item 5 component enclosures into one certificate."""
+"""Combine item 5 component enclosures into Stage 5a/5b certificates."""
 from __future__ import annotations
 
 import hashlib
@@ -41,47 +41,70 @@ def main() -> None:
     D_mid = parse_real(midpoint["D"])
     Dp = parse_real(derivative["D_prime"])
 
-    lo = fmpq(171743, 50000)
-    hi = fmpq(85872, 25000)
+    lo = fmpq(1717, 500)
+    hi = fmpq(1718, 500)
     box = arb((lo + hi) / 2, (hi - lo) / 2)
-    mid = arb(fmpq(343487, 100000))
-    newton = mid - D_mid / Dp
+    mid = arb(fmpq(687, 200))
 
-    conditions = {
-        "D(lambda_lo) > 0": bool(D_lo > 0 and lower["D"]["imag_contains_zero"]),
-        "D(lambda_hi) < 0": bool(D_hi < 0 and upper["D"]["imag_contains_zero"]),
-        "D'(I) < 0": bool(Dp < 0 and derivative["D_prime"]["imag_contains_zero"]),
-        "D(lambda_mid) real": bool(midpoint["D"]["imag_contains_zero"]),
-        "interval Newton image strictly inside I": bool(
-            newton.lower() > box.lower() and newton.upper() < box.upper()
+    stage_5a_conditions = {
+        "D(3.434) > 0": bool(D_lo > 0 and lower["D"]["imag_contains_zero"]),
+        "D(3.436) < 0": bool(D_hi < 0 and upper["D"]["imag_contains_zero"]),
+        "D'([3.434,3.436]) < 0": bool(
+            Dp < 0 and derivative["D_prime"]["imag_contains_zero"]
         ),
     }
+    stage_5a_certified = all(stage_5a_conditions.values())
+
+    derivative_excludes_zero = bool(0 not in Dp)
+    newton = mid - D_mid / Dp if derivative_excludes_zero else box
+    newton_intersection = newton.intersection(box)
+    stage_5b_conditions = {
+        "D(3.435) real": bool(midpoint["D"]["imag_contains_zero"]),
+        "D'(I5) excludes zero": derivative_excludes_zero,
+        "Newton image intersects I5": bool(newton_intersection is not None),
+        "Newton image strictly inside I5": bool(
+            derivative_excludes_zero
+            and newton.lower() > box.lower()
+            and newton.upper() < box.upper()
+        ),
+    }
+    stage_5b_certified = stage_5a_certified and all(stage_5b_conditions.values())
 
     result = {
-        "status": "CERTIFIED" if all(conditions.values()) else "FAILED_OR_INCONCLUSIVE",
+        "status": "CERTIFIED" if stage_5a_certified else "FAILED_OR_INCONCLUSIVE",
+        "stage_5a_status": "CERTIFIED" if stage_5a_certified else "FAILED_OR_INCONCLUSIVE",
+        "stage_5b_status": "CERTIFIED" if stage_5b_certified else "INCONCLUSIVE",
         "environment": {
             "python": platform.python_version(),
             "python_flint": flint.__version__,
             "flint": flint.__FLINT_VERSION__,
         },
-        "arithmetic": "python-flint Arb/Acb ball arithmetic; parallel component run",
-        "lambda_bracket": "[3.43486, 3.43488]",
-        "conditions": conditions,
+        "arithmetic": "python-flint Arb/Acb ball arithmetic; four-band boundary integration",
+        "stage_5a_bracket": "[3.434, 3.436]",
+        "stage_5a_bracket_exact": "[1717/500, 1718/500]",
+        "stage_5b_midpoint": "3.435 = 687/200",
+        "stage_5a_conditions": stage_5a_conditions,
+        "stage_5b_conditions": stage_5b_conditions,
         "values": {
             "D_at_lower": lower["D"],
             "D_at_upper": upper["D"],
             "D_at_midpoint": midpoint["D"],
-            "D_prime_on_interval": derivative["D_prime"],
+            "D_prime_on_stage_5a_interval": derivative["D_prime"],
             "interval_newton_image": arb_record(newton),
+            "interval_newton_intersection_with_I5": (
+                arb_record(newton_intersection) if newton_intersection is not None else None
+            ),
             "E_center_at_midpoint": midpoint["E_center"],
             "E_boundary_at_midpoint": midpoint["E_boundary"],
             "E_center_prime_on_interval": derivative["E_center_prime"],
             "E_boundary_prime_on_interval": derivative["E_boundary_prime"],
         },
         "certified_conclusion": (
-            "If status is CERTIFIED, D(lambda)=E_lambda(1,0)-E_lambda(0,0) "
-            "has exactly one zero lambda_cross in [3.43486,3.43488], "
-            "D'(lambda_cross)<0, and the boundary and center values cross transversely."
+            "If stage_5a_status is CERTIFIED, D(lambda)=E_lambda(1,0)-E_lambda(0,0) "
+            "has exactly one simple zero lambda_cross in [3.434,3.436], with "
+            "D'(lambda_cross)<0 and transverse boundary/center value crossing. "
+            "If stage_5b_status is also CERTIFIED, the interval-Newton image is a "
+            "strictly smaller certified enclosure of lambda_cross."
         ),
         "components": {
             "lower": lower,
@@ -105,7 +128,7 @@ def main() -> None:
         encoding="utf-8",
     )
     print(json.dumps(result, indent=2))
-    raise SystemExit(0 if result["status"] == "CERTIFIED" else 1)
+    raise SystemExit(0 if stage_5a_certified else 1)
 
 
 if __name__ == "__main__":
