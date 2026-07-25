@@ -102,6 +102,11 @@ jobs:
         run: >-
           python prolate_axis_center_cap_combine.py
           --pattern "center_half_outputs/prolate_axis_center_half_block_*.json"
+          --v-lo 0
+          --v-hi 1/2
+          --lambda-lo 1
+          --lambda-hi 100
+          --expected-blocks 16
           --json prolate_axis_center_half_combined_1_100.json
       - name: Upload combined center-half certificate
         if: always()
