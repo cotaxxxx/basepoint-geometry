@@ -1,9 +1,6 @@
 name: Prolate item 6 extended center-cap certificate
 
 on:
-  pull_request:
-    paths:
-      - ".github/workflows/prolate-item6-center-cap-extended.yml"
   workflow_dispatch:
 
 concurrency:
