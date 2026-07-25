@@ -15,7 +15,7 @@ def sha256_file(path: Path) -> str:
     return h.hexdigest()
 
 
-lam, w, c = sp.symbols("lam w c", positive=True, finite=True)
+lam, w, c, t = sp.symbols("lam w c t", positive=True, finite=True)
 
 N = 1 - w * c
 R2 = 1 - c**2 + lam**2 * (c - w)**2
@@ -26,18 +26,24 @@ Cw_claim = C * (-c / N + lam**2 * (c - w) / R2)
 
 # Reflection is checked using a separate unconstrained symbol substitution.
 reflection = sp.simplify(C.subs({c: -c, w: -w}) - C)
-weight_reflection = sp.simplify(
-    N.subs({c: -c, w: -w}) - N
-)
+weight_reflection = sp.simplify(N.subs({c: -c, w: -w}) - N)
+
+# Correlation-preserving moving-layer chart used by Region I.
+c_left = -1 + (1 + w) * t
+c_right = w + (1 - w) * t
 
 checks = {
     "C_w_formula": sp.simplify(sp.diff(C, w) - Cw_claim) == 0,
-    "R2_reflection": sp.simplify(
-        R2.subs({c: -c, w: -w}) - R2
-    ) == 0,
+    "R2_reflection": sp.simplify(R2.subs({c: -c, w: -w}) - R2) == 0,
     "S2_even_in_c": sp.simplify(S2.subs(c, -c) - S2) == 0,
     "C_reflection": reflection == 0,
     "cone_weight_reflection": weight_reflection == 0,
+    "left_chart_starts_at_minus_one": sp.simplify(c_left.subs(t, 0) + 1) == 0,
+    "left_chart_ends_at_moving_layer": sp.simplify(c_left.subs(t, 1) - w) == 0,
+    "right_chart_starts_at_moving_layer": sp.simplify(c_right.subs(t, 0) - w) == 0,
+    "right_chart_ends_at_one": sp.simplify(c_right.subs(t, 1) - 1) == 0,
+    "left_chart_jacobian": sp.simplify(sp.diff(c_left, t) - (1 + w)) == 0,
+    "right_chart_jacobian": sp.simplify(sp.diff(c_right, t) - (1 - w)) == 0,
 }
 
 result = {
@@ -49,10 +55,18 @@ result = {
         "S2": str(S2),
         "C": str(C),
         "C_w": str(Cw_claim),
+        "c_left": str(c_left),
+        "dc_left_dt": str(sp.diff(c_left, t)),
+        "c_right": str(c_right),
+        "dc_right_dt": str(sp.diff(c_right, t)),
     },
     "consequences": {
         "energy_even": "A_lambda(-w)=A_lambda(w), after c -> -c",
         "derivative_odd": "Psi_lambda(-w)=-Psi_lambda(w)",
+        "interior_chart": (
+            "[-1,w] and [w,1] are each mapped to t in [0,1] while preserving "
+            "the shared parameter w inside c-w, 1-wc, and R2"
+        ),
     },
     "script_sha256": sha256_file(Path(__file__)),
 }
