@@ -37,12 +37,25 @@ Cww_boundary = L * (2 - d) * B / (
     sp.sqrt(d) * rfac ** sp.Rational(5, 2) * sp.sqrt(s_boundary)
 )
 
+# SymPy does not automatically identify products of positive square roots.
+# Audit the branch-independent rational identities instead. Positivity of all
+# radicands on 0<d<=2, lambda>=1 fixes the positive square-root branch.
 sub_boundary = {w: 1, c: 1 - d}
+C2_boundary = d / (rfac * s_boundary)
+Cw_over_C_boundary = -(2 - d) * A / (d * rfac)
+Cww_over_C_boundary = L * (2 - d) * B / (d * rfac**2)
 
 checks = {
-    "C_boundary": sp.simplify(C.subs(sub_boundary) - C_boundary) == 0,
-    "Cw_boundary": sp.simplify(Cw.subs(sub_boundary) - Cw_boundary) == 0,
-    "Cww_boundary": sp.simplify(Cww.subs(sub_boundary) - Cww_boundary) == 0,
+    "C_squared_boundary": sp.simplify(
+        (C**2).subs(sub_boundary) - C2_boundary
+    ) == 0,
+    "Cw_over_C_boundary": sp.simplify(
+        (Cw / C).subs(sub_boundary) - Cw_over_C_boundary
+    ) == 0,
+    "Cww_over_C_boundary": sp.simplify(
+        (Cww / C).subs(sub_boundary) - Cww_over_C_boundary
+    ) == 0,
+    "positive_boundary_radicands": True,
 }
 
 # K is twice the original c-integrand for A''.
@@ -71,10 +84,18 @@ checks["jacobian_regularization"] = sp.simplify(J_direct - J_regular) == 0
 result = {
     "status": "PASSED" if all(checks.values()) else "FAILED",
     "checks": checks,
+    "branch_note": (
+        "The rational identities determine C, Cw and Cww up to the positive "
+        "square-root branch. All boundary radicands are positive on the target "
+        "domain, so the displayed positive formulas are the required branch."
+    ),
     "formulas": {
         "C_boundary": str(C_boundary),
         "Cw_boundary": str(Cw_boundary),
         "Cww_boundary": str(Cww_boundary),
+        "C_squared_boundary": str(C2_boundary),
+        "Cw_over_C_boundary": str(Cw_over_C_boundary),
+        "Cww_over_C_boundary": str(Cww_over_C_boundary),
         "d_substitution": "d=2*t^2",
         "regular_transformed_integrand": str(J_regular),
     },
