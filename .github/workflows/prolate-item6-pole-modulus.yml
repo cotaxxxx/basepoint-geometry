@@ -1,9 +1,6 @@
 name: Prolate item 6 pole modulus certificate
 
 on:
-  pull_request:
-    paths:
-      - ".github/workflows/prolate-item6-pole-modulus.yml"
   workflow_dispatch:
 
 concurrency:
