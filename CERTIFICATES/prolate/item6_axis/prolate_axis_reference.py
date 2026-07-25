@@ -51,19 +51,21 @@ def energy(lam: mp.mpf, w: mp.mpf) -> mp.mpf:
         h, _ = angle_data(cosine)
         return mp.mpf("0.5") * n * h
 
-    return mp.quad(kernel, [-1, 0, 1])
+    # c=w is the narrow large-aspect-ratio layer. Splitting there improves
+    # the non-certified quadrature without changing the exact formula.
+    return mp.quad(kernel, [-1, w, 1])
 
 
 def psi(lam: mp.mpf, w: mp.mpf) -> mp.mpf:
     def kernel(c: mp.mpf) -> mp.mpf:
         n, r2, _, cosine = geometry(lam, w, c)
         h, h1 = angle_data(cosine)
-        cosine_w = cosine * (
-            -c / n + lam * lam * (c - w) / r2
-        )
+        cosine_w = cosine * (-c / n + lam * lam * (c - w) / r2)
         return mp.mpf("0.5") * (-c * h + n * h1 * cosine_w)
 
-    return mp.quad(kernel, [-1, 0, 1])
+    # Split at the moving layer c=w. This is essential for reliable tail
+    # scouting when lambda is large; it remains non-interval quadrature.
+    return mp.quad(kernel, [-1, w, 1])
 
 
 def main() -> None:
@@ -104,18 +106,24 @@ def main() -> None:
 
     # Independent derivative consistency checks away from the endpoints.
     derivative_checks = []
-    for lam, w in [(mp.mpf("2"), mp.mpf("0.4")),
-                   (mp.mpf("4.7243834"), mp.mpf("0.6")),
-                   (mp.mpf("10"), mp.mpf("0.8"))]:
+    for lam, w in [
+        (mp.mpf("2"), mp.mpf("0.4")),
+        (mp.mpf("4.7243834"), mp.mpf("0.6")),
+        (mp.mpf("10"), mp.mpf("0.8")),
+    ]:
         direct = psi(lam, w)
         differentiated = mp.diff(lambda z: energy(lam, z), w)
-        derivative_checks.append({
-            "lambda": str(lam),
-            "w": str(w),
-            "psi_direct": mp.nstr(direct, args.dps),
-            "energy_derivative": mp.nstr(differentiated, args.dps),
-            "absolute_difference": mp.nstr(abs(direct - differentiated), args.dps),
-        })
+        derivative_checks.append(
+            {
+                "lambda": str(lam),
+                "w": str(w),
+                "psi_direct": mp.nstr(direct, args.dps),
+                "energy_derivative": mp.nstr(differentiated, args.dps),
+                "absolute_difference": mp.nstr(
+                    abs(direct - differentiated), args.dps
+                ),
+            }
+        )
 
     result = {
         "status": "NON_CERTIFIED_REFERENCE",
