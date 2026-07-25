@@ -47,6 +47,7 @@ jobs:
           prolate_axis_reference.py
           prolate_axis_center_reference.py
           prolate_axis_tail_reference.py
+          prolate_axis_center_compact_arb.py
       - name: Upload audit outputs
         uses: actions/upload-artifact@v4
         with:
@@ -58,3 +59,33 @@ jobs:
             CERTIFICATES/prolate/item6_axis/prolate_axis_reference.json
             CERTIFICATES/prolate/item6_axis/prolate_axis_center_reference.json
             CERTIFICATES/prolate/item6_axis/prolate_axis_tail_reference.json
+
+  center-compact-arb:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install validated arithmetic
+        run: python -m pip install python-flint==0.9.0
+      - name: Certify compact center Hessian interval
+        working-directory: CERTIFICATES/prolate/item6_axis
+        run: >-
+          python prolate_axis_center_compact_arb.py
+          --dps 50
+          --tolerance 1e-18
+          --integration-depth 22
+          --eval-limit 200000
+          --max-split-depth 10
+          --max-boxes 8192
+          --lambda-hi 10
+      - name: Upload compact center certificate
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: prolate-item6-center-compact-arb
+          path: |
+            CERTIFICATES/prolate/item6_axis/prolate_axis_center_compact_arb.json
+            CERTIFICATES/prolate/item6_axis/prolate_axis_center_compact_arb.json.sha256
