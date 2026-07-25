@@ -22,12 +22,18 @@ jobs:
       - name: Run exact symbolic audit
         working-directory: CERTIFICATES/prolate/item6_axis
         run: python prolate_axis_symbolic_audit.py
+      - name: Run exact center Hessian audit
+        working-directory: CERTIFICATES/prolate/item6_axis
+        run: python prolate_axis_center_symbolic_audit.py
       - name: Run exact tail coefficient audit
         working-directory: CERTIFICATES/prolate/item6_axis
         run: python prolate_axis_tail_symbolic_audit.py
       - name: Run non-certified reference scout
         working-directory: CERTIFICATES/prolate/item6_axis
         run: python prolate_axis_reference.py --dps 50
+      - name: Run non-certified center Hessian scout
+        working-directory: CERTIFICATES/prolate/item6_axis
+        run: python prolate_axis_center_reference.py --dps 40
       - name: Run non-certified tail regression audit
         working-directory: CERTIFICATES/prolate/item6_axis
         run: python prolate_axis_tail_reference.py --dps 40
@@ -36,8 +42,10 @@ jobs:
         run: >-
           python -m py_compile
           prolate_axis_symbolic_audit.py
+          prolate_axis_center_symbolic_audit.py
           prolate_axis_tail_symbolic_audit.py
           prolate_axis_reference.py
+          prolate_axis_center_reference.py
           prolate_axis_tail_reference.py
       - name: Upload audit outputs
         uses: actions/upload-artifact@v4
@@ -45,6 +53,8 @@ jobs:
           name: prolate-item6-axis-audit
           path: |
             CERTIFICATES/prolate/item6_axis/prolate_axis_symbolic_audit.json
+            CERTIFICATES/prolate/item6_axis/prolate_axis_center_symbolic_audit.json
             CERTIFICATES/prolate/item6_axis/prolate_axis_tail_symbolic_audit.json
             CERTIFICATES/prolate/item6_axis/prolate_axis_reference.json
+            CERTIFICATES/prolate/item6_axis/prolate_axis_center_reference.json
             CERTIFICATES/prolate/item6_axis/prolate_axis_tail_reference.json
