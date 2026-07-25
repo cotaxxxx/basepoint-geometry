@@ -21,7 +21,8 @@ The uploaded ZIP extracts successfully and contains seven files:
 - `runner_0b.py`
 - `rescue_v5_0b.py`
 
-All five Python files pass `python -m py_compile`.
+All five Python files pass `python -m py_compile`. `SHA256SUMS.txt` records
+the hash of the delivery ZIP and each extracted file.
 
 ## Leaf audit
 
@@ -59,11 +60,9 @@ The certificate proves `F_r<0` on the closed boundary band. Therefore, for
 right-anchor sign for `lambda<lambda_partial`; this yields `F>0` throughout
 the band and completes the equatorial exclusion when joined to 0c and 0d.
 
-## Reversible ZIP representation
+## Archive status
 
-The 34,025-byte uploaded ZIP is split into 6 raw byte ranges.
-Each range is Base64-encoded independently. `reconstruct_zip.py` decodes the
-parts in offset order and rejects the output unless both conditions hold:
-
-- reconstructed size = `34025`
-- reconstructed SHA-256 = `7a07e9c687ed59bec40103daf6b55c348f9c2cac5dcecf61bc7de64655b8d9be`
+The repository stores the compact machine certificate, this audit, and the
+complete SHA-256 manifest. The original 34,025-byte delivery ZIP remains the
+immutable source artifact identified by
+`7a07e9c687ed59bec40103daf6b55c348f9c2cac5dcecf61bc7de64655b8d9be`.
