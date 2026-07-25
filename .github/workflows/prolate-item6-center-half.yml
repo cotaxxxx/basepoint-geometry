@@ -1,9 +1,6 @@
 name: Prolate item 6 center-half convexity certificate
 
 on:
-  pull_request:
-    paths:
-      - ".github/workflows/prolate-item6-center-half.yml"
   workflow_dispatch:
 
 concurrency:
