@@ -107,6 +107,12 @@ jobs:
         run: >-
           python prolate_axis_interior_combine.py
           --root middle_outputs
+          --pattern "prolate_axis_middle_block_*.json"
+          --w-lo 1/2
+          --w-hi 3/4
+          --lambda-lo 1
+          --lambda-hi 100
+          --expected-blocks 16
           --json prolate_axis_middle_combined_1_100.json
       - name: Upload combined middle certificate
         if: always()
