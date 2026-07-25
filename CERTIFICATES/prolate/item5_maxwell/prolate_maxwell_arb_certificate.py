@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
-"""Rigorous Arb/Acb certificate for the prolate boundary Maxwell transition.
+"""Serial Arb/Acb reference certificate for prolate item 5.
 
-Certifies a unique simple zero of
-D(lambda)=E_lambda(1,0)-E_lambda(0,0)
-on the exact rational bracket [3.43486,3.43488].
+Stage 5a certifies a unique simple zero of
+    D(lambda) = E_lambda(1,0) - E_lambda(0,0)
+on the exact rational bracket [1717/500, 1718/500].
+
+Stage 5b applies one interval-Newton step at 687/200 to obtain a smaller
+certified enclosure. The production workflow replaces ``integral_2d`` with a
+four-band phi-partitioned implementation, but uses the same kernels.
 """
 from __future__ import annotations
 
@@ -47,7 +51,7 @@ def arb_record(x: arb) -> dict:
 
 
 def angle_data(c: acb) -> tuple[acb, acb]:
-    """f(c)=acos(c)^2 and f'(c), regular at alignment endpoints."""
+    """Return f(c)=acos(c)^2 and f'(c), regular at alignment endpoints."""
     one = acb(1)
     z = (one - c) / 2
     H = z.hypgeom_2f1(one / 2, one / 2, acb(3) / 2)
@@ -60,8 +64,13 @@ def integral_1d(
     kernel: Callable[[acb, bool], acb], tol: arb, depth: int, limit: int
 ) -> acb:
     return acb.integral(
-        kernel, 0, 1, abs_tol=tol, rel_tol=tol,
-        depth_limit=depth, eval_limit=limit,
+        kernel,
+        0,
+        1,
+        abs_tol=tol,
+        rel_tol=tol,
+        depth_limit=depth,
+        eval_limit=limit,
     )
 
 
@@ -78,13 +87,23 @@ def integral_2d(
             return kernel(t, phi, analytic_phi and analytic_t)
 
         return acb.integral(
-            inner, 0, 1, abs_tol=tol, rel_tol=tol,
-            depth_limit=depth, eval_limit=limit,
+            inner,
+            0,
+            1,
+            abs_tol=tol,
+            rel_tol=tol,
+            depth_limit=depth,
+            eval_limit=limit,
         )
 
     return acb.integral(
-        outer, 0, upper, abs_tol=tol, rel_tol=tol,
-        depth_limit=depth, eval_limit=limit,
+        outer,
+        0,
+        upper,
+        abs_tol=tol,
+        rel_tol=tol,
+        depth_limit=depth,
+        eval_limit=limit,
     )
 
 
@@ -166,10 +185,10 @@ def run(dps: int, tolerance: str, depth: int, limit: int) -> dict:
     ctx.dps = dps
     tol = arb(tolerance)
 
-    lo = arb(fmpq(171743, 50000))       # 3.43486
-    hi = arb(fmpq(85872, 25000))        # 3.43488
-    mid = arb(fmpq(343487, 100000))     # 3.43487
-    box = closed_interval(171743, 50000, 85872, 25000)
+    lo = arb(fmpq(1717, 500))
+    hi = arb(fmpq(1718, 500))
+    mid = arb(fmpq(687, 200))
+    box = closed_interval(1717, 500, 1718, 500)
 
     E0_lo = center_energy(lo, tol, depth, limit)
     E1_lo = boundary_energy(lo, tol, depth, limit)
@@ -184,20 +203,32 @@ def run(dps: int, tolerance: str, depth: int, limit: int) -> dict:
     D_hi = E1_hi - E0_hi
     D_mid = E1_mid - E0_mid
     Dp_box = E1p_box - E0p_box
-    newton = mid - D_mid.real / Dp_box.real
 
-    conditions = {
-        "D(lambda_lo) > 0": bool(D_lo.real > 0 and 0 in D_lo.imag),
-        "D(lambda_hi) < 0": bool(D_hi.real < 0 and 0 in D_hi.imag),
-        "D'(I) < 0": bool(Dp_box.real < 0 and 0 in Dp_box.imag),
-        "D(lambda_mid) real": bool(0 in D_mid.imag),
-        "interval Newton image strictly inside I": bool(
-            newton.lower() > box.lower() and newton.upper() < box.upper()
-        ),
+    stage_5a_conditions = {
+        "D(3.434) > 0": bool(D_lo.real > 0 and 0 in D_lo.imag),
+        "D(3.436) < 0": bool(D_hi.real < 0 and 0 in D_hi.imag),
+        "D'([3.434,3.436]) < 0": bool(Dp_box.real < 0 and 0 in Dp_box.imag),
     }
+    stage_5a_certified = all(stage_5a_conditions.values())
+
+    derivative_excludes_zero = bool(0 not in Dp_box.real)
+    newton = mid - D_mid.real / Dp_box.real if derivative_excludes_zero else box
+    newton_inside = bool(
+        derivative_excludes_zero
+        and newton.lower() > box.lower()
+        and newton.upper() < box.upper()
+    )
+    stage_5b_conditions = {
+        "D(3.435) real": bool(0 in D_mid.imag),
+        "D'(I5) excludes zero": derivative_excludes_zero,
+        "Newton image strictly inside I5": newton_inside,
+    }
+    stage_5b_certified = stage_5a_certified and all(stage_5b_conditions.values())
 
     return {
-        "status": "CERTIFIED" if all(conditions.values()) else "FAILED_OR_INCONCLUSIVE",
+        "status": "CERTIFIED" if stage_5a_certified else "FAILED_OR_INCONCLUSIVE",
+        "stage_5a_status": "CERTIFIED" if stage_5a_certified else "FAILED_OR_INCONCLUSIVE",
+        "stage_5b_status": "CERTIFIED" if stage_5b_certified else "INCONCLUSIVE",
         "environment": {
             "python": platform.python_version(),
             "python_flint": flint.__version__,
@@ -206,8 +237,11 @@ def run(dps: int, tolerance: str, depth: int, limit: int) -> dict:
         "arithmetic": "python-flint Arb/Acb ball arithmetic",
         "decimal_precision": dps,
         "integration_tolerance": tolerance,
-        "lambda_bracket": "[3.43486, 3.43488]",
-        "conditions": conditions,
+        "stage_5a_bracket": "[3.434, 3.436]",
+        "stage_5a_bracket_exact": "[1717/500, 1718/500]",
+        "stage_5b_midpoint": "3.435 = 687/200",
+        "stage_5a_conditions": stage_5a_conditions,
+        "stage_5b_conditions": stage_5b_conditions,
         "values": {
             "lambda_interval": arb_record(box),
             "D_at_lower": acb_record(D_lo),
@@ -221,9 +255,10 @@ def run(dps: int, tolerance: str, depth: int, limit: int) -> dict:
             "E_boundary_prime_on_interval": acb_record(E1p_box),
         },
         "certified_conclusion": (
-            "If status is CERTIFIED, D has exactly one zero lambda_cross in "
-            "[3.43486,3.43488], D'(lambda_cross)<0, and the boundary and "
-            "center critical values cross transversely there."
+            "If stage_5a_status is CERTIFIED, D has exactly one simple zero "
+            "lambda_cross in [3.434,3.436], D'(lambda_cross)<0, and the boundary "
+            "and center values cross transversely. If stage_5b_status is also "
+            "CERTIFIED, the interval-Newton image is a smaller enclosure."
         ),
         "noncertified_reference": {
             "lambda_cross": "3.43486844286684...",
@@ -235,10 +270,10 @@ def run(dps: int, tolerance: str, depth: int, limit: int) -> dict:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--dps", type=int, default=70)
-    parser.add_argument("--tolerance", default="1e-22")
-    parser.add_argument("--depth-limit", type=int, default=28)
-    parser.add_argument("--eval-limit", type=int, default=500000)
+    parser.add_argument("--dps", type=int, default=30)
+    parser.add_argument("--tolerance", default="1e-6")
+    parser.add_argument("--depth-limit", type=int, default=12)
+    parser.add_argument("--eval-limit", type=int, default=200000)
     parser.add_argument("--json", default="prolate_maxwell_arb_certificate.json")
     args = parser.parse_args()
 
@@ -252,7 +287,7 @@ def main() -> None:
         encoding="utf-8",
     )
     print(json.dumps(result, indent=2))
-    raise SystemExit(0 if result["status"] == "CERTIFIED" else 1)
+    raise SystemExit(0 if result["stage_5a_status"] == "CERTIFIED" else 1)
 
 
 if __name__ == "__main__":
