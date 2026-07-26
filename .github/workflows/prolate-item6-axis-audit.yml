@@ -47,6 +47,9 @@ jobs:
       - name: Run pole second-boundary symbolic audit
         working-directory: CERTIFICATES/prolate/item6_axis
         run: python prolate_axis_pole_second_boundary_symbolic_audit.py
+      - name: Run pole modulus symbolic audit
+        working-directory: CERTIFICATES/prolate/item6_axis
+        run: python prolate_axis_pole_modulus_symbolic_audit.py
       - name: Run non-certified reference scout
         working-directory: CERTIFICATES/prolate/item6_axis
         run: python prolate_axis_reference.py --dps 50
@@ -68,6 +71,7 @@ jobs:
           prolate_axis_tail_log_derivative_symbolic_audit.py
           prolate_axis_pole_boundary_symbolic_audit.py
           prolate_axis_pole_second_boundary_symbolic_audit.py
+          prolate_axis_pole_modulus_symbolic_audit.py
           prolate_axis_reference.py
           prolate_axis_center_reference.py
           prolate_axis_tail_reference.py
@@ -90,6 +94,7 @@ jobs:
           prolate_axis_pole_second_boundary_combine.py
           prolate_axis_second_rectangle_arb.py
           prolate_axis_grid_combine.py
+          prolate_axis_pole_modulus_arb.py
       - name: Upload audit outputs
         uses: actions/upload-artifact@v4
         with:
@@ -103,6 +108,7 @@ jobs:
             CERTIFICATES/prolate/item6_axis/prolate_axis_tail_log_derivative_symbolic_audit.json
             CERTIFICATES/prolate/item6_axis/prolate_axis_pole_boundary_symbolic_audit.json
             CERTIFICATES/prolate/item6_axis/prolate_axis_pole_second_boundary_symbolic_audit.json
+            CERTIFICATES/prolate/item6_axis/prolate_axis_pole_modulus_symbolic_audit.json
             CERTIFICATES/prolate/item6_axis/prolate_axis_reference.json
             CERTIFICATES/prolate/item6_axis/prolate_axis_center_reference.json
             CERTIFICATES/prolate/item6_axis/prolate_axis_tail_reference.json
