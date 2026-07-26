@@ -1,13 +1,6 @@
 name: Prolate item 6 finite grid certificate
 
 on:
-  pull_request:
-    paths:
-      - ".github/workflows/prolate-item6-finite-grid.yml"
-      - "CERTIFICATES/prolate/item6_axis/prolate_axis_signed_angle_symbolic_audit.py"
-      - "CERTIFICATES/prolate/item6_axis/prolate_axis_second_rectangle_arb.py"
-      - "CERTIFICATES/prolate/item6_axis/prolate_axis_interior_block_arb.py"
-      - "CERTIFICATES/prolate/item6_axis/prolate_axis_grid_combine.py"
   workflow_dispatch:
 
 concurrency:
