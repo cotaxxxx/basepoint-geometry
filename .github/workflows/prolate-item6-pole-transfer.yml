@@ -1,6 +1,9 @@
 name: Prolate item 6 retired pole-transfer workflow
 
 on:
+  pull_request:
+    paths:
+      - ".github/workflows/prolate-item6-pole-transfer.yml"
   push:
     branches:
       - agent/prolate-item6-axis
