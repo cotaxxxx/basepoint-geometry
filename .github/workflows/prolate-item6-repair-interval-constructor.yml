@@ -93,7 +93,10 @@ jobs:
 
           legacy = "return arb((lo + hi) / 2, (hi - lo) / 2)"
           legacy_files = []
+          audit_path = Path(__file__).resolve()
           for path in sorted(Path(__file__).parent.glob("*.py")):
+              if path.resolve() == audit_path:
+                  continue
               if legacy in path.read_text(encoding="utf-8"):
                   legacy_files.append(path.name)
           checks.append(not legacy_files)
