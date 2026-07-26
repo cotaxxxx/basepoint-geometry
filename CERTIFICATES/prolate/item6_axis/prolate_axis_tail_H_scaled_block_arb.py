@@ -1,14 +1,12 @@
 #!/usr/bin/env python3
-"""Paired, endpoint-capped compact-tail driver for H.
+"""Paired, cancellation-preserving compact-tail driver for H.
 
-The moving layer is resolved by an inner blow-up, a left/right paired outer
-piece, and the unmatched far-left piece.  The two outer components are split at
-``t=255/256``.  On the endpoint cap, the side tending to ``c=+/-1`` uses
-
-    hbar(C) = (h(C)-pi^2/4)/C,
-
-which is regular at ``C=1``.  The bulk and non-endpoint side retain the form
-regular at ``C=0``.  All cap joins are exact rational joins.
+The constant angle term is removed before interval evaluation.  The quotient
+``hbar=(h-h(0))/C`` is never evaluated: substituting ``C=mu*N/root`` into the
+complete density cancels it exactly.  In the inner blow-up, the common mu factor
+cancels as well.  Outer pieces retain exact rational endpoint caps only to keep
+Acb integration neighborhoods small; both bulk and caps use the same exact
+cancellation-preserving density.
 """
 from __future__ import annotations
 
@@ -25,12 +23,6 @@ LAYER_RADIUS = 4
 CAP_START_Q = fmpq(255, 256)
 EVALUATION_TRACE: list[dict] = []
 TRACE_LIMIT = 32
-
-
-def endpoint_hbar(cosine: acb) -> acb:
-    pi = acb(arb.pi())
-    h, _ = base.regular_angle_data(cosine)
-    return (h - pi * pi / 4) / cosine
 
 
 def mapped_integral(
@@ -63,6 +55,8 @@ def paired_tail_H(
     w = acb(w_value)
     mu2 = mu * mu
     radius = acb(LAYER_RADIUS)
+    pi = acb(arb.pi())
+    angle_floor = pi * pi / 4
 
     def outer_integrand(
         c: acb,
@@ -70,16 +64,18 @@ def paired_tail_H(
         rho2: acb,
         n: acb,
         analytic: bool,
-        endpoint_mode: bool = False,
     ) -> acb:
         p = difference * difference + mu2 * rho2
         s = rho2 + mu2 * c * c
         root = (p * s).sqrt(analytic=analytic)
         cosine = mu * n / root
-        _, h1 = base.regular_angle_data(cosine)
-        hbar = endpoint_hbar(cosine) if endpoint_mode else base.regular_hbar(cosine)
+        h, h1 = base.regular_angle_data(cosine)
         bracket = -c + n * difference / p
-        return n * (-c * hbar + h1 * bracket) / (2 * w * root)
+        regularized_square = h - angle_floor
+        return (
+            -c * regularized_square / (2 * mu * w)
+            + n * h1 * bracket / (2 * w * root)
+        )
 
     def inner_kernel(t: acb, analytic: bool) -> acb:
         q = 2 * radius * t - radius
@@ -90,63 +86,62 @@ def paired_tail_H(
         reduced_root = (reduced_p * s).sqrt(analytic=analytic)
         n = 1 - w * w - mu * w * q
         cosine = n / reduced_root
-        _, h1 = base.regular_angle_data(cosine)
-        hbar = base.regular_hbar(cosine)
+        h, h1 = base.regular_angle_data(cosine)
         bracket = -c + n * q / (mu * reduced_p)
-        return radius * n * (-c * hbar + h1 * bracket) / (
-            w * reduced_root
+        regularized_square = h - angle_floor
+        return (
+            -radius * c * regularized_square / w
+            + radius * n * h1 * bracket / (w * reduced_root)
         )
 
     pair_jacobian = 1 - w - radius * mu
 
-    def paired_kernel(t: acb, analytic: bool, endpoint_right: bool) -> acb:
+    def paired_kernel(t: acb, analytic: bool) -> acb:
         x = radius * mu + pair_jacobian * t
 
         c_left = w - x
         rho2_left = (1 - w + x) * (1 + w - x)
         n_left = 1 - w * w + w * x
         left = outer_integrand(
-            c_left, -x, rho2_left, n_left, analytic, False
+            c_left, -x, rho2_left, n_left, analytic
         )
 
         c_right = w + x
         rho2_right = pair_jacobian * (1 - t) * (1 + w + x)
         n_right = 1 - w * w - w * x
         right = outer_integrand(
-            c_right, x, rho2_right, n_right, analytic, endpoint_right
+            c_right, x, rho2_right, n_right, analytic
         )
 
         return pair_jacobian * (left + right)
 
-    def far_left_kernel(t: acb, analytic: bool, endpoint_mode: bool) -> acb:
+    def far_left_kernel(t: acb, analytic: bool) -> acb:
         x = 1 - w + 2 * w * t
         c = w - x
         rho2 = 4 * w * (1 - t) * (1 - w + w * t)
         n = 1 + w - 2 * w * w + 2 * w * w * t
-        return 2 * w * outer_integrand(
-            c, -x, rho2, n, analytic, endpoint_mode
-        )
+        return 2 * w * outer_integrand(c, -x, rho2, n, analytic)
 
     inner = base.rigorous_integral(
         inner_kernel, tolerance, integration_depth, eval_limit
     )
     paired_bulk = mapped_integral(
-        lambda t, analytic: paired_kernel(t, analytic, False),
+        paired_kernel,
         fmpq(0), CAP_START_Q,
         tolerance, integration_depth, eval_limit,
     )
     paired_cap = mapped_integral(
-        lambda t, analytic: paired_kernel(t, analytic, True),
+        paired_kernel,
         CAP_START_Q, fmpq(1),
         tolerance, integration_depth, eval_limit,
     )
     far_bulk = mapped_integral(
-        lambda t, analytic: far_left_kernel(t, analytic, False),
+        far_left_kernel,
         fmpq(0), CAP_START_Q,
         tolerance, integration_depth, eval_limit,
     )
     far_cap = mapped_integral(
-        lambda t, analytic: far_left_kernel(t, analytic, True),
+        far_left_kernel,
         CAP_START_Q, fmpq(1),
         tolerance, integration_depth, eval_limit,
     )
@@ -215,6 +210,10 @@ def main() -> None:
         w_hi,
     )
     result["evaluation_trace"] = EVALUATION_TRACE
+    result["representation"] = (
+        "complete-density cancellation of hbar quotient; paired outer charts; "
+        "exact rational endpoint caps"
+    )
     result["integration_chart"] = {
         "type": "paired moving-layer split with exact endpoint caps",
         "layer_radius": LAYER_RADIUS,
@@ -241,9 +240,6 @@ def main() -> None:
     result["paired_chart_audit_sha256"] = base.sha256_file(
         Path(__file__).with_name("prolate_axis_tail_paired_chart_symbolic_audit.py")
     )
-    result["hbar_endpoint_audit_sha256"] = base.sha256_file(
-        Path(__file__).with_name("prolate_axis_tail_hbar_endpoint_audit.json")
-    )
 
     output = Path(args.json)
     output.write_text(json.dumps(result, indent=2), encoding="utf-8")
@@ -252,7 +248,6 @@ def main() -> None:
         f"{result['base_driver_sha256']}  prolate_axis_tail_H_block_arb.py\n"
         f"{result['regularization_audit_sha256']}  prolate_axis_tail_regularized_symbolic_audit.py\n"
         f"{result['paired_chart_audit_sha256']}  prolate_axis_tail_paired_chart_symbolic_audit.py\n"
-        f"{result['hbar_endpoint_audit_sha256']}  prolate_axis_tail_hbar_endpoint_audit.json\n"
         f"{base.sha256_file(output)}  {output.name}\n",
         encoding="utf-8",
     )
