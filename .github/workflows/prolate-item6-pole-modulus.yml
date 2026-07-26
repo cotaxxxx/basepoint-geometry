@@ -14,6 +14,7 @@ on:
       - "CERTIFICATES/prolate/item6_axis/prolate_axis_pole_modulus_budgeted_arb.py"
       - "CERTIFICATES/prolate/item6_axis/prolate_axis_pole_modulus_budgeted_dfs_arb.py"
       - "CERTIFICATES/prolate/item6_axis/prolate_axis_pole_modulus_split_dfs_arb.py"
+      - "CERTIFICATES/prolate/item6_axis/prolate_axis_pole_modulus_split_relaxed_dfs_arb.py"
   workflow_dispatch:
 
 concurrency:
@@ -51,6 +52,7 @@ jobs:
           prolate_axis_pole_modulus_budgeted_arb.py
           prolate_axis_pole_modulus_budgeted_dfs_arb.py
           prolate_axis_pole_modulus_split_dfs_arb.py
+          prolate_axis_pole_modulus_split_relaxed_dfs_arb.py
       - name: Smoke-test endpoint and junction charts
         working-directory: CERTIFICATES/prolate/item6_axis
         shell: bash
@@ -60,7 +62,7 @@ jobs:
           from pathlib import Path
           from flint import arb, ctx, fmpq
           import prolate_axis_pole_modulus_endpoint_arb as endpoint
-          import prolate_axis_pole_modulus_split_dfs_arb as split
+          import prolate_axis_pole_modulus_split_relaxed_dfs_arb as relaxed
 
           ctx.dps = 50
 
@@ -80,12 +82,12 @@ jobs:
               ),
               (
                   "junction",
-                  split.signed_junction_density,
+                  relaxed.signed_junction_density,
                   (fmpq(1, 128), fmpq(639, 65536), fmpq(3, 8192), fmpq(7, 16384), fmpq(4435, 64), fmpq(2225, 32)),
               ),
               (
                   "junction",
-                  split.signed_junction_density,
+                  relaxed.signed_junction_density,
                   (fmpq(1, 128), fmpq(639, 65536), fmpq(1, 4096), fmpq(5, 16384), fmpq(2465, 32), fmpq(4945, 64)),
               ),
           ]
@@ -135,7 +137,7 @@ jobs:
         shell: bash
         run: |
           set +e
-          python prolate_axis_pole_modulus_split_dfs_arb.py \
+          python prolate_axis_pole_modulus_split_relaxed_dfs_arb.py \
             --dps 50 \
             --max-split-depth 24 \
             --max-boxes 3000000 \
