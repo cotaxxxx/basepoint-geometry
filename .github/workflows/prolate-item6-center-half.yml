@@ -1,9 +1,9 @@
 name: Prolate item 6 retired center-half workflow
 
 on:
-  pull_request:
-    paths:
-      - ".github/workflows/prolate-item6-center-half.yml"
+  push:
+    branches:
+      - agent/prolate-item6-axis
   workflow_dispatch:
 
 concurrency:
@@ -14,4 +14,4 @@ jobs:
   retired:
     runs-on: ubuntu-latest
     steps:
-      - run: echo "Retired: replaced by the signed-angle finite-grid certificate."
+      - run: echo "Retired; replaced by signed-angle finite-grid certificates."
