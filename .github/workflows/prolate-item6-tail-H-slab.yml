@@ -1,6 +1,9 @@
 name: Prolate item 6 retired compact tail-H workflow
 
 on:
+  pull_request:
+    paths:
+      - ".github/workflows/prolate-item6-tail-H-slab.yml"
   push:
     branches:
       - agent/prolate-item6-axis
