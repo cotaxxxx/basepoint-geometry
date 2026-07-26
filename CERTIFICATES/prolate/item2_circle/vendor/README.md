@@ -1,14 +1,28 @@
-# vendor/ — B-KERNEL 入庫指示
+# vendor/ — B-KERNEL status
 
-1. 元成果物 ZIP から `prolate_general_r_arb_kernels.py` と
-   `riemann_rescue.py` を無改変でここに置き、両ファイルの SHA-256 を
-   `SHA256SUMS_VENDOR.txt` に記録する。
-2. `prolate_circle_kernels.py` をここに新規作成し、次の4関数を公開する:
-   - `F_arb(r: arb, lam: arb) -> arb` — F の厳密包含（vendored 核を呼ぶ）
-   - `dFdr_arb(r: arb, lam: arb) -> arb` — ∂F/∂r の厳密包含。
-     元成果物に無い場合は F と同一の式から記号導出し、
-     symbolic audit（項目6形式）を添付する
-   - `F_float(r: float, lam: float) -> float` / `dFdr_float(...)` —
-     B-SEED 用の非厳密版（同じ式の float 評価）
-3. 監査: ランダム有理点で F_arb と F_float の整合、および
-   dFdr_arb と F_arb の差分商の包含整合を確認する smoke を付ける。
+The historical modules `prolate_general_r_arb_kernels.py` and
+`riemann_rescue.py` were not recovered. In particular, no file is represented
+as the historical kernel unless its SHA-256 equals
+`ef065381abd802239f5fb107c3e87f64a12259deccbf98d6909bcd975da7157d`.
+
+The current public interface is wired to a NEW clean-room implementation:
+
+- `prolate_circle_F_cleanroom.py`
+- `prolate_circle_kernels.py`
+- `SHA256SUMS_VENDOR.txt`
+
+The formula is derived from the manuscript's fixed-domain integral for
+`E_lambda(r)`. Equivalence to the historical item0d behavior is accepted only
+if the all-224-leaf Arb regression and the symbolic/difference-quotient audit
+both pass. The immutable audit package and its provenance are stored in
+`../cleanroom/`.
+
+The four public functions are:
+
+- `F_arb(r, lam)`
+- `dFdr_arb(r, lam)`
+- `F_float(r, lam)`
+- `dFdr_float(r, lam)`
+
+The old `[5,6]` B-TUBE pilot remains disabled as mathematical content; its
+branch interval must be repaired separately after B-KERNEL acceptance.
