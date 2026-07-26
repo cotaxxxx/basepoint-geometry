@@ -51,7 +51,7 @@ jobs:
           python prolate_axis_pole_modulus_budgeted_arb.py
           --dps 50
           --max-split-depth 24
-          --max-boxes 1500000
+          --max-boxes 3000000
           --inner-density-limit 100
           --outer-near-density-limit 144100
           --max-terminal-records 100
