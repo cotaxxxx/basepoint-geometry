@@ -14,13 +14,13 @@ verified before normalization:
   `a7d46705fbdf7b1702a8040ad81d4f13fc9a1cc89d25ccbf53bc1dcc832b40fd`
 - clean-room implementation SHA-256:
   `77e7a93c594ba66ac7d98df29ec3c03107b0c63962a5aa60f8503559082c10ac`
-- integrated auditor SHA-256:
-  `13a0155891c6aec61b8dc1657daa873139068451f4c0d3f162c79aa5ee8b55ae`
 
 The binary intake package is not used as a repository transport. Instead,
 `bkernel_cleanroom_audit.py` rebuilds the exact 224-leaf fixture directly from
 `item0d_certified.zip`. The generated fixture must have SHA-256
 `800b12fd6850f1b3dde0d22d3afa13918dbb46687f98ae99f5c8097083ed47eb`.
+The auditor's repository-byte SHA is captured by CI before execution and is
+frozen into the ledger after the first complete audit.
 
 CI obligations:
 
