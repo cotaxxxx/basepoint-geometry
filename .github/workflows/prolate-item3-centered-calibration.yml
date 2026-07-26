@@ -8,6 +8,10 @@ on:
       - ".github/workflows/prolate-item3-centered-calibration.yml"
   workflow_dispatch:
 
+concurrency:
+  group: prolate-item3-centered-calibration-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   calibration:
     runs-on: ubuntu-latest
@@ -20,7 +24,7 @@ jobs:
           python-version: "3.11"
 
       - name: Install dependencies
-        run: python -m pip install --upgrade pip python-flint sympy mpmath
+        run: python -m pip install --upgrade pip python-flint
 
       - name: Compile sources
         run: |
@@ -29,9 +33,24 @@ jobs:
             CERTIFICATES/prolate/item3_center_connection/audit/prolate_item3_frr_symbolic_audit.py \
             CERTIFICATES/prolate/item3_center_connection/calibration/prolate_item3_centered_calibration.py
 
-      - name: Run symbolic audit
-        working-directory: CERTIFICATES/prolate/item3_center_connection/audit
-        run: python prolate_item3_frr_symbolic_audit.py
+      - name: Verify accepted symbolic audit and provenance
+        run: |
+          python - <<'PY'
+          import hashlib, json
+          from pathlib import Path
+
+          base = Path("CERTIFICATES/prolate/item2_circle/vendor/prolate_circle_F_cleanroom.py")
+          frr = Path("CERTIFICATES/prolate/item3_center_connection/vendor/prolate_circle_Frr_ext.py")
+          audit = Path("CERTIFICATES/prolate/item3_center_connection/audit/item3_frr_symbolic_audit.json")
+
+          assert hashlib.sha256(base.read_bytes()).hexdigest() == "77e7a93c594ba66ac7d98df29ec3c03107b0c63962a5aa60f8503559082c10ac"
+          assert hashlib.sha256(frr.read_bytes()).hexdigest() == "223b7007c9e077b204612fb1ff669b4147a2aa0f9c941cc8e83e81efd975e757"
+          data = json.loads(audit.read_bytes())
+          assert data["verdict"] == "PASS"
+          assert all(value == "0" for value in data["symbolic_residuals"].values())
+          assert data["h3_endpoint_exact"] is True
+          print("F_rr audit and provenance PASS")
+          PY
 
       - name: Run resumable strict calibration
         working-directory: CERTIFICATES/prolate/item3_center_connection/calibration
