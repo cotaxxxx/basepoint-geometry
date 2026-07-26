@@ -1,6 +1,9 @@
-name: Prolate item 6 finite-domain grid certificate
+name: Prolate item 6 signed-angle finite grid certificate
 
 on:
+  pull_request:
+    paths:
+      - ".github/workflows/prolate-item6-finite-grid.yml"
   workflow_dispatch:
 
 concurrency:
@@ -24,27 +27,25 @@ jobs:
               (10, 20), (20, 40), (40, 70), (70, 100),
           ]
           regions = {
-              "center": [
-                  (0, 1, 1, 4),
-                  (1, 4, 3, 8),
-                  (3, 8, 1, 2),
-              ],
-              "middle": [
-                  (1, 2, 5, 8),
-                  (5, 8, 11, 16),
-                  (11, 16, 3, 4),
-              ],
-              "pole": [
-                  (3, 4, 13, 16),
-                  (13, 16, 7, 8),
-                  (7, 8, 15, 16),
-                  (15, 16, 31, 32),
-                  (31, 32, 63, 64),
-              ],
+              "center": {
+                  "quantity": "A_second",
+                  "bands": [(0, 1, 1, 4), (1, 4, 3, 8), (3, 8, 1, 2)],
+              },
+              "middle": {
+                  "quantity": "Psi",
+                  "bands": [(1, 2, 5, 8), (5, 8, 11, 16), (11, 16, 3, 4)],
+              },
+              "pole": {
+                  "quantity": "Psi",
+                  "bands": [
+                      (3, 4, 13, 16), (13, 16, 7, 8), (7, 8, 15, 16),
+                      (15, 16, 31, 32), (31, 32, 63, 64),
+                  ],
+              },
           }
           rows = []
-          for mode, w_bands in regions.items():
-              for w_lo_num, w_lo_den, w_hi_num, w_hi_den in w_bands:
+          for mode, spec in regions.items():
+              for w_lo_num, w_lo_den, w_hi_num, w_hi_den in spec["bands"]:
                   for lo, hi in lambda_bands:
                       rows.append({
                           "name": (
@@ -52,8 +53,7 @@ jobs:
                               f"{w_hi_num}_{w_hi_den}-l{lo}-{hi}"
                           ),
                           "mode": mode,
-                          "kind": "second" if mode == "center" else "interior",
-                          "sign": "positive",
+                          "quantity": spec["quantity"],
                           "w_lo_num": w_lo_num,
                           "w_lo_den": w_lo_den,
                           "w_hi_num": w_hi_num,
@@ -68,7 +68,7 @@ jobs:
     name: finite-${{ matrix.name }}
     needs: prepare
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       max-parallel: 6
@@ -78,56 +78,42 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
-      - name: Install validated arithmetic
-        run: python -m pip install python-flint==0.9.0
-      - name: Certify finite rectangle
+      - name: Install audit and validated arithmetic
+        run: python -m pip install sympy==1.14.0 python-flint==0.9.0
+      - name: Verify signed-angle reduction
         working-directory: CERTIFICATES/prolate/item6_axis
-        shell: bash
-        run: |
-          OUT="prolate_axis_finite_${{ matrix.mode }}_${{ matrix.name }}.json"
-          if [[ "${{ matrix.kind }}" == "second" ]]; then
-            python prolate_axis_second_rectangle_arb.py \
-              --dps 45 \
-              --tolerance 1e-16 \
-              --integration-depth 20 \
-              --eval-limit 100000 \
-              --max-split-depth 15 \
-              --max-boxes 16384 \
-              --w-lo-num ${{ matrix.w_lo_num }} \
-              --w-lo-den ${{ matrix.w_lo_den }} \
-              --w-hi-num ${{ matrix.w_hi_num }} \
-              --w-hi-den ${{ matrix.w_hi_den }} \
-              --lambda-lo ${{ matrix.lo }} \
-              --lambda-hi ${{ matrix.hi }} \
-              --sign ${{ matrix.sign }} \
-              --json "$OUT"
-          else
-            python prolate_axis_interior_block_arb.py \
-              --dps 45 \
-              --tolerance 1e-16 \
-              --integration-depth 20 \
-              --eval-limit 100000 \
-              --max-split-depth 15 \
-              --max-boxes 16384 \
-              --w-lo-num ${{ matrix.w_lo_num }} \
-              --w-lo-den ${{ matrix.w_lo_den }} \
-              --w-hi-num ${{ matrix.w_hi_num }} \
-              --w-hi-den ${{ matrix.w_hi_den }} \
-              --lambda-lo ${{ matrix.lo }} \
-              --lambda-hi ${{ matrix.hi }} \
-              --json "$OUT"
-          fi
-      - name: Upload finite rectangle certificate
+        run: python prolate_axis_signed_angle_symbolic_audit.py
+      - name: Certify signed-angle finite rectangle
+        working-directory: CERTIFICATES/prolate/item6_axis
+        run: >-
+          python prolate_axis_signed_rectangle_arb.py
+          --dps 45
+          --tolerance 1e-16
+          --integration-depth 20
+          --eval-limit 100000
+          --max-split-depth 14
+          --max-boxes 8192
+          --w-lo-num ${{ matrix.w_lo_num }}
+          --w-lo-den ${{ matrix.w_lo_den }}
+          --w-hi-num ${{ matrix.w_hi_num }}
+          --w-hi-den ${{ matrix.w_hi_den }}
+          --lambda-lo ${{ matrix.lo }}
+          --lambda-hi ${{ matrix.hi }}
+          --quantity ${{ matrix.quantity }}
+          --sign positive
+          --json prolate_axis_signed_finite_${{ matrix.mode }}_${{ matrix.name }}.json
+      - name: Upload signed-angle finite rectangle certificate
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: prolate-item6-finite-${{ matrix.mode }}-${{ matrix.name }}
+          name: prolate-item6-signed-finite-${{ matrix.mode }}-${{ matrix.name }}
           path: |
-            CERTIFICATES/prolate/item6_axis/prolate_axis_finite_${{ matrix.mode }}_${{ matrix.name }}.json
-            CERTIFICATES/prolate/item6_axis/prolate_axis_finite_${{ matrix.mode }}_${{ matrix.name }}.json.sha256
+            CERTIFICATES/prolate/item6_axis/prolate_axis_signed_angle_symbolic_audit.json
+            CERTIFICATES/prolate/item6_axis/prolate_axis_signed_finite_${{ matrix.mode }}_${{ matrix.name }}.json
+            CERTIFICATES/prolate/item6_axis/prolate_axis_signed_finite_${{ matrix.mode }}_${{ matrix.name }}.json.sha256
 
   combine:
-    name: finite-grid-combine
+    name: signed-finite-grid-combine
     needs: finite-block
     if: always()
     runs-on: ubuntu-latest
@@ -137,48 +123,48 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
-      - name: Download all finite rectangle certificates
+      - name: Download all signed-angle finite rectangle certificates
         uses: actions/download-artifact@v4
         with:
-          pattern: prolate-item6-finite-*
-          path: CERTIFICATES/prolate/item6_axis/finite_grid_outputs
+          pattern: prolate-item6-signed-finite-*
+          path: CERTIFICATES/prolate/item6_axis/signed_finite_outputs
           merge-multiple: true
       - name: Combine center half
         working-directory: CERTIFICATES/prolate/item6_axis
         run: >-
           python prolate_axis_grid_combine.py
-          --pattern "finite_grid_outputs/prolate_axis_finite_center_*.json"
+          --pattern "signed_finite_outputs/prolate_axis_signed_finite_center_*.json"
           --value-key A_second --sign positive
           --x-lo 0 --x-hi 1/2 --y-lo 1 --y-hi 100
           --expected-blocks 24
-          --json prolate_axis_finite_center_grid_1_100.json
+          --json prolate_axis_signed_center_grid_1_100.json
       - name: Combine middle interior
         working-directory: CERTIFICATES/prolate/item6_axis
         run: >-
           python prolate_axis_grid_combine.py
-          --pattern "finite_grid_outputs/prolate_axis_finite_middle_*.json"
+          --pattern "signed_finite_outputs/prolate_axis_signed_finite_middle_*.json"
           --value-key Psi --sign positive
           --x-lo 1/2 --x-hi 3/4 --y-lo 1 --y-hi 100
           --expected-blocks 24
-          --json prolate_axis_finite_middle_grid_1_100.json
-      - name: Combine direct pole interior
+          --json prolate_axis_signed_middle_grid_1_100.json
+      - name: Combine pole interior
         working-directory: CERTIFICATES/prolate/item6_axis
         run: >-
           python prolate_axis_grid_combine.py
-          --pattern "finite_grid_outputs/prolate_axis_finite_pole_*.json"
+          --pattern "signed_finite_outputs/prolate_axis_signed_finite_pole_*.json"
           --value-key Psi --sign positive
           --x-lo 3/4 --x-hi 63/64 --y-lo 1 --y-hi 100
           --expected-blocks 40
-          --json prolate_axis_finite_pole_grid_1_100.json
-      - name: Upload combined finite grid certificates
+          --json prolate_axis_signed_pole_grid_1_100.json
+      - name: Upload combined signed-angle finite certificates
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: prolate-item6-finite-grid-combined
+          name: prolate-item6-signed-finite-grid-combined
           path: |
-            CERTIFICATES/prolate/item6_axis/prolate_axis_finite_center_grid_1_100.json
-            CERTIFICATES/prolate/item6_axis/prolate_axis_finite_center_grid_1_100.json.sha256
-            CERTIFICATES/prolate/item6_axis/prolate_axis_finite_middle_grid_1_100.json
-            CERTIFICATES/prolate/item6_axis/prolate_axis_finite_middle_grid_1_100.json.sha256
-            CERTIFICATES/prolate/item6_axis/prolate_axis_finite_pole_grid_1_100.json
-            CERTIFICATES/prolate/item6_axis/prolate_axis_finite_pole_grid_1_100.json.sha256
+            CERTIFICATES/prolate/item6_axis/prolate_axis_signed_center_grid_1_100.json
+            CERTIFICATES/prolate/item6_axis/prolate_axis_signed_center_grid_1_100.json.sha256
+            CERTIFICATES/prolate/item6_axis/prolate_axis_signed_middle_grid_1_100.json
+            CERTIFICATES/prolate/item6_axis/prolate_axis_signed_middle_grid_1_100.json.sha256
+            CERTIFICATES/prolate/item6_axis/prolate_axis_signed_pole_grid_1_100.json
+            CERTIFICATES/prolate/item6_axis/prolate_axis_signed_pole_grid_1_100.json.sha256
