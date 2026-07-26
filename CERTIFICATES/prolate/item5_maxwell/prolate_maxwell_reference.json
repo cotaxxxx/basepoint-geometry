@@ -1,0 +1,39 @@
+{
+  "status": "NONCERTIFIED_REFERENCE",
+  "quantity": "D(lambda)=E_lambda(1,0)-E_lambda(0,0)",
+  "quadrature": "tensor Gauss-Legendre order 300",
+  "bracket": [
+    3.43486,
+    3.43488
+  ],
+  "lower": {
+    "lambda": 3.43486,
+    "E_center": 0.6428756130481577,
+    "E_boundary": 0.6428762205976967,
+    "D": 6.075495390112096e-07,
+    "E_center_prime": 0.24038029878962208,
+    "E_boundary_prime": 0.16842000758420964,
+    "D_prime": -0.07196029120541245
+  },
+  "upper": {
+    "lambda": 3.43488,
+    "E_center": 0.6428804206420566,
+    "E_boundary": 0.64287958899485,
+    "D": -8.316472066560721e-07,
+    "E_center_prime": 0.2403790911141493,
+    "E_boundary_prime": 0.1684197077407727,
+    "D_prime": -0.0719593833733766
+  },
+  "root": {
+    "lambda": 3.434868442866843,
+    "E_center": 0.6428776425448599,
+    "E_boundary": 0.6428776425448599,
+    "D": 0.0,
+    "E_center_prime": 0.24037978897684809,
+    "E_boundary_prime": 0.16841988100829738,
+    "D_prime": -0.0719599079685507
+  },
+  "lambda_cross": 3.434868442866843,
+  "interpretation": "D changes from positive to negative; boundary and center energies are equal at lambda_cross, with a numerically transverse crossing.",
+  "script_sha256": "d1838f934699787c0dbe75d36e3aabae683ec26c8669560d836140ce57aad334"
+}

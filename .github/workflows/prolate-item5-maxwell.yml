@@ -1,0 +1,87 @@
+name: Prolate item 5 Maxwell certificate
+
+on:
+  pull_request:
+    paths:
+      - "CERTIFICATES/prolate/item5_maxwell/**"
+      - ".github/workflows/prolate-item5-maxwell.yml"
+  workflow_dispatch:
+
+jobs:
+  symbolic:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: python -m pip install sympy==1.14.0
+      - name: Run exact symbolic audit
+        working-directory: CERTIFICATES/prolate/item5_maxwell
+        run: python prolate_maxwell_symbolic_audit.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: prolate-item5-symbolic
+          path: CERTIFICATES/prolate/item5_maxwell/prolate_maxwell_symbolic_audit.json
+
+  components:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [lower, upper, midpoint, derivative]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install Arb environment
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install python-flint==0.9.0
+      - name: Run ${{ matrix.mode }} component
+        working-directory: CERTIFICATES/prolate/item5_maxwell
+        run: |
+          python prolate_maxwell_component.py "${{ matrix.mode }}" \
+            --dps 30 --tolerance 1e-6 \
+            --depth-limit 12 --eval-limit 200000
+      - name: Upload component
+        uses: actions/upload-artifact@v4
+        with:
+          name: prolate-item5-component-${{ matrix.mode }}
+          path: CERTIFICATES/prolate/item5_maxwell/component_${{ matrix.mode }}.json
+
+  combine:
+    needs: [symbolic, components]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: python -m pip install python-flint==0.9.0
+      - name: Download component enclosures
+        uses: actions/download-artifact@v4
+        with:
+          pattern: prolate-item5-component-*
+          path: CERTIFICATES/prolate/item5_maxwell/components
+          merge-multiple: true
+      - name: Download symbolic audit
+        uses: actions/download-artifact@v4
+        with:
+          name: prolate-item5-symbolic
+          path: CERTIFICATES/prolate/item5_maxwell
+      - name: Combine Stage 5a and Stage 5b certificates
+        working-directory: CERTIFICATES/prolate/item5_maxwell
+        run: python prolate_maxwell_combine.py
+      - name: Upload final certificate
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: prolate-item5-maxwell-certificate
+          path: |
+            CERTIFICATES/prolate/item5_maxwell/prolate_maxwell_symbolic_audit.json
+            CERTIFICATES/prolate/item5_maxwell/prolate_maxwell_arb_certificate.json
+            CERTIFICATES/prolate/item5_maxwell/prolate_maxwell_arb_certificate.json.sha256
+          if-no-files-found: warn
