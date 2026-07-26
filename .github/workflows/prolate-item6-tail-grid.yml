@@ -1,20 +1,11 @@
 name: Prolate item 6 regularized tail interface grid
 
 on:
-  pull_request:
-    paths:
-      - ".github/workflows/prolate-item6-tail-grid.yml"
-      - "CERTIFICATES/prolate/item6_axis/prolate_axis_signed_tail_symbolic_audit.py"
-      - "CERTIFICATES/prolate/item6_axis/prolate_axis_tail_regularized_symbolic_audit.py"
-      - "CERTIFICATES/prolate/item6_axis/prolate_axis_tail_log_derivative_symbolic_audit.py"
-      - "CERTIFICATES/prolate/item6_axis/prolate_axis_tail_H_scaled_block_arb.py"
-      - "CERTIFICATES/prolate/item6_axis/prolate_axis_tail_M_scaled_block_arb.py"
-      - "CERTIFICATES/prolate/item6_axis/prolate_axis_grid_combine.py"
   workflow_dispatch:
 
 concurrency:
   group: prolate-item6-tail-grid-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   prepare:
