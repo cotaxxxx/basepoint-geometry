@@ -1,15 +1,14 @@
 #!/usr/bin/env python3
-"""Paired, correlation-preserving compact-tail driver for H.
+"""Paired, endpoint-capped compact-tail driver for H.
 
-For ``mu=1/lambda`` the moving layer is resolved by three exact pieces:
+The moving layer is resolved by an inner blow-up, a left/right paired outer
+piece, and the unmatched far-left piece.  The two outer components are split at
+``t=255/256``.  On the endpoint cap, the side tending to ``c=+/-1`` uses
 
-* an inner blow-up ``c=w+mu*q``, ``q in [-4,4]``;
-* a paired outer piece at the common distance ``x=|c-w|``;
-* the unmatched far-left piece.
+    hbar(C) = (h(C)-pi^2/4)/C,
 
-Pairing the two outer sides inside one integration kernel exposes the dominant
-left/right cancellation before parameter subdivision.  Every occurrence of
-``c-w`` and every vanishing endpoint factor is substituted in factored form.
+which is regular at ``C=1``.  The bulk and non-endpoint side retain the form
+regular at ``C=0``.  All cap joins are exact rational joins.
 """
 from __future__ import annotations
 
@@ -23,8 +22,34 @@ import prolate_axis_tail_H_block_arb as base
 
 
 LAYER_RADIUS = 4
+CAP_START_Q = fmpq(255, 256)
 EVALUATION_TRACE: list[dict] = []
 TRACE_LIMIT = 32
+
+
+def endpoint_hbar(cosine: acb) -> acb:
+    pi = acb(arb.pi())
+    h, _ = base.regular_angle_data(cosine)
+    return (h - pi * pi / 4) / cosine
+
+
+def mapped_integral(
+    kernel,
+    lo: fmpq,
+    hi: fmpq,
+    tolerance: arb,
+    integration_depth: int,
+    eval_limit: int,
+) -> acb:
+    lo_c = acb(arb(str(lo)))
+    jacobian = acb(arb(str(hi - lo)))
+
+    def mapped(t: acb, analytic: bool) -> acb:
+        return jacobian * kernel(lo_c + jacobian * t, analytic)
+
+    return base.rigorous_integral(
+        mapped, tolerance, integration_depth, eval_limit
+    )
 
 
 def paired_tail_H(
@@ -45,13 +70,14 @@ def paired_tail_H(
         rho2: acb,
         n: acb,
         analytic: bool,
+        endpoint_mode: bool = False,
     ) -> acb:
         p = difference * difference + mu2 * rho2
         s = rho2 + mu2 * c * c
         root = (p * s).sqrt(analytic=analytic)
         cosine = mu * n / root
         _, h1 = base.regular_angle_data(cosine)
-        hbar = base.regular_hbar(cosine)
+        hbar = endpoint_hbar(cosine) if endpoint_mode else base.regular_hbar(cosine)
         bracket = -c + n * difference / p
         return n * (-c * hbar + h1 * bracket) / (2 * w * root)
 
@@ -67,57 +93,76 @@ def paired_tail_H(
         _, h1 = base.regular_angle_data(cosine)
         hbar = base.regular_hbar(cosine)
         bracket = -c + n * q / (mu * reduced_p)
-        # dc=8*mu*dt and sqrt(P*S)=mu*sqrt(reduced_p*S).
         return radius * n * (-c * hbar + h1 * bracket) / (
             w * reduced_root
         )
 
     pair_jacobian = 1 - w - radius * mu
 
-    def paired_outer_kernel(t: acb, analytic: bool) -> acb:
+    def paired_kernel(t: acb, analytic: bool, endpoint_right: bool) -> acb:
         x = radius * mu + pair_jacobian * t
 
         c_left = w - x
         rho2_left = (1 - w + x) * (1 + w - x)
         n_left = 1 - w * w + w * x
         left = outer_integrand(
-            c_left, -x, rho2_left, n_left, analytic
+            c_left, -x, rho2_left, n_left, analytic, False
         )
 
         c_right = w + x
-        # 1-c_right vanishes exactly at t=1.
         rho2_right = pair_jacobian * (1 - t) * (1 + w + x)
         n_right = 1 - w * w - w * x
         right = outer_integrand(
-            c_right, x, rho2_right, n_right, analytic
+            c_right, x, rho2_right, n_right, analytic, endpoint_right
         )
 
         return pair_jacobian * (left + right)
 
-    def far_left_kernel(t: acb, analytic: bool) -> acb:
-        # x runs from 1-w to 1+w; c=w-x runs from 2w-1 to -1.
+    def far_left_kernel(t: acb, analytic: bool, endpoint_mode: bool) -> acb:
         x = 1 - w + 2 * w * t
         c = w - x
         rho2 = 4 * w * (1 - t) * (1 - w + w * t)
         n = 1 + w - 2 * w * w + 2 * w * w * t
-        return 2 * w * outer_integrand(c, -x, rho2, n, analytic)
+        return 2 * w * outer_integrand(
+            c, -x, rho2, n, analytic, endpoint_mode
+        )
 
     inner = base.rigorous_integral(
         inner_kernel, tolerance, integration_depth, eval_limit
     )
-    paired = base.rigorous_integral(
-        paired_outer_kernel, tolerance, integration_depth, eval_limit
+    paired_bulk = mapped_integral(
+        lambda t, analytic: paired_kernel(t, analytic, False),
+        fmpq(0), CAP_START_Q,
+        tolerance, integration_depth, eval_limit,
     )
-    far_left = base.rigorous_integral(
-        far_left_kernel, tolerance, integration_depth, eval_limit
+    paired_cap = mapped_integral(
+        lambda t, analytic: paired_kernel(t, analytic, True),
+        CAP_START_Q, fmpq(1),
+        tolerance, integration_depth, eval_limit,
     )
+    far_bulk = mapped_integral(
+        lambda t, analytic: far_left_kernel(t, analytic, False),
+        fmpq(0), CAP_START_Q,
+        tolerance, integration_depth, eval_limit,
+    )
+    far_cap = mapped_integral(
+        lambda t, analytic: far_left_kernel(t, analytic, True),
+        CAP_START_Q, fmpq(1),
+        tolerance, integration_depth, eval_limit,
+    )
+    paired = paired_bulk + paired_cap
+    far_left = far_bulk + far_cap
     total = inner + paired + far_left
     if len(EVALUATION_TRACE) < TRACE_LIMIT:
         EVALUATION_TRACE.append({
             "mu_ball": str(mu_value),
             "w_ball": str(w_value),
             "inner": base.acb_record(inner),
+            "paired_bulk": base.acb_record(paired_bulk),
+            "paired_cap": base.acb_record(paired_cap),
             "paired_outer": base.acb_record(paired),
+            "far_bulk": base.acb_record(far_bulk),
+            "far_cap": base.acb_record(far_cap),
             "far_left": base.acb_record(far_left),
             "total": base.acb_record(total),
         })
@@ -171,15 +216,19 @@ def main() -> None:
     )
     result["evaluation_trace"] = EVALUATION_TRACE
     result["integration_chart"] = {
-        "type": "paired correlation-preserving moving-layer split",
+        "type": "paired moving-layer split with exact endpoint caps",
         "layer_radius": LAYER_RADIUS,
+        "cap_start": str(CAP_START_Q),
         "pieces": [
             "inner: c=w+mu*(8t-4)",
-            "paired: c=w+-x, x=4mu+(1-w-4mu)t",
-            "far-left: x=1-w+2wt, c=w-x",
+            "paired bulk: t in [0,255/256]",
+            "paired endpoint cap: t in [255/256,1]",
+            "far-left bulk: t in [0,255/256]",
+            "far-left endpoint cap: t in [255/256,1]",
         ],
         "exact_partition": (
-            "inner plus paired outer plus unmatched far-left equals [-1,1]"
+            "inner plus paired outer plus unmatched far-left equals [-1,1]; "
+            "each outer parameter interval is split at the exact rational 255/256"
         ),
     }
     result["script_sha256"] = base.sha256_file(Path(__file__))
@@ -192,6 +241,9 @@ def main() -> None:
     result["paired_chart_audit_sha256"] = base.sha256_file(
         Path(__file__).with_name("prolate_axis_tail_paired_chart_symbolic_audit.py")
     )
+    result["hbar_endpoint_audit_sha256"] = base.sha256_file(
+        Path(__file__).with_name("prolate_axis_tail_hbar_endpoint_audit.json")
+    )
 
     output = Path(args.json)
     output.write_text(json.dumps(result, indent=2), encoding="utf-8")
@@ -200,6 +252,7 @@ def main() -> None:
         f"{result['base_driver_sha256']}  prolate_axis_tail_H_block_arb.py\n"
         f"{result['regularization_audit_sha256']}  prolate_axis_tail_regularized_symbolic_audit.py\n"
         f"{result['paired_chart_audit_sha256']}  prolate_axis_tail_paired_chart_symbolic_audit.py\n"
+        f"{result['hbar_endpoint_audit_sha256']}  prolate_axis_tail_hbar_endpoint_audit.json\n"
         f"{base.sha256_file(output)}  {output.name}\n",
         encoding="utf-8",
     )
