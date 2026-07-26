@@ -21,55 +21,40 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Inspect certified item0d archive structure
+      - name: Extract certified item0d metadata
         run: |
+          rm -rf item0d-diagnostic
+          mkdir item0d-diagnostic
           python - <<'PY'
           import hashlib, json, zipfile
           from pathlib import Path
 
-          path = Path("CERTIFICATES/prolate/item0d_interior/item0d_certified.zip")
-          raw = path.read_bytes()
-          print("ZIP_SHA256", hashlib.sha256(raw).hexdigest())
-
-          def shape(x, depth=0):
-              if depth >= 4:
-                  return type(x).__name__
-              if isinstance(x, dict):
-                  return {k: shape(v, depth + 1) for k, v in x.items()}
-              if isinstance(x, list):
-                  return {"type": "list", "length": len(x),
-                          "first": shape(x[0], depth + 1) if x else None,
-                          "last": shape(x[-1], depth + 1) if x else None}
-              return type(x).__name__
-
-          with zipfile.ZipFile(path) as z:
-              print("NAMES_BEGIN")
+          source = Path("CERTIFICATES/prolate/item0d_interior/item0d_certified.zip")
+          out = Path("item0d-diagnostic")
+          raw = source.read_bytes()
+          archive = {
+              "zip_sha256": hashlib.sha256(raw).hexdigest(),
+              "members": [],
+          }
+          with zipfile.ZipFile(source) as z:
               for name in z.namelist():
-                  info = z.getinfo(name)
-                  print(name, info.file_size,
-                        hashlib.sha256(z.read(name)).hexdigest())
-              print("NAMES_END")
-              for name in z.namelist():
-                  if not name.endswith(".json"):
-                      continue
-                  obj = json.loads(z.read(name))
-                  print("JSON_SHAPE_BEGIN", name)
-                  print(json.dumps(shape(obj), ensure_ascii=False,
-                                   sort_keys=True))
-                  if isinstance(obj, dict):
-                      for key, value in obj.items():
-                          if isinstance(value, list) and value:
-                              print("LIST_SAMPLE", name, key,
-                                    json.dumps(value[0], ensure_ascii=False,
-                                               sort_keys=True))
-                              print("LIST_LAST", name, key,
-                                    json.dumps(value[-1], ensure_ascii=False,
-                                               sort_keys=True))
-                  if name == "certificate_0d_combined.json":
-                      print("COMBINED_CONTENT",
-                            json.dumps(obj, ensure_ascii=False, sort_keys=True))
-                  print("JSON_SHAPE_END", name)
+                  data = z.read(name)
+                  archive["members"].append({
+                      "name": name,
+                      "size": len(data),
+                      "sha256": hashlib.sha256(data).hexdigest(),
+                  })
+                  if name.endswith(".json"):
+                      target = out / name
+                      target.parent.mkdir(parents=True, exist_ok=True)
+                      target.write_bytes(data)
+          (out / "archive_manifest.json").write_text(
+              json.dumps(archive, ensure_ascii=False, indent=2),
+              encoding="utf-8",
+          )
           PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: prolate-item0d-diagnostic-json
+          path: item0d-diagnostic
+          if-no-files-found: error
