@@ -44,7 +44,7 @@ jobs:
           python prolate_axis_pole_modulus_outer_far_preflight_arb.py
           --dps 50
           --max-split-depth 24
-          --max-boxes 500000
+          --max-boxes 1000000
           --inner-density-limit 100
           --outer-near-density-limit 144100
           --max-terminal-records 100
