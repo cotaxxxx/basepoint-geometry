@@ -1,0 +1,48 @@
+name: Audit item 2 SELFTEST artifact
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/workflows/audit-item2-selftest-pr.yml
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Query SELFTEST run and artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SELFTEST_SHA: a74c1955c6e3e7a7725485306fbac3cae32124e6
+        shell: bash
+        run: |
+          set -u
+          mkdir -p /tmp/item2-audit
+          gh api --method GET "/repos/$REPO/actions/runs" \
+            -f head_sha="$SELFTEST_SHA" -f per_page=20 \
+            > /tmp/item2-audit/runs.json
+          run_id="$(jq -r '[.workflow_runs[] | select(.name == "Prolate item 2 isolated SELFTEST")] | sort_by(.created_at) | last | .id // empty' /tmp/item2-audit/runs.json)"
+          echo "$run_id" > /tmp/item2-audit/run_id.txt
+          if [ -n "$run_id" ]; then
+            gh api "/repos/$REPO/actions/runs/$run_id" > /tmp/item2-audit/run.json
+            gh api "/repos/$REPO/actions/runs/$run_id/artifacts" > /tmp/item2-audit/artifacts.json
+            artifact_id="$(jq -r '.artifacts[] | select(.name == "item2-tube-pilot-SELFTEST") | .id' /tmp/item2-audit/artifacts.json | head -1)"
+            echo "$artifact_id" > /tmp/item2-audit/artifact_id.txt
+            if [ -n "$artifact_id" ]; then
+              gh api "/repos/$REPO/actions/artifacts/$artifact_id/zip" > /tmp/item2-audit/selftest.zip
+              mkdir -p /tmp/item2-audit/extracted
+              unzip -q /tmp/item2-audit/selftest.zip -d /tmp/item2-audit/extracted
+            fi
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: item2-selftest-audit-data
+          path: /tmp/item2-audit
