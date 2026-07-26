@@ -15,23 +15,15 @@ verified before normalization:
 - clean-room implementation SHA-256:
   `77e7a93c594ba66ac7d98df29ec3c03107b0c63962a5aa60f8503559082c10ac`
 
-The binary intake package is not used as a repository transport. Instead,
-`bkernel_cleanroom_audit.py` rebuilds the exact 224-leaf fixture directly from
-`item0d_certified.zip`. The generated fixture must have SHA-256
-`800b12fd6850f1b3dde0d22d3afa13918dbb46687f98ae99f5c8097083ed47eb`.
-The auditor's repository-byte SHA is captured by CI before execution and is
-frozen into the ledger after the first complete audit.
+The binary intake package is not used as repository transport. The integrated
+auditor rebuilds the exact 224-leaf fixture directly from the certified item0d
+ZIP; the result must have SHA-256 `800b12fd…`.
 
-CI obligations:
+CI first performs provenance, symbolic, independent midpoint, checker-control,
+and interface checks. It then runs the rigorous regression as 16 disjoint
+14-leaf shards and the interval difference-quotient audit as four 6-point
+shards. The final aggregation requires the exact global leaf index set
+`{0,...,223}`, 24 successful difference-quotient points, and zero failures.
 
-1. source ZIP and combined-certificate hashes match;
-2. fixture rebuild gives exactly 224 leaves and the fixed fixture hash;
-3. pure SymPy identities are exactly zero;
-4. independent 224-leaf Gauss--Legendre midpoint reference passes;
-5. positive and negative checker controls pass;
-6. rigorous Arb regression passes all 224 leaves;
-7. the symbolic and interval difference-quotient audit passes;
-8. the four-function public B-KERNEL interface is available.
-
-The old `[5,6]` circle-tube pilot is deliberately outside this audit. Its
-branch range must be repaired in the subsequent B-SEED/B-TUBE work.
+The old `[5,6]` circle-tube pilot is outside this audit. Its branch range must
+be repaired in the subsequent B-SEED/B-TUBE work.
