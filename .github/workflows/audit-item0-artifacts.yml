@@ -11,26 +11,29 @@ permissions:
   contents: read
   actions: read
 
+concurrency:
+  group: item0-artifact-audit-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   audit:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - name: Inventory and scan candidate artifacts
+      - name: Inventory candidate artifacts
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p item0_artifact_audit/downloads
+          mkdir -p item0_artifact_audit
           gh api --paginate "/repos/$REPO/actions/artifacts?per_page=100" \
             --jq '.artifacts[] | @json' > item0_artifact_audit/artifacts.jsonl
           python - <<'PY'
-          import hashlib, json, os, re, subprocess, zipfile
-          from datetime import datetime, timezone
-          from io import BytesIO
+          import json, re
+          from datetime import datetime
           from pathlib import Path
 
           root = Path('item0_artifact_audit')
@@ -42,65 +45,18 @@ jobs:
               created = datetime.fromisoformat(rec['created_at'].replace('Z', '+00:00'))
               if start <= created < end:
                   dated.append(rec)
-          root.joinpath('inventory_2026-07-23_26.json').write_text(json.dumps(dated, indent=2), encoding='utf-8')
-
-          name_re = re.compile(r'(item[-_ ]?0|item0|0d|harvest|checkpoint|prolate|certif)', re.I)
+          name_re = re.compile(r'(item[-_ ]?0|item0|0d|harvest|checkpoint|prolate|certif|kernel|interior)', re.I)
           candidates = [r for r in dated if name_re.search(r.get('name','')) and not r.get('expired', False)]
-          target_names = {'prolate_general_r_arb_kernels.py', 'riemann_rescue.py'}
-          target_hash = 'ef065381abd802239f5fb107c3e87f64a12259deccbf98d6909bcd975da7157d'
-          findings = []
-          errors = []
-
-          def scan_zip(data: bytes, label: str, depth: int = 0):
-              if depth > 3:
-                  return
-              try:
-                  with zipfile.ZipFile(BytesIO(data)) as zf:
-                      for info in zf.infolist():
-                          if info.is_dir():
-                              continue
-                          payload = zf.read(info)
-                          digest = hashlib.sha256(payload).hexdigest()
-                          base = Path(info.filename).name
-                          if base in target_names or digest == target_hash:
-                              findings.append({
-                                  'container': label,
-                                  'path': info.filename,
-                                  'size': len(payload),
-                                  'sha256': digest,
-                                  'name_match': base in target_names,
-                                  'hash_match': digest == target_hash,
-                              })
-                          if info.filename.lower().endswith('.zip'):
-                              scan_zip(payload, f'{label}!{info.filename}', depth + 1)
-              except Exception as exc:
-                  errors.append({'container': label, 'error': f'{type(exc).__name__}: {exc}'})
-
-          for rec in candidates:
-              aid = rec['id']
-              out = root / 'downloads' / f'{aid}.zip'
-              try:
-                  subprocess.run(['gh', 'api', f'/repos/{os.environ["REPO"]}/actions/artifacts/{aid}/zip'], check=True, stdout=out.open('wb'))
-                  scan_zip(out.read_bytes(), f"artifact:{aid}:{rec.get('name','')}")
-              except Exception as exc:
-                  errors.append({'artifact_id': aid, 'name': rec.get('name',''), 'error': f'{type(exc).__name__}: {exc}'})
-
           report = {
               'date_window_utc': [start.isoformat(), end.isoformat()],
               'total_artifacts_in_window': len(dated),
-              'candidate_artifacts_scanned': len(candidates),
-              'candidate_inventory': [{k:r.get(k) for k in ('id','name','size_in_bytes','created_at','expired')} for r in candidates],
-              'target_names': sorted(target_names),
-              'target_sha256': target_hash,
-              'findings': findings,
-              'errors': errors,
+              'candidate_count': len(candidates),
+              'candidates': [{k:r.get(k) for k in ('id','name','size_in_bytes','created_at','expired')} for r in candidates],
           }
-          root.joinpath('scan_report.json').write_text(json.dumps(report, indent=2), encoding='utf-8')
+          root.joinpath('inventory.json').write_text(json.dumps(report, indent=2), encoding='utf-8')
           print(json.dumps(report, indent=2))
           PY
       - uses: actions/upload-artifact@v4
         with:
-          name: item0-artifact-audit
-          path: |
-            item0_artifact_audit/inventory_2026-07-23_26.json
-            item0_artifact_audit/scan_report.json
+          name: item0-artifact-inventory
+          path: item0_artifact_audit/inventory.json
