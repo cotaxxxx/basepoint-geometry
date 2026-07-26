@@ -62,14 +62,21 @@ def compact_density(
     c: acb,
     radial: acb,
     s2: acb,
-    gbar: acb,
-    gvbar: acb,
+    L: acb,
+    q: acb,
 ) -> acb:
+    """Cancellation-safe transformed A'' density.
+
+    The products C*gbar and C*(gbar^2+g_vbar) are assembled before
+    interval evaluation, eliminating the removable 1/n factors at the
+    projective corner n=0.
+    """
     root = (radial * s2).sqrt()
     cosine = n / root
     h1, h2 = regular_angle_derivatives(cosine)
-    cwbar = cosine * gbar
-    cwwbar = cosine * (gbar * gbar + gvbar)
+    a = L * q / radial
+    cwbar = (-c + n * a) / root
+    cwwbar = (-2 * c * a + n * (3 * a * a - L / radial)) / root
     return (
         -2 * c * h1 * cwbar
         + n * (h2 * cwbar * cwbar + h1 * cwwbar)
@@ -88,13 +95,8 @@ def inner_density(u_value: arb, y_value: arb, lambda_value: arb) -> acb:
     n = 1 + u * y2 - u2 * y2
     radial = y2 * (2 - u2 * y2) + L * (1 - u * y2) ** 2
     s2 = d * (2 - d) + (1 - d) ** 2 / L
-    gbar = -c / n + L * (1 - u * y2) / radial
-    gvbar = (
-        -c * c / (n * n)
-        - L / radial
-        + 2 * L * L * (1 - u * y2) ** 2 / (radial * radial)
-    )
-    return u * y * compact_density(n, c, radial, s2, gbar, gvbar)
+    q = 1 - u * y2
+    return u * y * compact_density(n, c, radial, s2, L, q)
 
 
 def outer_density_from_zr(z: acb, r: acb, lambda_value: arb) -> acb:
@@ -105,13 +107,8 @@ def outer_density_from_zr(z: acb, r: acb, lambda_value: arb) -> acb:
     n = r + z - r * z2
     radial = 2 - z2 + L * (r - z) ** 2
     s2 = z2 * (2 - z2) + (1 - z2) ** 2 / L
-    gbar = -c / n + L * (r - z) / radial
-    gvbar = (
-        -c * c / (n * n)
-        - L / radial
-        + 2 * L * L * (r - z) ** 2 / (radial * radial)
-    )
-    return compact_density(n, c, radial, s2, gbar, gvbar)
+    q = r - z
+    return compact_density(n, c, radial, s2, L, q)
 
 
 def outer_near_density(t_value: arb, r_value: arb, lambda_value: arb) -> acb:
