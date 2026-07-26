@@ -1,0 +1,145 @@
+name: Patch item 6 tail hbar endpoint
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/prolate-item6-patch-hbar-endpoint.yml"
+  push:
+    branches:
+      - agent/prolate-item6-axis
+    paths:
+      - ".github/workflows/prolate-item6-patch-hbar-endpoint.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/prolate-item6-axis
+          fetch-depth: 1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Replace endpoint-singular hbar representation
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("CERTIFICATES/prolate/item6_axis/prolate_axis_tail_H_block_arb.py")
+          text = path.read_text(encoding="utf-8")
+          old = '''def regular_hbar(cosine: acb) -> acb:
+              """Return (h(c)-pi^2/4)/c, regular at c=0."""
+              one = acb(1)
+              asin_ratio = (cosine * cosine).hypgeom_2f1(
+                  one / 2, one / 2, acb(3) / 2
+              )
+              pi = acb(arb.pi())
+              return -pi * asin_ratio + cosine * asin_ratio * asin_ratio
+          '''
+          new = '''def regular_hbar(cosine: acb) -> acb:
+              """Return (h(c)-pi^2/4)/c, regular at c=0 and c=1.
+
+              The asin(c)/c hypergeometric form is regular at c=0 but its
+              direct 2F1 evaluation is non-finite at the endpoint c=1.  When
+              the cosine ball excludes zero, use the endpoint-regular h(c)
+              representation instead.  Only balls containing zero use the
+              center series.
+              """
+              pi = acb(arb.pi())
+              if 0 not in cosine:
+                  h, _ = regular_angle_data(cosine)
+                  return (h - pi * pi / 4) / cosine
+              one = acb(1)
+              asin_ratio = (cosine * cosine).hypgeom_2f1(
+                  one / 2, one / 2, acb(3) / 2
+              )
+              return -pi * asin_ratio + cosine * asin_ratio * asin_ratio
+          '''
+          import textwrap
+          old = textwrap.dedent(old)
+          new = textwrap.dedent(new)
+          if old not in text:
+              raise SystemExit("expected regular_hbar source not found")
+          path.write_text(text.replace(old, new, 1), encoding="utf-8")
+          PY
+      - name: Audit center and endpoint representations
+        shell: bash
+        run: |
+          python -m pip install python-flint==0.9.0
+          cd CERTIFICATES/prolate/item6_axis
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from flint import acb, arb, ctx
+          import prolate_axis_tail_H_block_arb as base
+
+          ctx.dps = 60
+          pi = acb(arb.pi())
+
+          def finite(value):
+              return not any(x in str(value).lower() for x in ("nan", "inf", "unknown"))
+
+          points = ["0", "0.25", "0.5", "0.75", "0.99", "1"]
+          records = []
+          checks = []
+          for text in points:
+              c = acb(arb(text))
+              value = base.regular_hbar(c)
+              rec = {"cosine": text, "value": str(value), "finite": finite(value)}
+              records.append(rec)
+              checks.append(rec["finite"])
+          endpoint = base.regular_hbar(acb(1))
+          endpoint_target = -pi * pi / 4
+          checks.append(bool(endpoint.overlaps(endpoint_target)))
+
+          near_endpoint = acb(arb("0.995", "0.005"))
+          near_value = base.regular_hbar(near_endpoint)
+          records.append({
+              "cosine": "[0.99,1]",
+              "value": str(near_value),
+              "finite": finite(near_value),
+          })
+          checks.append(finite(near_value))
+
+          # Away from c=1, compare against the center-regular identity.
+          one = acb(1)
+          for text in ("0.25", "0.5", "0.75"):
+              c = acb(arb(text))
+              asin_ratio = (c * c).hypgeom_2f1(one / 2, one / 2, acb(3) / 2)
+              old_value = -pi * asin_ratio + c * asin_ratio * asin_ratio
+              new_value = base.regular_hbar(c)
+              checks.append(bool(old_value.overlaps(new_value)))
+
+          result = {
+              "status": "PASSED" if all(checks) else "FAILED",
+              "records": records,
+              "endpoint_target": str(endpoint_target),
+              "endpoint_value": str(endpoint),
+              "conclusion": (
+                  "The piecewise hbar evaluation is finite at c=0, c=1 and a "
+                  "ball touching c=1, and agrees with the center-series identity "
+                  "away from the endpoint."
+              ),
+          }
+          Path("prolate_axis_tail_hbar_endpoint_audit.json").write_text(
+              json.dumps(result, indent=2), encoding="utf-8"
+          )
+          print(json.dumps(result, indent=2))
+          raise SystemExit(0 if result["status"] == "PASSED" else 1)
+          PY
+      - name: Commit endpoint-regular hbar and audit
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add CERTIFICATES/prolate/item6_axis/prolate_axis_tail_H_block_arb.py
+          git add CERTIFICATES/prolate/item6_axis/prolate_axis_tail_hbar_endpoint_audit.json
+          git commit -m "Regularize tail H kernel at cosine endpoint"
+          git push origin HEAD:agent/prolate-item6-axis
