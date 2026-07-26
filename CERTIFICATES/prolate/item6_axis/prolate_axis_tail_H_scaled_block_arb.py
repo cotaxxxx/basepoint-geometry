@@ -1,13 +1,20 @@
 #!/usr/bin/env python3
-"""Mu-scaled three-chart driver for compact tail H blocks.
+"""Correlation-preserving three-chart driver for compact tail H blocks.
 
 This wrapper reuses the exact block-cover logic from
-``prolate_axis_tail_H_block_arb.py`` but replaces the moving-layer integral by
-three correlated charts with inner width ``8*mu``:
+``prolate_axis_tail_H_block_arb.py``.  The moving layer is split as
 
     [-1, w-4mu], [w-4mu, w+4mu], [w+4mu, 1].
 
-The central chart resolves the layer c-w=O(mu) explicitly.
+Unlike the former implementation, each chart substitutes ``c-w`` and the
+endpoint factors before Arb evaluation.  In particular, on the inner chart
+
+    c = w + mu*q,  q = 8*t-4,
+    c-w = mu*q,
+    P = mu^2 * (q^2 + 1-c^2),
+
+are evaluated in these exact factored forms.  This prevents interval loss from
+forming ``c`` and then subtracting the same interval ``w`` again.
 """
 from __future__ import annotations
 
@@ -35,36 +42,63 @@ def scaled_tail_H_three_chart(
     mu2 = mu * mu
     radius = acb(LAYER_RADIUS)
 
-    def base_integrand(c: acb, analytic: bool) -> acb:
-        c2 = c * c
-        n = 1 - w * c
-        delta = c - w
-        p = delta * delta + mu2 * (1 - c2)
-        s = 1 - c2 + mu2 * c2
+    def outer_integrand(
+        c: acb,
+        difference: acb,
+        rho2: acb,
+        n: acb,
+        analytic: bool,
+    ) -> acb:
+        p = difference * difference + mu2 * rho2
+        s = rho2 + mu2 * c * c
         root = (p * s).sqrt(analytic=analytic)
         cosine = mu * n / root
         _, h1 = base.regular_angle_data(cosine)
         hbar = base.regular_hbar(cosine)
-        bracket = -c + n * delta / p
+        bracket = -c + n * difference / p
         return n * (-c * hbar + h1 * bracket) / (2 * w * root)
 
-    left_edge = w - radius * mu
-    right_edge = w + radius * mu
+    left_jacobian = 1 + w - radius * mu
+    right_jacobian = 1 - w - radius * mu
 
     def left_kernel(t: acb, analytic: bool) -> acb:
-        jacobian = 1 + left_edge
-        c = -1 + jacobian * t
-        return jacobian * base_integrand(c, analytic)
+        # c=-1+Jt.  Keep c-w=-(1+w)(1-t)-4mu*t exact.
+        c = -1 + left_jacobian * t
+        difference = -(1 + w) * (1 - t) - radius * mu * t
+        rho2 = left_jacobian * t * (2 - left_jacobian * t)
+        n = 1 + w - w * left_jacobian * t
+        return left_jacobian * outer_integrand(
+            c, difference, rho2, n, analytic
+        )
 
     def inner_kernel(t: acb, analytic: bool) -> acb:
-        jacobian = 2 * radius * mu
-        c = left_edge + jacobian * t
-        return jacobian * base_integrand(c, analytic)
+        # c=w+mu*q, q in [-4,4].  Cancel the common mu factor in P and sqrt(P).
+        q = 2 * radius * t - radius
+        c = w + mu * q
+        difference = mu * q
+        rho2 = 1 - c * c
+        reduced_p = q * q + rho2
+        s = rho2 + mu2 * c * c
+        reduced_root = (reduced_p * s).sqrt(analytic=analytic)
+        n = 1 - w * w - mu * w * q
+        cosine = n / reduced_root
+        _, h1 = base.regular_angle_data(cosine)
+        hbar = base.regular_hbar(cosine)
+        bracket = -c + n * q / (mu * reduced_p)
+        # dc=2*radius*mu*dt and sqrt(P*S)=mu*sqrt(reduced_p*S).
+        return radius * n * (-c * hbar + h1 * bracket) / (
+            w * reduced_root
+        )
 
     def right_kernel(t: acb, analytic: bool) -> acb:
-        jacobian = 1 - right_edge
-        c = right_edge + jacobian * t
-        return jacobian * base_integrand(c, analytic)
+        # c=w+4mu+Jt.  Both c-w and 1-c retain exact positive factors.
+        c = w + radius * mu + right_jacobian * t
+        difference = radius * mu + right_jacobian * t
+        rho2 = right_jacobian * (1 - t) * (1 + c)
+        n = 1 - w * w - radius * mu * w - w * right_jacobian * t
+        return right_jacobian * outer_integrand(
+            c, difference, rho2, n, analytic
+        )
 
     left = base.rigorous_integral(
         left_kernel, tolerance, integration_depth, eval_limit
@@ -125,9 +159,14 @@ def main() -> None:
         w_hi,
     )
     result["integration_chart"] = {
-        "type": "mu-scaled three-chart moving-layer split",
+        "type": "correlation-preserving mu-scaled three-chart split",
         "layer_radius": LAYER_RADIUS,
         "pieces": ["[-1,w-4mu]", "[w-4mu,w+4mu]", "[w+4mu,1]"],
+        "exact_inner_identities": [
+            "c=w+mu*(8t-4)",
+            "c-w=mu*(8t-4)",
+            "P=mu^2*((8t-4)^2+1-c^2)",
+        ],
     }
     result["script_sha256"] = base.sha256_file(Path(__file__))
     result["base_driver_sha256"] = base.sha256_file(
