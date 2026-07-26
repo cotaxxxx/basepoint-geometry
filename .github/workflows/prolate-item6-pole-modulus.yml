@@ -6,6 +6,7 @@ on:
       - ".github/workflows/prolate-item6-pole-modulus.yml"
       - "CERTIFICATES/prolate/item6_axis/prolate_axis_pole_modulus_symbolic_audit.py"
       - "CERTIFICATES/prolate/item6_axis/prolate_axis_pole_modulus_arb.py"
+      - "CERTIFICATES/prolate/item6_axis/prolate_axis_pole_modulus_compact_arb.py"
   workflow_dispatch:
 
 concurrency:
@@ -26,27 +27,30 @@ jobs:
       - name: Verify pole modulus blow-up formulas
         working-directory: CERTIFICATES/prolate/item6_axis
         run: python prolate_axis_pole_modulus_symbolic_audit.py
-      - name: Compile pole modulus driver
+      - name: Compile pole modulus drivers
         working-directory: CERTIFICATES/prolate/item6_axis
         run: >-
           python -m py_compile
           prolate_axis_pole_modulus_symbolic_audit.py
           prolate_axis_pole_modulus_arb.py
-      - name: Certify uniform pole modulus
+          prolate_axis_pole_modulus_compact_arb.py
+      - name: Certify compact uniform pole modulus
         working-directory: CERTIFICATES/prolate/item6_axis
         run: >-
-          python prolate_axis_pole_modulus_arb.py
+          python prolate_axis_pole_modulus_compact_arb.py
           --dps 50
-          --max-split-depth 18
-          --max-boxes 65536
-          --density-bound-limit 140000
-          --json prolate_axis_pole_modulus.json
-      - name: Upload pole modulus certificate
+          --max-split-depth 24
+          --max-boxes 1000000
+          --inner-density-limit 100
+          --outer-density-limit 144100
+          --max-terminal-records 100
+          --json prolate_axis_pole_modulus_compact.json
+      - name: Upload compact pole modulus certificate
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: prolate-item6-pole-modulus
+          name: prolate-item6-pole-modulus-compact
           path: |
             CERTIFICATES/prolate/item6_axis/prolate_axis_pole_modulus_symbolic_audit.json
-            CERTIFICATES/prolate/item6_axis/prolate_axis_pole_modulus.json
-            CERTIFICATES/prolate/item6_axis/prolate_axis_pole_modulus.json.sha256
+            CERTIFICATES/prolate/item6_axis/prolate_axis_pole_modulus_compact.json
+            CERTIFICATES/prolate/item6_axis/prolate_axis_pole_modulus_compact.json.sha256
