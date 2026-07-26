@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
-"""Paired, cancellation-preserving compact-tail driver for H.
+"""Signed-angle, paired and endpoint-squared compact-tail driver for H.
 
-The constant angle term is removed before interval evaluation.  The quotient
-``hbar=(h-h(0))/C`` is never evaluated: substituting ``C=mu*N/root`` into the
-complete density cancels it exactly.  In the inner blow-up, the common mu factor
-cancels as well.  Outer pieces retain exact rational endpoint caps only to keep
-Acb integration neighborhoods small; both bulk and caps use the same exact
-cancellation-preserving density.
+The exact signed-angle density is used directly, avoiding all cosine
+hypergeometric endpoint evaluation.  The paired right endpoint ``c=1`` and the
+far-left endpoint ``c=-1`` are integrated with
+
+    t = 1 - (1-s)^2 / 256,
+
+so the vanishing factor in ``rho=sqrt(1-c^2)`` is extracted explicitly.  The
+remaining bulk, paired and inner charts preserve ``c-w`` algebraically.
 """
 from __future__ import annotations
 
@@ -20,7 +22,8 @@ import prolate_axis_tail_H_block_arb as base
 
 
 LAYER_RADIUS = 4
-CAP_START_Q = fmpq(255, 256)
+CAP_SIZE_Q = fmpq(1, 256)
+CAP_START_Q = 1 - CAP_SIZE_Q
 EVALUATION_TRACE: list[dict] = []
 TRACE_LIMIT = 32
 
@@ -44,6 +47,27 @@ def mapped_integral(
     )
 
 
+def signed_density(
+    mu: acb,
+    w: acb,
+    c: acb,
+    difference: acb,
+    rho2: acb,
+    rho: acb,
+) -> acb:
+    mu2 = mu * mu
+    n = 1 - w * c
+    p = difference * difference + mu2 * rho2
+    y = -difference + mu2 * c
+    delta = (rho * y / (mu * n)).atan()
+    pi = acb(arb.pi())
+    regularized_square = delta * delta - pi * pi / 4
+    return (
+        -c * regularized_square / (2 * mu * w)
+        + n * delta * rho / (w * p)
+    )
+
+
 def paired_tail_H(
     mu_value: arb,
     w_value: arb,
@@ -53,97 +77,98 @@ def paired_tail_H(
 ) -> acb:
     mu = acb(mu_value)
     w = acb(w_value)
-    mu2 = mu * mu
     radius = acb(LAYER_RADIUS)
-    pi = acb(arb.pi())
-    angle_floor = pi * pi / 4
-
-    def outer_integrand(
-        c: acb,
-        difference: acb,
-        rho2: acb,
-        n: acb,
-        analytic: bool,
-    ) -> acb:
-        p = difference * difference + mu2 * rho2
-        s = rho2 + mu2 * c * c
-        root = (p * s).sqrt(analytic=analytic)
-        cosine = mu * n / root
-        h, h1 = base.regular_angle_data(cosine)
-        bracket = -c + n * difference / p
-        regularized_square = h - angle_floor
-        return (
-            -c * regularized_square / (2 * mu * w)
-            + n * h1 * bracket / (2 * w * root)
-        )
+    cap = acb(arb(str(CAP_SIZE_Q)))
 
     def inner_kernel(t: acb, analytic: bool) -> acb:
         q = 2 * radius * t - radius
         c = w + mu * q
         rho2 = (1 - c) * (1 + c)
+        rho = rho2.sqrt(analytic=analytic)
         reduced_p = q * q + rho2
-        s = rho2 + mu2 * c * c
-        reduced_root = (reduced_p * s).sqrt(analytic=analytic)
-        n = 1 - w * w - mu * w * q
-        cosine = n / reduced_root
-        h, h1 = base.regular_angle_data(cosine)
-        bracket = -c + n * q / (mu * reduced_p)
-        regularized_square = h - angle_floor
+        n = 1 - w * c
+        y = -mu * q + mu * mu * c
+        delta = (rho * y / (mu * n)).atan()
+        pi = acb(arb.pi())
+        regularized_square = delta * delta - pi * pi / 4
+        # dc=8*mu*dt and P=mu^2*reduced_p.
         return (
             -radius * c * regularized_square / w
-            + radius * n * h1 * bracket / (w * reduced_root)
+            + 2 * radius * n * delta * rho / (w * mu * reduced_p)
         )
 
     pair_jacobian = 1 - w - radius * mu
 
-    def paired_kernel(t: acb, analytic: bool) -> acb:
+    def paired_bulk_kernel(t: acb, analytic: bool) -> acb:
         x = radius * mu + pair_jacobian * t
 
         c_left = w - x
         rho2_left = (1 - w + x) * (1 + w - x)
-        n_left = 1 - w * w + w * x
-        left = outer_integrand(
-            c_left, -x, rho2_left, n_left, analytic
-        )
+        rho_left = rho2_left.sqrt(analytic=analytic)
+        left = signed_density(mu, w, c_left, -x, rho2_left, rho_left)
 
         c_right = w + x
         rho2_right = pair_jacobian * (1 - t) * (1 + w + x)
-        n_right = 1 - w * w - w * x
-        right = outer_integrand(
-            c_right, x, rho2_right, n_right, analytic
-        )
-
+        rho_right = rho2_right.sqrt(analytic=analytic)
+        right = signed_density(mu, w, c_right, x, rho2_right, rho_right)
         return pair_jacobian * (left + right)
 
-    def far_left_kernel(t: acb, analytic: bool) -> acb:
+    def paired_cap_kernel(s: acb, analytic: bool) -> acb:
+        u = 1 - s
+        t = 1 - cap * u * u
+        dt_ds = 2 * cap * u
+        x = radius * mu + pair_jacobian * t
+
+        c_left = w - x
+        rho2_left = (1 - w + x) * (1 + w - x)
+        rho_left = rho2_left.sqrt(analytic=analytic)
+        left = signed_density(mu, w, c_left, -x, rho2_left, rho_left)
+
+        c_right = w + x
+        right_factor = pair_jacobian * cap * (1 + w + x)
+        rho_right = u * right_factor.sqrt(analytic=analytic)
+        rho2_right = rho_right * rho_right
+        right = signed_density(mu, w, c_right, x, rho2_right, rho_right)
+        return dt_ds * pair_jacobian * (left + right)
+
+    def far_bulk_kernel(t: acb, analytic: bool) -> acb:
         x = 1 - w + 2 * w * t
         c = w - x
         rho2 = 4 * w * (1 - t) * (1 - w + w * t)
-        n = 1 + w - 2 * w * w + 2 * w * w * t
-        return 2 * w * outer_integrand(c, -x, rho2, n, analytic)
+        rho = rho2.sqrt(analytic=analytic)
+        return 2 * w * signed_density(mu, w, c, -x, rho2, rho)
+
+    def far_cap_kernel(s: acb, analytic: bool) -> acb:
+        u = 1 - s
+        t = 1 - cap * u * u
+        dt_ds = 2 * cap * u
+        x = 1 - w + 2 * w * t
+        c = w - x
+        rho_factor = 4 * w * cap * (1 - w + w * t)
+        rho = u * rho_factor.sqrt(analytic=analytic)
+        rho2 = rho * rho
+        return dt_ds * 2 * w * signed_density(
+            mu, w, c, -x, rho2, rho
+        )
 
     inner = base.rigorous_integral(
         inner_kernel, tolerance, integration_depth, eval_limit
     )
     paired_bulk = mapped_integral(
-        paired_kernel,
+        paired_bulk_kernel,
         fmpq(0), CAP_START_Q,
         tolerance, integration_depth, eval_limit,
     )
-    paired_cap = mapped_integral(
-        paired_kernel,
-        CAP_START_Q, fmpq(1),
-        tolerance, integration_depth, eval_limit,
+    paired_cap = base.rigorous_integral(
+        paired_cap_kernel, tolerance, integration_depth, eval_limit
     )
     far_bulk = mapped_integral(
-        far_left_kernel,
+        far_bulk_kernel,
         fmpq(0), CAP_START_Q,
         tolerance, integration_depth, eval_limit,
     )
-    far_cap = mapped_integral(
-        far_left_kernel,
-        CAP_START_Q, fmpq(1),
-        tolerance, integration_depth, eval_limit,
+    far_cap = base.rigorous_integral(
+        far_cap_kernel, tolerance, integration_depth, eval_limit
     )
     paired = paired_bulk + paired_cap
     far_left = far_bulk + far_cap
@@ -151,7 +176,11 @@ def paired_tail_H(
     if len(EVALUATION_TRACE) < TRACE_LIMIT:
         EVALUATION_TRACE.append({
             "mu_ball": str(mu_value),
+            "mu_lower": str(mu_value.lower()),
+            "mu_upper": str(mu_value.upper()),
             "w_ball": str(w_value),
+            "w_lower": str(w_value.lower()),
+            "w_upper": str(w_value.upper()),
             "inner": base.acb_record(inner),
             "paired_bulk": base.acb_record(paired_bulk),
             "paired_cap": base.acb_record(paired_cap),
@@ -211,31 +240,30 @@ def main() -> None:
     )
     result["evaluation_trace"] = EVALUATION_TRACE
     result["representation"] = (
-        "complete-density cancellation of hbar quotient; paired outer charts; "
-        "exact rational endpoint caps"
+        "exact signed atan density; paired outer charts; endpoint-square caps"
     )
     result["integration_chart"] = {
-        "type": "paired moving-layer split with exact endpoint caps",
+        "type": "signed-angle paired split with endpoint-square caps",
         "layer_radius": LAYER_RADIUS,
-        "cap_start": str(CAP_START_Q),
+        "cap_size": str(CAP_SIZE_Q),
         "pieces": [
             "inner: c=w+mu*(8t-4)",
             "paired bulk: t in [0,255/256]",
-            "paired endpoint cap: t in [255/256,1]",
+            "paired endpoint cap: t=1-(1-s)^2/256",
             "far-left bulk: t in [0,255/256]",
-            "far-left endpoint cap: t in [255/256,1]",
+            "far-left endpoint cap: t=1-(1-s)^2/256",
         ],
         "exact_partition": (
             "inner plus paired outer plus unmatched far-left equals [-1,1]; "
-            "each outer parameter interval is split at the exact rational 255/256"
+            "the exact rational cap [255/256,1] is reparameterized bijectively"
         ),
     }
     result["script_sha256"] = base.sha256_file(Path(__file__))
     result["base_driver_sha256"] = base.sha256_file(
         Path(__file__).with_name("prolate_axis_tail_H_block_arb.py")
     )
-    result["regularization_audit_sha256"] = base.sha256_file(
-        Path(__file__).with_name("prolate_axis_tail_regularized_symbolic_audit.py")
+    result["formula_audit_sha256"] = base.sha256_file(
+        Path(__file__).with_name("prolate_axis_signed_tail_symbolic_audit.py")
     )
     result["paired_chart_audit_sha256"] = base.sha256_file(
         Path(__file__).with_name("prolate_axis_tail_paired_chart_symbolic_audit.py")
@@ -246,7 +274,7 @@ def main() -> None:
     output.with_suffix(output.suffix + ".sha256").write_text(
         f"{result['script_sha256']}  {Path(__file__).name}\n"
         f"{result['base_driver_sha256']}  prolate_axis_tail_H_block_arb.py\n"
-        f"{result['regularization_audit_sha256']}  prolate_axis_tail_regularized_symbolic_audit.py\n"
+        f"{result['formula_audit_sha256']}  prolate_axis_signed_tail_symbolic_audit.py\n"
         f"{result['paired_chart_audit_sha256']}  prolate_axis_tail_paired_chart_symbolic_audit.py\n"
         f"{base.sha256_file(output)}  {output.name}\n",
         encoding="utf-8",
