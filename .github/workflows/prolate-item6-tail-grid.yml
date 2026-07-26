@@ -1,9 +1,6 @@
 name: Prolate item 6 signed-angle tail interface grid
 
 on:
-  pull_request:
-    paths:
-      - ".github/workflows/prolate-item6-tail-grid.yml"
   workflow_dispatch:
 
 concurrency:
