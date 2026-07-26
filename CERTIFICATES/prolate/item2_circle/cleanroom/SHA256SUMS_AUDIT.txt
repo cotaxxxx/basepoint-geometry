@@ -1,0 +1,4 @@
+# Clean-room audit inputs checked by CI.
+13a0155891c6aec61b8dc1657daa873139068451f4c0d3f162c79aa5ee8b55ae  bkernel_cleanroom_audit.py
+77e7a93c594ba66ac7d98df29ec3c03107b0c63962a5aa60f8503559082c10ac  ../vendor/prolate_circle_F_cleanroom.py
+800b12fd6850f1b3dde0d22d3afa13918dbb46687f98ae99f5c8097083ed47eb  item0d_regression_fixture.json

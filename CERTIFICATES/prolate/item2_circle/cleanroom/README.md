@@ -1,18 +1,37 @@
-# B-KERNEL clean-room audit package
+# B-KERNEL clean-room audit
 
-This directory records the new implementation and its audit harness. It is
-not a recovery of the historical `prolate_general_r_arb_kernels.py`.
+The historical `prolate_general_r_arb_kernels.py` was not recovered. No file
+in this directory is represented as that historical source. Its recorded
+SHA-256 remains, for comparison only:
 
-- package: `item2_bkernel_cleanroom_filled.zip`
-- package SHA-256: `a7d46705fbdf7b1702a8040ad81d4f13fc9a1cc89d25ccbf53bc1dcc832b40fd`
-- implementation SHA-256: `77e7a93c594ba66ac7d98df29ec3c03107b0c63962a5aa60f8503559082c10ac`
-- historical unrecovered hash, comparison only: `ef065381abd802239f5fb107c3e87f64a12259deccbf98d6909bcd975da7157d`
+`ef065381abd802239f5fb107c3e87f64a12259deccbf98d6909bcd975da7157d`
 
-The formula is derived from the manuscript's fixed-domain expression for
-`E_lambda(r)`. The package contains the all-224-leaf item0d regression fixture,
-pure symbolic audits, positive and negative harness controls, and the
-integrated Arb audit.
+The current kernel is a new implementation derived from the manuscript's
+fixed-domain integral for `E_lambda(r)`. The user-supplied intake package was
+verified before normalization:
 
-The B-KERNEL CI deliberately does not run the old `[5,6]` circle-tube pilot.
-That interval is not the established noncentral branch range; branch-range
-repair belongs to B-SEED/B-TUBE after B-KERNEL is accepted.
+- intake package SHA-256:
+  `a7d46705fbdf7b1702a8040ad81d4f13fc9a1cc89d25ccbf53bc1dcc832b40fd`
+- clean-room implementation SHA-256:
+  `77e7a93c594ba66ac7d98df29ec3c03107b0c63962a5aa60f8503559082c10ac`
+- integrated auditor SHA-256:
+  `13a0155891c6aec61b8dc1657daa873139068451f4c0d3f162c79aa5ee8b55ae`
+
+The binary intake package is not used as a repository transport. Instead,
+`bkernel_cleanroom_audit.py` rebuilds the exact 224-leaf fixture directly from
+`item0d_certified.zip`. The generated fixture must have SHA-256
+`800b12fd6850f1b3dde0d22d3afa13918dbb46687f98ae99f5c8097083ed47eb`.
+
+CI obligations:
+
+1. source ZIP and combined-certificate hashes match;
+2. fixture rebuild gives exactly 224 leaves and the fixed fixture hash;
+3. pure SymPy identities are exactly zero;
+4. independent 224-leaf Gauss--Legendre midpoint reference passes;
+5. positive and negative checker controls pass;
+6. rigorous Arb regression passes all 224 leaves;
+7. the symbolic and interval difference-quotient audit passes;
+8. the four-function public B-KERNEL interface is available.
+
+The old `[5,6]` circle-tube pilot is deliberately outside this audit. Its
+branch range must be repaired in the subsequent B-SEED/B-TUBE work.
