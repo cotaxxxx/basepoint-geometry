@@ -1,11 +1,16 @@
 name: Prolate item 6 pole modulus certificate
 
 on:
+  pull_request:
+    paths:
+      - ".github/workflows/prolate-item6-pole-modulus.yml"
+      - "CERTIFICATES/prolate/item6_axis/prolate_axis_pole_modulus_symbolic_audit.py"
+      - "CERTIFICATES/prolate/item6_axis/prolate_axis_pole_modulus_arb.py"
   workflow_dispatch:
 
 concurrency:
   group: prolate-item6-pole-modulus-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   certify:
