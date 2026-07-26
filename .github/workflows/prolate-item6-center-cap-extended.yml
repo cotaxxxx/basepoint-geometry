@@ -1,6 +1,9 @@
 name: Prolate item 6 retired extended center-cap workflow
 
 on:
+  pull_request:
+    paths:
+      - ".github/workflows/prolate-item6-center-cap-extended.yml"
   push:
     branches:
       - agent/prolate-item6-axis
