@@ -67,29 +67,45 @@ jobs:
               (fmpq(1), fmpq(1), fmpq(0), fmpq(1, 65536), fmpq(1), fmpq(100)),
           ]
           records = []
+          failures = 0
           for tl, th, ul, uh, ll, lh in boxes:
-              value = endpoint.signed_outer_far_density(
-                  closed(tl, th), closed(ul, uh), closed(ll, lh)
-              )
-              text = str(value).lower()
-              finite = "nan" not in text and "inf" not in text
               record = {
                   "t": [str(tl), str(th)],
                   "u": [str(ul), str(uh)],
                   "lambda": [str(ll), str(lh)],
-                  "value": str(value),
-                  "finite": finite,
-                  "imag_contains_zero": bool(0 in value.imag),
               }
+              try:
+                  value = endpoint.signed_outer_far_density(
+                      closed(tl, th), closed(ul, uh), closed(ll, lh)
+                  )
+                  text = str(value).lower()
+                  finite = "nan" not in text and "inf" not in text
+                  record.update({
+                      "value": str(value),
+                      "finite": finite,
+                      "imag_contains_zero": bool(0 in value.imag),
+                  })
+                  if not finite or not record["imag_contains_zero"]:
+                      failures += 1
+              except Exception as exc:
+                  record.update({
+                      "finite": False,
+                      "imag_contains_zero": False,
+                      "error": f"{type(exc).__name__}: {exc}",
+                  })
+                  failures += 1
               records.append(record)
-              if not finite or not record["imag_contains_zero"]:
-                  raise SystemExit(json.dumps(record, indent=2))
 
-          result = {"status": "PASSED", "boxes": records}
+          result = {
+              "status": "PASSED" if failures == 0 else "FAILED",
+              "failure_count": failures,
+              "boxes": records,
+          }
           Path("prolate_axis_pole_modulus_endpoint_smoke.json").write_text(
               json.dumps(result, indent=2), encoding="utf-8"
           )
           print(json.dumps(result, indent=2))
+          raise SystemExit(0 if failures == 0 else 1)
           PY
       - name: Certify budget-adaptive endpoint-stable pole modulus
         working-directory: CERTIFICATES/prolate/item6_axis
