@@ -1,106 +1,17 @@
-name: Prolate item 6 tail monotonicity slab certificate
+name: Prolate item 6 retired tail-monotonicity workflow
 
 on:
+  push:
+    branches:
+      - agent/prolate-item6-axis
   workflow_dispatch:
 
 concurrency:
   group: prolate-item6-tail-M-slab-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
-  tail-M-block:
-    name: tail-M-${{ matrix.name }}
+  retired:
     runs-on: ubuntu-latest
-    timeout-minutes: 120
-    strategy:
-      fail-fast: false
-      max-parallel: 3
-      matrix:
-        include:
-          - name: center-interior
-            w_lo_num: 1
-            w_lo_den: 20
-            w_hi_num: 1
-            w_hi_den: 4
-          - name: middle-interior
-            w_lo_num: 1
-            w_lo_den: 4
-            w_hi_num: 1
-            w_hi_den: 2
-          - name: outer-interior
-            w_lo_num: 1
-            w_lo_den: 2
-            w_hi_num: 3
-            w_hi_den: 4
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
-      - name: Install validated arithmetic
-        run: python -m pip install python-flint==0.9.0
-      - name: Certify positive tail log derivative
-        working-directory: CERTIFICATES/prolate/item6_axis
-        run: >-
-          python prolate_axis_tail_M_scaled_block_arb.py
-          --dps 50
-          --tolerance 1e-18
-          --integration-depth 22
-          --eval-limit 200000
-          --max-split-depth 16
-          --max-boxes 32768
-          --mu-lo-num 1
-          --mu-lo-den 400
-          --mu-hi-num 1
-          --mu-hi-den 200
-          --w-lo-num ${{ matrix.w_lo_num }}
-          --w-lo-den ${{ matrix.w_lo_den }}
-          --w-hi-num ${{ matrix.w_hi_num }}
-          --w-hi-den ${{ matrix.w_hi_den }}
-          --json prolate_axis_tail_M_block_${{ matrix.name }}.json
-      - name: Upload tail M block certificate
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: prolate-item6-tail-M-block-${{ matrix.name }}
-          path: |
-            CERTIFICATES/prolate/item6_axis/prolate_axis_tail_M_block_${{ matrix.name }}.json
-            CERTIFICATES/prolate/item6_axis/prolate_axis_tail_M_block_${{ matrix.name }}.json.sha256
-
-  combine:
-    name: tail-M-combine-mu-1-400-1-200
-    needs: tail-M-block
-    if: always()
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
-      - name: Download all tail M block certificates
-        uses: actions/download-artifact@v4
-        with:
-          pattern: prolate-item6-tail-M-block-*
-          path: CERTIFICATES/prolate/item6_axis/tail_M_outputs
-          merge-multiple: true
-      - name: Combine exact adjacent w blocks
-        working-directory: CERTIFICATES/prolate/item6_axis
-        run: >-
-          python prolate_axis_tail_H_combine.py
-          --pattern "tail_M_outputs/prolate_axis_tail_M_block_*.json"
-          --value-key M
-          --mu-lo 1/400
-          --mu-hi 1/200
-          --w-lo 1/20
-          --w-hi 3/4
-          --expected-blocks 3
-          --json prolate_axis_tail_M_combined_mu_1_400_1_200.json
-      - name: Upload combined tail M certificate
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: prolate-item6-tail-M-combined-mu-1-400-1-200
-          path: |
-            CERTIFICATES/prolate/item6_axis/prolate_axis_tail_M_combined_mu_1_400_1_200.json
-            CERTIFICATES/prolate/item6_axis/prolate_axis_tail_M_combined_mu_1_400_1_200.json.sha256
+      - run: echo "Retired; replaced by signed-angle tail-grid certificates."
