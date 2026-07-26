@@ -1,0 +1,87 @@
+name: Prolate item2 B-KERNEL clean-room audit
+
+on:
+  pull_request:
+    paths:
+      - "CERTIFICATES/prolate/item2_circle/**"
+      - ".github/workflows/prolate-item2-bkernel-cleanroom.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: prolate-item2-bkernel-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install audit dependencies
+        run: python -m pip install python-flint==0.9.0 sympy numpy
+      - name: Verify and unpack immutable package
+        working-directory: CERTIFICATES/prolate/item2_circle/cleanroom
+        run: |
+          echo "a7d46705fbdf7b1702a8040ad81d4f13fc9a1cc89d25ccbf53bc1dcc832b40fd  item2_bkernel_cleanroom_filled.zip" | sha256sum -c -
+          rm -rf audit
+          mkdir audit
+          unzip -q item2_bkernel_cleanroom_filled.zip -d audit
+          cd audit
+          sha256sum -c SHA256SUMS_CLEANROOM.txt
+          cmp prolate_circle_F_cleanroom.py ../../vendor/prolate_circle_F_cleanroom.py
+      - name: Compile and run non-Arb audits
+        working-directory: CERTIFICATES/prolate/item2_circle/cleanroom/audit
+        run: |
+          python -m py_compile *.py
+          python symbolic_formula_audit_pure.py
+          python reference_midpoint_audit.py
+      - name: Harness positive and negative controls
+        working-directory: CERTIFICATES/prolate/item2_circle/cleanroom/audit
+        run: |
+          python regression_item0d.py --kernel-override selftest_echo_kernel
+          set +e
+          python regression_item0d.py --kernel-override selftest_wrong_kernel
+          code=$?
+          set -e
+          test "$code" -eq 1
+      - name: Rigorous all-leaf item0d regression
+        working-directory: CERTIFICATES/prolate/item2_circle/cleanroom/audit
+        run: python regression_item0d.py --dps 40 --tol 1e-10 --depth-limit 12 --eval-limit 200000
+      - name: Rigorous symbolic and difference-quotient audit
+        working-directory: CERTIFICATES/prolate/item2_circle/cleanroom/audit
+        run: python symbolic_audit_dFdr.py --points 24 --dps 40 --h 1/4096 --tol 1e-10 --depth-limit 12 --eval-limit 200000
+      - name: Verify public B-KERNEL interface
+        working-directory: CERTIFICATES/prolate/item2_circle
+        run: |
+          python -m py_compile vendor/prolate_circle_F_cleanroom.py vendor/prolate_circle_kernels.py
+          PYTHONPATH=vendor python - <<'PY'
+          import prolate_circle_kernels as K
+          assert K.FORMULA_STATE == "FILLED"
+          for name in ("F_arb", "dFdr_arb", "F_float", "dFdr_float"):
+              assert callable(getattr(K, name))
+          print("B-KERNEL interface PASS")
+          PY
+      - name: Hash audit reports
+        if: always()
+        working-directory: CERTIFICATES/prolate/item2_circle/cleanroom/audit
+        run: |
+          files=()
+          for f in regression_item0d_report.json symbolic_audit_dFdr_report.json; do
+            if [ -f "$f" ]; then files+=("$f"); fi
+          done
+          if [ "${#files[@]}" -gt 0 ]; then sha256sum "${files[@]}" > B_KERNEL_REPORT_SHA256.txt; fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: prolate-item2-bkernel-cleanroom-audit
+          path: |
+            CERTIFICATES/prolate/item2_circle/cleanroom/audit/regression_item0d_report.json
+            CERTIFICATES/prolate/item2_circle/cleanroom/audit/symbolic_audit_dFdr_report.json
+            CERTIFICATES/prolate/item2_circle/cleanroom/audit/B_KERNEL_REPORT_SHA256.txt
+          if-no-files-found: warn

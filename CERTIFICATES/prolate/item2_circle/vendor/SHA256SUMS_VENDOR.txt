@@ -1,0 +1,6 @@
+# B-KERNEL clean-room implementation; NOT the unrecovered historical original.
+# Historical provenance hash (unrecovered, comparison only):
+# ef065381abd802239f5fb107c3e87f64a12259deccbf98d6909bcd975da7157d  prolate_general_r_arb_kernels.py
+77e7a93c594ba66ac7d98df29ec3c03107b0c63962a5aa60f8503559082c10ac  prolate_circle_F_cleanroom.py
+# Complete audit package, stored at ../cleanroom/item2_bkernel_cleanroom_filled.zip
+# a7d46705fbdf7b1702a8040ad81d4f13fc9a1cc89d25ccbf53bc1dcc832b40fd
