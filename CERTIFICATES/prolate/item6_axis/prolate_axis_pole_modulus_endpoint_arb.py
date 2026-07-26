@@ -11,8 +11,11 @@ touches ``t=1``. This wrapper uses two exact representations:
   ``delta=atan(X/N)`` and its rational-algebraic w derivatives are evaluated
   directly, avoiding the cosine branch point altogether.
 
-The two formulas are exact representations of the same transformed A''
-density. The compact cover and exact partition accounting are unchanged.
+On the signed cap, quantities known to be nonnegative are built from monotone
+endpoint bounds rather than generic centered-ball products. This prevents a
+true interval such as ``[0,a]`` from acquiring a tiny negative lower endpoint
+before a square root, and prevents a broad positive lambda interval from
+losing positivity when squared.
 """
 from __future__ import annotations
 
@@ -36,6 +39,51 @@ def sha256_file(path: Path) -> str:
         for chunk in iter(lambda: handle.read(1 << 20), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def interval_hull(lower, upper) -> arb:
+    """Return the Arb hull of two ordered real endpoints."""
+    lo = arb(lower)
+    hi = arb(upper)
+    return arb((lo + hi) / 2, (hi - lo) / 2)
+
+
+def positive_square_hull(value: arb) -> arb:
+    """Square a known nonnegative interval by endpoint monotonicity."""
+    lo = arb(value.lower())
+    hi = arb(value.upper())
+    if lo < 0:
+        raise ValueError(f"positive_square_hull received negative lower endpoint: {lo}")
+    lo_sq = lo * lo
+    hi_sq = hi * hi
+    return interval_hull(lo_sq.lower(), hi_sq.upper())
+
+
+def endpoint_rho_hull(t_value: arb) -> arb:
+    """Hull rho(t)=2*t*sqrt((1-t)(1+t)) on t>=255/256.
+
+    The function is decreasing on this cap. Endpoint evaluation therefore
+    gives a tight nonnegative enclosure and never asks Arb to take the square
+    root of a centered interval that merely touches zero.
+    """
+    one = arb(1)
+    two = arb(2)
+    t_lo = arb(t_value.lower())
+    t_hi = arb(t_value.upper())
+    if t_hi > one:
+        t_hi = one
+    if t_lo < arb(SIGNED_ENDPOINT_T):
+        raise ValueError(f"signed endpoint chart received t below cap: {t_lo}")
+
+    def point_value(t_point: arb) -> arb:
+        radicand = (one - t_point) * (one + t_point)
+        if radicand < 0:
+            raise ValueError(f"negative endpoint radicand: {radicand}")
+        return two * t_point * radicand.sqrt()
+
+    lower_value = point_value(t_hi)
+    upper_value = point_value(t_lo)
+    return interval_hull(lower_value.lower(), upper_value.upper())
 
 
 def endpoint_factorization_audit() -> dict:
@@ -101,6 +149,8 @@ def endpoint_factorization_audit() -> dict:
     N_t = u + z2_t - u * z2_t
     q_t = u - z2_t
     R2_t = rho2_t + lam**2 * q_t**2
+    rho_t = 2 * t * sp.sqrt((1 - t) * (1 + t))
+    rho_derivative = sp.simplify(sp.diff(rho_t, t))
 
     checks = {
         "first_endpoint_factorization": sp.simplify(first_raw - first_claim) == 0,
@@ -117,6 +167,11 @@ def endpoint_factorization_audit() -> dict:
         ) == 0,
         "signed_chart_c_minus_w": sp.expand(c_t - w_t - q_t) == 0,
         "outer_t_jacobian": sp.simplify(2 * z_t * sp.sqrt(2) - 4 * t) == 0,
+        "rho_decreases_for_t_above_inverse_sqrt2": sp.simplify(
+            rho_derivative - 2 * (1 - 2 * t**2) / sp.sqrt(1 - t**2)
+        )
+        == 0,
+        "signed_cap_above_inverse_sqrt2": sp.Rational(255, 256) ** 2 > sp.Rational(1, 2),
         "opposite_pole_factor_is_z2_minus_2": True,
         "no_division_by_z2_minus_2": True,
     }
@@ -128,6 +183,8 @@ def endpoint_factorization_audit() -> dict:
             "Cww_numerator": str(second_far_claim),
             "outer_far_density_factored": str(density_factored),
             "signed_N": str(N_t),
+            "signed_rho": str(rho_t),
+            "signed_rho_derivative": str(rho_derivative),
             "signed_rho_squared": str(rho2_t),
             "signed_R_squared": str(R2_t),
             "signed_delta": "atan(rho*(lambda*w-(lambda-1/lambda)*c)/N)",
@@ -137,13 +194,14 @@ def endpoint_factorization_audit() -> dict:
             "far_relation": "u=r*z, z=sqrt(2)*t",
         },
         "domain_statement": (
-            "On t>=1/128, 0<=u<=1/64 and 1<=lambda<=100, "
-            "N=1-(1-u)(1-2*t^2)>0. Hence signed atan has no branch ambiguity."
+            "On t>=255/256, 0<=u<=1/64 and 1<=lambda<=100, N>0, "
+            "rho(t) is decreasing, and lambda^2 is monotone on the positive "
+            "lambda interval. These order facts are used to build endpoint hulls."
         ),
         "conclusion": (
             "The cosine density is factored without cancelling z^2-2. Boxes in "
-            "the endpoint cap use the exact signed-angle A'' integrand with "
-            "Jacobian 4*t, eliminating the cosine branch-point enclosure."
+            "the endpoint cap use the exact signed-angle A'' integrand and "
+            "monotone nonnegative endpoint hulls before Arb arithmetic."
         ),
     }
 
@@ -222,25 +280,31 @@ def signed_outer_far_density(
     one = arb(1)
     two = arb(2)
     four = arb(4)
-    L = lam**2
 
-    t2 = t**2
+    if lam.lower() <= 0:
+        raise ValueError(f"signed endpoint chart requires lambda>0: {lam}")
+    L = positive_square_hull(lam)
+    rho = endpoint_rho_hull(t)
+    rho2 = positive_square_hull(rho)
+
+    t2 = t * t
     z2 = two * t2
     c = one - z2
     w = one - u
-    endpoint_gap = abs(one - t)
-    one_plus_t = one + t
-    rho = two * t * endpoint_gap.sqrt() * one_plus_t.sqrt()
-    rho2 = four * t2 * endpoint_gap * one_plus_t
     N = u + z2 - u * z2
     q = u - z2
-    q2 = q**2
+    q_abs = z2 - u
+    if q_abs.lower() <= 0:
+        raise ValueError(f"signed endpoint chart lost q<0: {q}")
+    q2 = positive_square_hull(q_abs)
     R2 = rho2 + L * q2
+    if R2.lower() <= 0:
+        raise ValueError(f"signed endpoint R2 is not strictly positive: {R2}")
 
     cross = rho * (lam * w - (lam - one / lam) * c)
     delta = acb((cross / N).atan())
     delta_w = acb(lam * rho / R2)
-    delta_ww = acb(two * lam * L * rho * q / (R2**2))
+    delta_ww = acb(two * lam * L * rho * q / (R2 * R2))
     c_acb = acb(c)
     N_acb = acb(N)
     transformed = (
@@ -299,8 +363,8 @@ def main() -> None:
         "signed_endpoint_t": str(SIGNED_ENDPOINT_T),
         "method": (
             "factor the complete cosine density without dividing by z^2-2; "
-            "for t>=255/256 use exact nonnegative endpoint factors, real Arb "
-            "atan, signed-angle derivatives, and the 4*t outer-chart Jacobian"
+            "for t>=255/256 evaluate rho and positive squares by monotone endpoint "
+            "hulls, then use real Arb atan and exact signed-angle derivatives"
         ),
     }
     result["conditions"]["endpoint factorization exact audit passed"] = True
