@@ -1,11 +1,17 @@
 name: Prolate item 6 signed-angle dyadic pole layer
 
 on:
+  pull_request:
+    paths:
+      - ".github/workflows/prolate-item6-pole-dyadic.yml"
+      - "CERTIFICATES/prolate/item6_axis/prolate_axis_signed_angle_symbolic_audit.py"
+      - "CERTIFICATES/prolate/item6_axis/prolate_axis_signed_rectangle_arb.py"
+      - "CERTIFICATES/prolate/item6_axis/prolate_axis_grid_combine.py"
   workflow_dispatch:
 
 concurrency:
   group: prolate-item6-pole-dyadic-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   prepare:
