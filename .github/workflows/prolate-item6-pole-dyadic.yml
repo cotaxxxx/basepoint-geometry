@@ -1,9 +1,6 @@
 name: Prolate item 6 dyadic pole layer certificate
 
 on:
-  pull_request:
-    paths:
-      - ".github/workflows/prolate-item6-pole-dyadic.yml"
   workflow_dispatch:
 
 concurrency:
