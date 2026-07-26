@@ -1,4 +1,4 @@
-name: Import exact item 2 circle bundle commit
+name: Diagnose exact item 2 bundle import
 
 on:
   pull_request:
@@ -11,38 +11,33 @@ permissions:
   contents: write
 
 jobs:
-  import:
+  diagnose:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: main
           fetch-depth: 0
-      - name: Reconstruct exact bundle commit
+      - name: Reconstruct and record exact identifiers
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
         shell: bash
         run: |
-          set -euo pipefail
-
-          # The bundle delta adds the complete item0d ZIP to the split archive
-          # already present at main@3888936. Reconstruct and verify exact bytes.
+          set -u
+          : > /tmp/item2-import-diagnostic.txt
           cd CERTIFICATES/prolate/item0d_interior
-          python reconstruct_zip.py
-          test "$(sha256sum item0d_certified.zip | cut -d' ' -f1)" = \
-            db1c68e4bbf43fcb49bd5f27de5d45a36b44f1f8e77141477832ce16ae68df2a
-          test "$(git hash-object -w item0d_certified.zip)" = \
-            edfb13fe6d828fcd350972bf78bec601c46d3cda
+          python reconstruct_zip.py >> /tmp/item2-import-diagnostic.txt 2>&1
+          echo "zip_sha256=$(sha256sum item0d_certified.zip | cut -d' ' -f1)" >> /tmp/item2-import-diagnostic.txt
+          echo "zip_blob=$(git hash-object -w item0d_certified.zip)" >> /tmp/item2-import-diagnostic.txt
           cd ../../..
 
           put_blob() {
-            local sha="$1" path="$2"
-            local tmp
+            local sha="$1" path="$2" tmp
             tmp="$(mktemp)"
             mkdir -p "$(dirname "$path")"
             gh api "/repos/$REPO/git/blobs/$sha" --jq .content | base64 -d > "$tmp"
-            test "$(git hash-object -w "$tmp")" = "$sha"
+            echo "$path $(git hash-object -w "$tmp") expected=$sha" >> /tmp/item2-import-diagnostic.txt
             mv "$tmp" "$path"
           }
           put_blob 76f1ba70c503451e9a53a9158dafc9638148b26d .github/workflows/prolate-item2-circle-pilot.yml
@@ -52,13 +47,11 @@ jobs:
           put_blob 4e1d87f2144e8db5454240b482e10e7e2b4131f7 CERTIFICATES/prolate/item2_circle/selftest/mock_kernels.py
           put_blob f9f2bcabbe96aa20c7f0e7e279d9648cecd9cff5 CERTIFICATES/prolate/item2_circle/vendor/README.md
 
-          git add \
-            CERTIFICATES/prolate/item0d_interior/item0d_certified.zip \
-            .github/workflows/prolate-item2-circle-pilot.yml \
-            CERTIFICATES/prolate/item2_circle
+          git add CERTIFICATES/prolate/item0d_interior/item0d_certified.zip \
+            .github/workflows/prolate-item2-circle-pilot.yml CERTIFICATES/prolate/item2_circle
           tree="$(git write-tree)"
-          echo "Reconstructed tree=$tree"
-          test "$tree" = 1f93bb3234a4b6ed268e481206899518188ac4f8
+          echo "tree=$tree expected=1f93bb3234a4b6ed268e481206899518188ac4f8" >> /tmp/item2-import-diagnostic.txt
+          git diff --cached --raw >> /tmp/item2-import-diagnostic.txt
 
           echo 'U2NhZmZvbGQgcHJvbGF0ZSBpdGVtIDIgY2lyY2xlLWJyYW5jaCBjZXJ0aWZpY2F0aW9uCgotIERBRzogQi1LRVJORUwgLyBCLUxPQ0FMIC8gQi1TRUVEIC8gQi1UVUJFIC8gQi1FWFQgLyBCLUpPSU4gLyBCLURBRwotIDEtRCBpbnRlcnZhbC1LcmF3Y3p5ayB0dWJlIHBpbG90IChzdHJpY3QtaW5jbHVzaW9uIGNyaXRlcmlvbiksCiAgaGFybmVzcyB2YWxpZGF0ZWQgZW5kLXRvLWVuZDogcG9zaXRpdmUgY29udHJvbCAxNi8xNiBjZXJ0aWZpZWQsCiAgbmVnYXRpdmUgY29udHJvbCAwLzE2IChubyBmYWxzZSBjZXJ0aWZpY2F0aW9uKQotIHdvcmtmbG93X2Rpc3BhdGNoLW9ubHkgcGlsb3Qgd2l0aCBTRUxGVEVTVCBndWFyZCB1bnRpbCB0aGUgaXRlbS0wCiAgRihyLGxhbWJkYSkga2VybmVscyBhcmUgdmVuZG9yZWQgKEItS0VSTkVMIGRlYnQ7IG1vZHVsZSBzaGEyNTYKICBlZjA2NTM4MS4uLiByZWNvcmRlZCBpbiBpdGVtMGQgY2VydGlmaWNhdGUgcHJvdmVuYW5jZSkKLSBhcnRpZmFjdCBKU09OcyB3cml0dGVuIHdpdGhvdXQgdHJhaWxpbmcgbmV3bGluZSAoaGFzaCBkaXNjaXBsaW5lKQo=' | base64 -d > /tmp/item2-message
           export GIT_AUTHOR_NAME='Claude (assistant)'
@@ -67,10 +60,11 @@ jobs:
           export GIT_COMMITTER_EMAIL='noreply@anthropic.com'
           export GIT_AUTHOR_DATE='@1785057380 +0000'
           export GIT_COMMITTER_DATE='@1785057380 +0000'
-          commit="$(git commit-tree "$tree" -p 3888936d44bcd2c8abd84c5ee4dc1f337d93dbdd < /tmp/item2-message)"
-          echo "Reconstructed commit=$commit"
-          test "$commit" = 92c46e5de1a56d90ccf707154f535bbc2a8db76d
-          git push origin "$commit:refs/heads/agent/prolate-item2-circle"
-      - name: Remove temporary importer branch
-        if: success()
-        run: git push origin --delete agent/import-item2-circle
+          commit="$(git commit-tree "$tree" -p 3888936d44bcd2c8abd84c5ee4dc1f337d93dbdd < /tmp/item2-message 2>> /tmp/item2-import-diagnostic.txt)"
+          echo "commit=$commit expected=92c46e5de1a56d90ccf707154f535bbc2a8db76d" >> /tmp/item2-import-diagnostic.txt
+          cat /tmp/item2-import-diagnostic.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: item2-exact-import-diagnostic
+          path: /tmp/item2-import-diagnostic.txt
