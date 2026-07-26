@@ -1,9 +1,6 @@
 name: Prolate item 6 signed-angle smoke certificate
 
 on:
-  pull_request:
-    paths:
-      - ".github/workflows/prolate-item6-signed-smoke.yml"
   workflow_dispatch:
 
 concurrency:
