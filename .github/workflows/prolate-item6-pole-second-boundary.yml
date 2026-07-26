@@ -1,6 +1,9 @@
 name: Prolate item 6 retired pole-second-boundary workflow
 
 on:
+  pull_request:
+    paths:
+      - ".github/workflows/prolate-item6-pole-second-boundary.yml"
   push:
     branches:
       - agent/prolate-item6-axis
