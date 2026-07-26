@@ -8,9 +8,11 @@ on:
       - "CERTIFICATES/prolate/item6_axis/prolate_axis_signed_angle_symbolic_audit.py"
       - "CERTIFICATES/prolate/item6_axis/prolate_axis_pole_modulus_arb.py"
       - "CERTIFICATES/prolate/item6_axis/prolate_axis_pole_modulus_compact_arb.py"
+      - "CERTIFICATES/prolate/item6_axis/prolate_axis_pole_modulus_compact_dfs_arb.py"
       - "CERTIFICATES/prolate/item6_axis/prolate_axis_pole_modulus_endpoint_arb.py"
       - "CERTIFICATES/prolate/item6_axis/prolate_axis_pole_modulus_outer_far_preflight_arb.py"
       - "CERTIFICATES/prolate/item6_axis/prolate_axis_pole_modulus_budgeted_arb.py"
+      - "CERTIFICATES/prolate/item6_axis/prolate_axis_pole_modulus_budgeted_dfs_arb.py"
   workflow_dispatch:
 
 concurrency:
@@ -42,9 +44,11 @@ jobs:
           prolate_axis_signed_angle_symbolic_audit.py
           prolate_axis_pole_modulus_arb.py
           prolate_axis_pole_modulus_compact_arb.py
+          prolate_axis_pole_modulus_compact_dfs_arb.py
           prolate_axis_pole_modulus_endpoint_arb.py
           prolate_axis_pole_modulus_outer_far_preflight_arb.py
           prolate_axis_pole_modulus_budgeted_arb.py
+          prolate_axis_pole_modulus_budgeted_dfs_arb.py
       - name: Smoke-test formerly singular endpoint boxes
         working-directory: CERTIFICATES/prolate/item6_axis
         shell: bash
@@ -52,67 +56,13 @@ jobs:
           python - <<'PY'
           import json
           from pathlib import Path
-          from flint import acb, arb, ctx, fmpq
+          from flint import arb, ctx, fmpq
           import prolate_axis_pole_modulus_endpoint_arb as endpoint
 
           ctx.dps = 50
 
           def closed(lo, hi):
               return arb((lo + hi) / 2, (hi - lo) / 2)
-
-          def diagnose(t, u, lam):
-              one = arb(1)
-              two = arb(2)
-              four = arb(4)
-              values = {}
-
-              def put(name, value):
-                  values[name] = str(value)
-                  return value
-
-              try:
-                  L = put("L_integer_power", lam**2)
-                  t2 = put("t2_integer_power", t**2)
-                  z2 = put("z2", two * t2)
-                  c = put("c", one - z2)
-                  w = put("w", one - u)
-                  endpoint_gap = put("endpoint_gap_abs", abs(one - t))
-                  one_plus_t = put("one_plus_t", one + t)
-                  sqrt_gap = put("sqrt_endpoint_gap", endpoint_gap.sqrt())
-                  sqrt_one_plus_t = put("sqrt_one_plus_t", one_plus_t.sqrt())
-                  rho = put("rho_factored", two * t * sqrt_gap * sqrt_one_plus_t)
-                  rho2 = put("rho2_nonnegative", four * t2 * endpoint_gap * one_plus_t)
-                  N = put("N", u + z2 - u * z2)
-                  q = put("q", u - z2)
-                  q2 = put("q2_integer_power", q**2)
-                  Lq2 = put("L_times_q2", L * q2)
-                  R2 = put("R2", rho2 + Lq2)
-                  reciprocal_lam = put("reciprocal_lam", one / lam)
-                  angle_factor = put(
-                      "angle_factor",
-                      lam * w - (lam - reciprocal_lam) * c,
-                  )
-                  cross = put("cross", rho * angle_factor)
-                  ratio = put("ratio", cross / N)
-                  atan_ratio = put("atan_ratio", ratio.atan())
-                  delta = put("delta_acb", acb(atan_ratio))
-                  delta_w_arb = put("delta_w_arb", lam * rho / R2)
-                  delta_w = put("delta_w", acb(delta_w_arb))
-                  R2_squared = put("R2_squared", R2**2)
-                  delta_ww_arb = put(
-                      "delta_ww_arb",
-                      two * lam * L * rho * q / R2_squared,
-                  )
-                  delta_ww = put("delta_ww", acb(delta_ww_arb))
-                  transformed = put(
-                      "transformed",
-                      -2 * acb(c) * delta * delta_w
-                      + acb(N) * (delta_w * delta_w + delta * delta_ww),
-                  )
-                  put("density", acb(four * t) * transformed)
-              except Exception as exc:
-                  values["exception"] = f"{type(exc).__name__}: {exc}"
-              return values
 
           boxes = [
               (fmpq(130945, 131072), fmpq(1), fmpq(0), fmpq(1, 65536), fmpq(1), fmpq(17, 16)),
@@ -123,17 +73,15 @@ jobs:
           records = []
           failures = 0
           for tl, th, ul, uh, ll, lh in boxes:
-              t = closed(tl, th)
-              u = closed(ul, uh)
-              lam = closed(ll, lh)
               record = {
                   "t": [str(tl), str(th)],
                   "u": [str(ul), str(uh)],
                   "lambda": [str(ll), str(lh)],
-                  "intermediates": diagnose(t, u, lam),
               }
               try:
-                  value = endpoint.signed_outer_far_density(t, u, lam)
+                  value = endpoint.signed_outer_far_density(
+                      closed(tl, th), closed(ul, uh), closed(ll, lh)
+                  )
                   text = str(value).lower()
                   finite = "nan" not in text and "inf" not in text
                   record.update({
@@ -165,15 +113,21 @@ jobs:
           PY
       - name: Certify budget-adaptive endpoint-stable pole modulus
         working-directory: CERTIFICATES/prolate/item6_axis
-        run: >-
-          python prolate_axis_pole_modulus_budgeted_arb.py
-          --dps 50
-          --max-split-depth 24
-          --max-boxes 3000000
-          --inner-density-limit 100
-          --outer-near-density-limit 144100
-          --max-terminal-records 100
-          --json prolate_axis_pole_modulus_budgeted.json
+        shell: bash
+        run: |
+          set +e
+          python prolate_axis_pole_modulus_budgeted_dfs_arb.py \
+            --dps 50 \
+            --max-split-depth 24 \
+            --max-boxes 3000000 \
+            --inner-density-limit 100 \
+            --outer-near-density-limit 144100 \
+            --max-terminal-records 100 \
+            --json prolate_axis_pole_modulus_budgeted.json \
+            > prolate_axis_pole_modulus_budgeted.log 2>&1
+          CODE=$?
+          cat prolate_axis_pole_modulus_budgeted.log
+          exit "$CODE"
       - name: Upload budget-adaptive pole modulus certificate
         if: always()
         uses: actions/upload-artifact@v4
@@ -183,5 +137,6 @@ jobs:
             CERTIFICATES/prolate/item6_axis/prolate_axis_pole_modulus_symbolic_audit.json
             CERTIFICATES/prolate/item6_axis/prolate_axis_signed_angle_symbolic_audit.json
             CERTIFICATES/prolate/item6_axis/prolate_axis_pole_modulus_endpoint_smoke.json
+            CERTIFICATES/prolate/item6_axis/prolate_axis_pole_modulus_budgeted.log
             CERTIFICATES/prolate/item6_axis/prolate_axis_pole_modulus_budgeted.json
             CERTIFICATES/prolate/item6_axis/prolate_axis_pole_modulus_budgeted.json.sha256
