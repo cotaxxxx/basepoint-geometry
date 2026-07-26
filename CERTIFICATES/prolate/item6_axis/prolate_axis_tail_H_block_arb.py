@@ -57,12 +57,22 @@ def regular_angle_data(cosine: acb) -> tuple[acb, acb]:
 
 
 def regular_hbar(cosine: acb) -> acb:
-    """Return (h(c)-pi^2/4)/c, regular at c=0."""
+    """Return (h(c)-pi^2/4)/c, regular at c=0 and c=1.
+
+    The asin(c)/c hypergeometric form is regular at c=0 but its
+    direct 2F1 evaluation is non-finite at the endpoint c=1.  When
+    the cosine ball excludes zero, use the endpoint-regular h(c)
+    representation instead.  Only balls containing zero use the
+    center series.
+    """
+    pi = acb(arb.pi())
+    if 0 not in cosine:
+        h, _ = regular_angle_data(cosine)
+        return (h - pi * pi / 4) / cosine
     one = acb(1)
     asin_ratio = (cosine * cosine).hypgeom_2f1(
         one / 2, one / 2, acb(3) / 2
     )
-    pi = acb(arb.pi())
     return -pi * asin_ratio + cosine * asin_ratio * asin_ratio
 
 
