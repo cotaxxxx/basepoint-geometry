@@ -37,7 +37,7 @@ def interval_hull(lower, upper) -> arb:
     hi = arb(upper)
     if hi < lo:
         raise ValueError(f"unordered hull endpoints: {lo}, {hi}")
-    return arb((lo + hi) / 2, (hi - lo) / 2)
+    return arb(str((lo + hi) / 2), str((hi - lo) / 2))
 
 
 def known_nonnegative_hull(value: arb) -> arb:

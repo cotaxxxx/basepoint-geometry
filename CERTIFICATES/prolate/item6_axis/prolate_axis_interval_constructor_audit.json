@@ -1,0 +1,48 @@
+{
+  "status": "PASSED",
+  "constructor": "arb(rational_midpoint_string, rational_radius_string)",
+  "cases": [
+    {
+      "lo": "1/200",
+      "hi": "3/400",
+      "box": "[+/- 7.51e-3]",
+      "overlaps_lo": true,
+      "overlaps_hi": true,
+      "contains_zero": false
+    },
+    {
+      "lo": "1/20",
+      "hi": "1/8",
+      "box": "[+/- 0.126]",
+      "overlaps_lo": true,
+      "overlaps_hi": true,
+      "contains_zero": false
+    },
+    {
+      "lo": "63/64",
+      "hi": "127/128",
+      "box": "[0.99 +/- 5.63e-3]",
+      "overlaps_lo": true,
+      "overlaps_hi": true,
+      "contains_zero": false
+    },
+    {
+      "lo": "1",
+      "hi": "100",
+      "box": "[+/- 1.01e+2]",
+      "overlaps_lo": true,
+      "overlaps_hi": true,
+      "contains_zero": false
+    },
+    {
+      "lo": "0",
+      "hi": "1/2",
+      "box": "[+/- 0.501]",
+      "overlaps_lo": true,
+      "overlaps_hi": true,
+      "contains_zero": true
+    }
+  ],
+  "legacy_files": [],
+  "conclusion": "Every tested endpoint ball overlaps the constructed rational box, every strictly positive test interval excludes zero, and no legacy fmpq two-argument constructor remains."
+}

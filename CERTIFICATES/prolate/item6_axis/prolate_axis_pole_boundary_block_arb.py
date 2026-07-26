@@ -32,7 +32,7 @@ def sha256_file(path: Path) -> str:
 
 
 def closed_interval(lo: fmpq, hi: fmpq) -> arb:
-    return arb((lo + hi) / 2, (hi - lo) / 2)
+    return arb(str((lo + hi) / 2), str((hi - lo) / 2))
 
 
 def acb_record(value: acb) -> dict:
