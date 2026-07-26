@@ -16,9 +16,8 @@ def sha256_file(path: Path) -> str:
 
 
 u, y, z, r, L = sp.symbols("u y z r L", positive=True, finite=True)
-n, c, radial, s2, q = sp.symbols(
-    "n c radial s2 q", positive=True, finite=True
-)
+n, radial, s2 = sp.symbols("n radial s2", positive=True, finite=True)
+c, q = sp.symbols("c q", real=True, finite=True)
 h1, h2 = sp.symbols("h1 h2", finite=True)
 root = sp.sqrt(radial * s2)
 C = n / root
@@ -33,7 +32,6 @@ compact_raw = -2 * c * h1 * C * gbar + n * (
     h2 * (C * gbar) ** 2 + h1 * C * (gbar**2 + gvbar)
 )
 
-# Inner chart: d=u^2*y^2, w=1-u, c=1-d.
 d_inner = u**2 * y**2
 c_inner = 1 - d_inner
 w_inner = 1 - u
@@ -42,7 +40,6 @@ R2_inner = 1 - c_inner**2 + L * (c_inner - w_inner) ** 2
 n_inner = 1 + u * y**2 - u**2 * y**2
 radial_inner = y**2 * (2 - u**2 * y**2) + L * (1 - u * y**2) ** 2
 
-# Outer projective chart: d=z^2, u=r*z, w=1-u.
 d_outer = z**2
 c_outer = 1 - d_outer
 u_outer = r * z
@@ -89,9 +86,10 @@ result = {
         "outer_R2": str(z**2 * radial_outer),
     },
     "conclusion": (
-        "The removable 1/N factors are cancelled before interval evaluation. "
-        "The inner and outer Jacobians give exactly the densities used by the "
-        "uniform pole-modulus Arb cover."
+        "The identities are checked on N!=0. Their cancellation-safe right-hand "
+        "sides extend continuously to the projective corner N=0 and are the "
+        "expressions evaluated by the Arb cover. The inner and outer Jacobians "
+        "give exactly the transformed densities used by the modulus proof."
     ),
     "branch_note": (
         "On 0<=u<=1/64, 0<=y,r<=1, 0<=z<=sqrt(2), and L>=1, "
