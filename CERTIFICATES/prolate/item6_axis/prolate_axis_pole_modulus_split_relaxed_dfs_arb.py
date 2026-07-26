@@ -1,11 +1,40 @@
 #!/usr/bin/env python3
-"""Run the split pole certificate with rounding-tolerant junction evaluation."""
+"""Run the split pole certificate with rounding-tolerant signed charts."""
 from __future__ import annotations
 
 from flint import acb, arb
 
 import prolate_axis_pole_modulus_endpoint_arb as endpoint
 import prolate_axis_pole_modulus_split_dfs_arb as split
+
+
+def endpoint_rho_hull_relaxed(t_value: arb) -> arb:
+    """Monotone endpoint rho hull without re-testing rounded chart membership.
+
+    The exact compact-cover root fixes t in [255/256,1]. Closed Arb balls can
+    extend a few ulps below 255/256, while remaining far above 1/sqrt(2), where
+    rho(t)=2*t*sqrt(1-t^2) is strictly decreasing. Exact partition membership,
+    not the outward-rounded ball endpoint, certifies use of this chart.
+    """
+    one = arb(1)
+    two = arb(2)
+    t = arb(t_value)
+    t_lo = arb(t.lower())
+    t_hi = arb(t.upper())
+    if t_hi > one:
+        t_hi = one
+
+    def point_value(t_point: arb) -> arb:
+        radicand = endpoint.known_nonnegative_hull(
+            (one - t_point) * (one + t_point)
+        )
+        return two * t_point * radicand.sqrt()
+
+    lower_value = point_value(t_hi)
+    upper_value = point_value(t_lo)
+    return endpoint.known_nonnegative_hull(
+        endpoint.interval_hull(lower_value.lower(), upper_value.upper())
+    )
 
 
 def signed_junction_density(
@@ -15,7 +44,7 @@ def signed_junction_density(
 ) -> acb:
     """Exact signed-angle junction density without redundant slab rejection.
 
-    The exact compact-cover root fixes t in [1/128,1/64].  Closed Arb balls can
+    The exact compact-cover root fixes t in [1/128,1/64]. Closed Arb balls can
     extend a few ulps beyond an exact rational endpoint, so chart membership is
     certified by the exact partition rather than by re-testing rounded balls.
     """
@@ -63,8 +92,12 @@ def signed_junction_density(
     return acb(four * t) * transformed
 
 
+endpoint.endpoint_rho_hull = endpoint_rho_hull_relaxed
+
+
 def main() -> None:
     split.signed_junction_density = signed_junction_density
+    endpoint.endpoint_rho_hull = endpoint_rho_hull_relaxed
     split.main()
 
 
