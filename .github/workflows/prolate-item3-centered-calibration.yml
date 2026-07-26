@@ -31,7 +31,8 @@ jobs:
           python -m py_compile \
             CERTIFICATES/prolate/item3_center_connection/vendor/prolate_circle_Frr_ext.py \
             CERTIFICATES/prolate/item3_center_connection/audit/prolate_item3_frr_symbolic_audit.py \
-            CERTIFICATES/prolate/item3_center_connection/calibration/prolate_item3_centered_calibration.py
+            CERTIFICATES/prolate/item3_center_connection/calibration/prolate_item3_centered_calibration.py \
+            CERTIFICATES/prolate/item3_center_connection/calibration/canonicalize_centered_calibration.py
 
       - name: Verify accepted symbolic audit and provenance
         run: |
@@ -60,7 +61,8 @@ jobs:
           python prolate_item3_centered_calibration.py --fresh --rads 1/256
           python prolate_item3_centered_calibration.py --rads 1/1024
           python prolate_item3_centered_calibration.py --rads 1/4096
-          python prolate_item3_centered_calibration.py --verify-only
+          python canonicalize_centered_calibration.py --rewrite
+          python canonicalize_centered_calibration.py
 
       - name: Assemble immutable artifact
         run: |
@@ -73,6 +75,7 @@ jobs:
           cp CERTIFICATES/prolate/item3_center_connection/audit/item3_frr_symbolic_audit.json "$out/"
           cp CERTIFICATES/prolate/item3_center_connection/calibration/README.md "$out/CALIBRATION_README.md"
           cp CERTIFICATES/prolate/item3_center_connection/calibration/prolate_item3_centered_calibration.py "$out/"
+          cp CERTIFICATES/prolate/item3_center_connection/calibration/canonicalize_centered_calibration.py "$out/"
           cp CERTIFICATES/prolate/item3_center_connection/calibration/item3_centered_calibration.json "$out/"
           cp CERTIFICATES/prolate/item3_center_connection/calibration/EXTERNAL_DEPENDENCIES_CALIBRATION.txt "$out/"
           (cd "$out" && sha256sum * > SHA256SUMS.txt && sha256sum -c SHA256SUMS.txt)
