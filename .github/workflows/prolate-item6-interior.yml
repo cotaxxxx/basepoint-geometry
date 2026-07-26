@@ -1,101 +1,17 @@
-name: Prolate item 6 compact interior certificate
+name: Prolate item 6 retired compact-interior workflow
 
 on:
+  push:
+    branches:
+      - agent/prolate-item6-axis
   workflow_dispatch:
 
 concurrency:
   group: prolate-item6-interior-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
-  interior-block:
-    name: interior-${{ matrix.lo }}-${{ matrix.hi }}
+  retired:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
-    strategy:
-      fail-fast: false
-      max-parallel: 3
-      matrix:
-        include:
-          - lo: 1
-            hi: 2
-          - lo: 2
-            hi: 3
-          - lo: 3
-            hi: 4
-          - lo: 4
-            hi: 5
-          - lo: 5
-            hi: 6
-          - lo: 6
-            hi: 7
-          - lo: 7
-            hi: 8
-          - lo: 8
-            hi: 9
-          - lo: 9
-            hi: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
-      - name: Install validated arithmetic
-        run: python -m pip install python-flint==0.9.0
-      - name: Certify compact-interior lambda block
-        working-directory: CERTIFICATES/prolate/item6_axis
-        run: >-
-          python prolate_axis_interior_block_arb.py
-          --dps 50
-          --tolerance 1e-18
-          --integration-depth 22
-          --eval-limit 200000
-          --max-split-depth 16
-          --max-boxes 32768
-          --w-lo-num 1
-          --w-lo-den 20
-          --w-hi-num 3
-          --w-hi-den 4
-          --lambda-lo ${{ matrix.lo }}
-          --lambda-hi ${{ matrix.hi }}
-          --json prolate_axis_interior_block_${{ matrix.lo }}_${{ matrix.hi }}.json
-      - name: Upload block certificate
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: prolate-item6-interior-block-${{ matrix.lo }}-${{ matrix.hi }}
-          path: |
-            CERTIFICATES/prolate/item6_axis/prolate_axis_interior_block_${{ matrix.lo }}_${{ matrix.hi }}.json
-            CERTIFICATES/prolate/item6_axis/prolate_axis_interior_block_${{ matrix.lo }}_${{ matrix.hi }}.json.sha256
-
-  combine:
-    name: interior-combine-1-10
-    needs: interior-block
-    if: always()
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
-      - name: Download all block certificates
-        uses: actions/download-artifact@v4
-        with:
-          pattern: prolate-item6-interior-block-*
-          path: CERTIFICATES/prolate/item6_axis/interior_outputs
-          merge-multiple: true
-      - name: Combine exact adjacent blocks
-        working-directory: CERTIFICATES/prolate/item6_axis
-        run: >-
-          python prolate_axis_interior_combine.py
-          --root interior_outputs
-          --json prolate_axis_interior_1_10_combined.json
-      - name: Upload combined certificate
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: prolate-item6-interior-combined-1-10
-          path: |
-            CERTIFICATES/prolate/item6_axis/prolate_axis_interior_1_10_combined.json
-            CERTIFICATES/prolate/item6_axis/prolate_axis_interior_1_10_combined.json.sha256
+      - run: echo "Retired; replaced by signed-angle finite-grid certificates."
