@@ -27,7 +27,7 @@ from flint import acb, arb, fmpq
 import prolate_axis_pole_modulus_arb as base
 import prolate_axis_pole_modulus_compact_arb as compact
 
-SIGNED_ENDPOINT_T = fmpq(63, 64)
+SIGNED_ENDPOINT_T = fmpq(255, 256)
 
 
 def sha256_file(path: Path) -> str:
@@ -235,7 +235,7 @@ def signed_outer_far_density(
     R2 = rho2 + L * q * q
 
     cross = rho * (lam * w - (lam - one / lam) * c)
-    delta = (acb(cross) / acb(N)).atan()
+    delta = acb((cross / N).atan())
     delta_w = acb(lam * rho / R2)
     delta_ww = acb(two * lam * L * rho * q / (R2 * R2))
     c_acb = acb(c)
@@ -296,8 +296,8 @@ def main() -> None:
         "signed_endpoint_t": str(SIGNED_ENDPOINT_T),
         "method": (
             "factor the complete cosine density without dividing by z^2-2; "
-            "for t>=63/64 use exact signed atan angle derivatives and the 4*t "
-            "outer-chart Jacobian"
+            "for t>=255/256 use real Arb atan with exact signed-angle derivatives "
+            "and the 4*t outer-chart Jacobian"
         ),
     }
     result["conditions"]["endpoint factorization exact audit passed"] = True
