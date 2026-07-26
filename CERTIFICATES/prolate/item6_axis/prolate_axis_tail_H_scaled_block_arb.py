@@ -1,20 +1,15 @@
 #!/usr/bin/env python3
-"""Correlation-preserving three-chart driver for compact tail H blocks.
+"""Paired, correlation-preserving compact-tail driver for H.
 
-This wrapper reuses the exact block-cover logic from
-``prolate_axis_tail_H_block_arb.py``.  The moving layer is split as
+For ``mu=1/lambda`` the moving layer is resolved by three exact pieces:
 
-    [-1, w-4mu], [w-4mu, w+4mu], [w+4mu, 1].
+* an inner blow-up ``c=w+mu*q``, ``q in [-4,4]``;
+* a paired outer piece at the common distance ``x=|c-w|``;
+* the unmatched far-left piece.
 
-Unlike the former implementation, each chart substitutes ``c-w`` and the
-endpoint factors before Arb evaluation.  In particular, on the inner chart
-
-    c = w + mu*q,  q = 8*t-4,
-    c-w = mu*q,
-    P = mu^2 * (q^2 + 1-c^2),
-
-are evaluated in these exact factored forms.  This prevents interval loss from
-forming ``c`` and then subtracting the same interval ``w`` again.
+Pairing the two outer sides inside one integration kernel exposes the dominant
+left/right cancellation before parameter subdivision.  Every occurrence of
+``c-w`` and every vanishing endpoint factor is substituted in factored form.
 """
 from __future__ import annotations
 
@@ -30,7 +25,7 @@ import prolate_axis_tail_H_block_arb as base
 LAYER_RADIUS = 4
 
 
-def scaled_tail_H_three_chart(
+def paired_tail_H(
     mu_value: arb,
     w_value: arb,
     tolerance: arb,
@@ -58,25 +53,10 @@ def scaled_tail_H_three_chart(
         bracket = -c + n * difference / p
         return n * (-c * hbar + h1 * bracket) / (2 * w * root)
 
-    left_jacobian = 1 + w - radius * mu
-    right_jacobian = 1 - w - radius * mu
-
-    def left_kernel(t: acb, analytic: bool) -> acb:
-        # c=-1+Jt.  Keep c-w=-(1+w)(1-t)-4mu*t exact.
-        c = -1 + left_jacobian * t
-        difference = -(1 + w) * (1 - t) - radius * mu * t
-        rho2 = left_jacobian * t * (2 - left_jacobian * t)
-        n = 1 + w - w * left_jacobian * t
-        return left_jacobian * outer_integrand(
-            c, difference, rho2, n, analytic
-        )
-
     def inner_kernel(t: acb, analytic: bool) -> acb:
-        # c=w+mu*q, q in [-4,4].  Cancel the common mu factor in P and sqrt(P).
         q = 2 * radius * t - radius
         c = w + mu * q
-        difference = mu * q
-        rho2 = 1 - c * c
+        rho2 = (1 - c) * (1 + c)
         reduced_p = q * q + rho2
         s = rho2 + mu2 * c * c
         reduced_root = (reduced_p * s).sqrt(analytic=analytic)
@@ -85,31 +65,51 @@ def scaled_tail_H_three_chart(
         _, h1 = base.regular_angle_data(cosine)
         hbar = base.regular_hbar(cosine)
         bracket = -c + n * q / (mu * reduced_p)
-        # dc=2*radius*mu*dt and sqrt(P*S)=mu*sqrt(reduced_p*S).
+        # dc=8*mu*dt and sqrt(P*S)=mu*sqrt(reduced_p*S).
         return radius * n * (-c * hbar + h1 * bracket) / (
             w * reduced_root
         )
 
-    def right_kernel(t: acb, analytic: bool) -> acb:
-        # c=w+4mu+Jt.  Both c-w and 1-c retain exact positive factors.
-        c = w + radius * mu + right_jacobian * t
-        difference = radius * mu + right_jacobian * t
-        rho2 = right_jacobian * (1 - t) * (1 + c)
-        n = 1 - w * w - radius * mu * w - w * right_jacobian * t
-        return right_jacobian * outer_integrand(
-            c, difference, rho2, n, analytic
+    pair_jacobian = 1 - w - radius * mu
+
+    def paired_outer_kernel(t: acb, analytic: bool) -> acb:
+        x = radius * mu + pair_jacobian * t
+
+        c_left = w - x
+        rho2_left = (1 - w + x) * (1 + w - x)
+        n_left = 1 - w * w + w * x
+        left = outer_integrand(
+            c_left, -x, rho2_left, n_left, analytic
         )
 
-    left = base.rigorous_integral(
-        left_kernel, tolerance, integration_depth, eval_limit
-    )
+        c_right = w + x
+        # 1-c_right vanishes exactly at t=1.
+        rho2_right = pair_jacobian * (1 - t) * (1 + w + x)
+        n_right = 1 - w * w - w * x
+        right = outer_integrand(
+            c_right, x, rho2_right, n_right, analytic
+        )
+
+        return pair_jacobian * (left + right)
+
+    def far_left_kernel(t: acb, analytic: bool) -> acb:
+        # x runs from 1-w to 1+w; c=w-x runs from 2w-1 to -1.
+        x = 1 - w + 2 * w * t
+        c = w - x
+        rho2 = 4 * w * (1 - t) * (1 - w + w * t)
+        n = 1 + w - 2 * w * w + 2 * w * w * t
+        return 2 * w * outer_integrand(c, -x, rho2, n, analytic)
+
     inner = base.rigorous_integral(
         inner_kernel, tolerance, integration_depth, eval_limit
     )
-    right = base.rigorous_integral(
-        right_kernel, tolerance, integration_depth, eval_limit
+    paired = base.rigorous_integral(
+        paired_outer_kernel, tolerance, integration_depth, eval_limit
     )
-    return left + inner + right
+    far_left = base.rigorous_integral(
+        far_left_kernel, tolerance, integration_depth, eval_limit
+    )
+    return inner + paired + far_left
 
 
 def main() -> None:
@@ -139,13 +139,11 @@ def main() -> None:
         raise ValueError("require 0 < mu-lo < mu-hi")
     if not (fmpq(0) < w_lo < w_hi < fmpq(1)):
         raise ValueError("require 0 < w-lo < w-hi < 1")
-    if not (-1 < w_lo - LAYER_RADIUS * mu_hi):
-        raise ValueError("left outer chart leaves [-1,1]")
     if not (w_hi + LAYER_RADIUS * mu_hi < 1):
-        raise ValueError("right outer chart leaves [-1,1]")
+        raise ValueError("paired outer chart has nonpositive length")
 
     ctx.dps = args.dps
-    base.scaled_tail_H = scaled_tail_H_three_chart
+    base.scaled_tail_H = paired_tail_H
     result = base.certify_block(
         args.dps,
         args.tolerance,
@@ -159,14 +157,16 @@ def main() -> None:
         w_hi,
     )
     result["integration_chart"] = {
-        "type": "correlation-preserving mu-scaled three-chart split",
+        "type": "paired correlation-preserving moving-layer split",
         "layer_radius": LAYER_RADIUS,
-        "pieces": ["[-1,w-4mu]", "[w-4mu,w+4mu]", "[w+4mu,1]"],
-        "exact_inner_identities": [
-            "c=w+mu*(8t-4)",
-            "c-w=mu*(8t-4)",
-            "P=mu^2*((8t-4)^2+1-c^2)",
+        "pieces": [
+            "inner: c=w+mu*(8t-4)",
+            "paired: c=w+-x, x=4mu+(1-w-4mu)t",
+            "far-left: x=1-w+2wt, c=w-x",
         ],
+        "exact_partition": (
+            "inner plus paired outer plus unmatched far-left equals [-1,1]"
+        ),
     }
     result["script_sha256"] = base.sha256_file(Path(__file__))
     result["base_driver_sha256"] = base.sha256_file(
