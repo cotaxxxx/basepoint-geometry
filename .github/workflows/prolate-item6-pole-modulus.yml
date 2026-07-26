@@ -7,6 +7,7 @@ on:
       - "CERTIFICATES/prolate/item6_axis/prolate_axis_pole_modulus_symbolic_audit.py"
       - "CERTIFICATES/prolate/item6_axis/prolate_axis_pole_modulus_arb.py"
       - "CERTIFICATES/prolate/item6_axis/prolate_axis_pole_modulus_compact_arb.py"
+      - "CERTIFICATES/prolate/item6_axis/prolate_axis_pole_modulus_endpoint_arb.py"
   workflow_dispatch:
 
 concurrency:
@@ -34,10 +35,11 @@ jobs:
           prolate_axis_pole_modulus_symbolic_audit.py
           prolate_axis_pole_modulus_arb.py
           prolate_axis_pole_modulus_compact_arb.py
-      - name: Certify compact uniform pole modulus
+          prolate_axis_pole_modulus_endpoint_arb.py
+      - name: Certify endpoint-stable compact pole modulus
         working-directory: CERTIFICATES/prolate/item6_axis
         run: >-
-          python prolate_axis_pole_modulus_compact_arb.py
+          python prolate_axis_pole_modulus_endpoint_arb.py
           --dps 50
           --max-split-depth 24
           --max-boxes 1000000
@@ -45,11 +47,11 @@ jobs:
           --outer-density-limit 144100
           --max-terminal-records 100
           --json prolate_axis_pole_modulus_compact.json
-      - name: Upload compact pole modulus certificate
+      - name: Upload endpoint-stable pole modulus certificate
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: prolate-item6-pole-modulus-compact
+          name: prolate-item6-pole-modulus-endpoint-stable
           path: |
             CERTIFICATES/prolate/item6_axis/prolate_axis_pole_modulus_symbolic_audit.json
             CERTIFICATES/prolate/item6_axis/prolate_axis_pole_modulus_compact.json
