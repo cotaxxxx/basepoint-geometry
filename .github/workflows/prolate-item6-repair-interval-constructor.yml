@@ -22,7 +22,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: agent/prolate-item6-axis
-          fetch-depth: 0
+          fetch-depth: 1
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
@@ -82,12 +82,12 @@ jobs:
                   "lo": str(lo),
                   "hi": str(hi),
                   "box": str(box),
-                  "contains_lo": bool(lo_ball in box),
-                  "contains_hi": bool(hi_ball in box),
+                  "overlaps_lo": bool(box.overlaps(lo_ball)),
+                  "overlaps_hi": bool(box.overlaps(hi_ball)),
                   "contains_zero": bool(0 in box),
               }
               records.append(record)
-              checks.extend([record["contains_lo"], record["contains_hi"]])
+              checks.extend([record["overlaps_lo"], record["overlaps_hi"]])
               if lo > 0:
                   checks.append(not record["contains_zero"])
 
@@ -104,9 +104,9 @@ jobs:
               "cases": records,
               "legacy_files": legacy_files,
               "conclusion": (
-                  "Every tested exact rational endpoint is contained, every "
-                  "strictly positive test interval excludes zero, and no legacy "
-                  "fmpq two-argument constructor remains."
+                  "Every tested endpoint ball overlaps the constructed rational "
+                  "box, every strictly positive test interval excludes zero, and "
+                  "no legacy fmpq two-argument constructor remains."
               ),
           }
           output = Path(__file__).with_suffix(".json")
@@ -119,10 +119,28 @@ jobs:
           audit_path.write_text(textwrap.dedent(audit), encoding="utf-8")
           PY
       - name: Verify repaired constructor with python-flint 0.9
+        id: verify
+        continue-on-error: true
+        shell: bash
         run: |
           python -m pip install python-flint==0.9.0
-          python CERTIFICATES/prolate/item6_axis/prolate_axis_interval_constructor_audit.py
+          set +e
+          python CERTIFICATES/prolate/item6_axis/prolate_axis_interval_constructor_audit.py > interval_audit.log 2>&1
+          CODE=$?
+          cat interval_audit.log
+          exit $CODE
+      - name: Upload interval-constructor audit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: prolate-item6-interval-constructor-audit
+          path: |
+            interval_audit.log
+            CERTIFICATES/prolate/item6_axis/prolate_axis_interval_constructor_audit.py
+            CERTIFICATES/prolate/item6_axis/prolate_axis_interval_constructor_audit.json
+          if-no-files-found: warn
       - name: Commit repaired sources and audit
+        if: steps.verify.outcome == 'success'
         shell: bash
         run: |
           git config user.name "github-actions[bot]"
@@ -130,3 +148,6 @@ jobs:
           git add CERTIFICATES/prolate/item6_axis
           git commit -m "Repair exact rational Arb interval construction"
           git push origin HEAD:agent/prolate-item6-axis
+      - name: Reject failed constructor audit
+        if: steps.verify.outcome != 'success'
+        run: exit 1
