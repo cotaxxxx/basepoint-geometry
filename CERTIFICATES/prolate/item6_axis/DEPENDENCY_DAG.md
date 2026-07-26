@@ -2,66 +2,95 @@
 
 Status: **ASSEMBLY IN PROGRESS / FULL THEOREM NOT CERTIFIED**
 
-## Target domain
+## Target
 
 \[
-\mathcal D
+\mathcal D=\{(\lambda,w):\lambda\ge1,\ 0<w<1\},
+\qquad
+\Psi_\lambda(w)>0.
+\]
+
+The finite/tail interface is
+
+\[
+\lambda=100
+\quad\Longleftrightarrow\quad
+\mu=\frac1{100}.
+\]
+
+The finite `w` interfaces are
+
+\[
+w=\frac12,
+\qquad
+w=\frac34,
+\qquad
+w=\frac{63}{64},
+\qquad
+w=1-2^{-24}.
+\]
+
+## Exact representation layer
+
+### `R-SIGNED`
+
+For `0<=w<1`, the signed angle `delta` satisfies
+
+\[
+\arccos(C)^2=\delta^2,
+\]
+
+\[
+\delta_w
 =
-\{(\lambda,w):\lambda\ge1,\ 0<w<1\}.
+\frac{\lambda\sqrt{1-c^2}}
+{1-c^2+\lambda^2(c-w)^2},
 \]
-
-The target is
 
 \[
-\Psi_\lambda(w)>0
-\qquad((\lambda,w)\in\mathcal D).
+\delta_{ww}
+=
+\frac{2\lambda^3\sqrt{1-c^2}(c-w)}
+{\left(1-c^2+\lambda^2(c-w)^2\right)^2}.
 \]
 
-The assembly uses the exact interfaces
+State: **EXACT FORMULAS IMPLEMENTED / CI PENDING**.
+
+### `R-SIGNED-TAIL`
+
+For `mu=1/lambda`, the scaled kernels `H` and `M=-mu*H_mu` have exact signed-atan formulas after the identity
 
 \[
-w_0=\frac1{20},
-\qquad
-w_1=\frac34,
-\qquad
-w_2=\frac{63}{64},
+\int_{-1}^{1}c\,dc=0
 \]
 
-and
+removes the constant `pi^2/4` angle term.
 
-\[
-\lambda_1=10,
-\qquad
-\lambda_2=100,
-\qquad
-\mu_2=\frac1{100},
-\qquad
-\mu_3=\frac1{200}.
-\]
+State: **EXACT FORMULAS IMPLEMENTED / CI PENDING**.
 
 ## Node table
 
-| Node | Exact domain / boundary | Label | Current state |
+| Node | Exact domain / boundary | Direct statement | Current state |
 |---|---|---|---|
-| `C-HESSIAN` | `1<=lambda<=100`, `w=0` | direct positive Hessian anchor | **CERTIFIED** |
-| `C-1` | `1<=lambda<=10`, `0<w<=1/20` | center transfer by `A''>0` | **CERTIFIED** |
-| `C-2` | `10<=lambda<=100`, `0<w<=1/20` | center transfer by `A''>0` | **RUN ACTIVE** |
-| `I-1` | `1<=lambda<=10`, `1/20<=w<=3/4` | direct `Psi>0` | **RUN ACTIVE** |
-| `I-2` | `10<=lambda<=100`, `1/20<=w<=3/4` | direct or parameter transfer | **NOT STARTED** |
-| `P-BOUNDARY` | `1<=lambda<=100`, `w=1^-` | direct positive boundary anchor | **CERTIFIED** |
-| `P-SECOND` | `1<=lambda<=100`, `w=1^-` | negative boundary second derivative | **RUN / AUDIT REBINDING** |
-| `P-1` | `1<=lambda<=100`, `3/4<=w<=63/64` | transfer from boundary by `A''<0` | **RUN ACTIVE** |
-| `P-2` | `1<=lambda<=100`, `63/64<w<1` | blow-up transfer | **NOT CERTIFIED** |
-| `T-INTERFACE` | `1/200<=mu<=1/100`, `1/20<=w<=3/4` | direct scaled `H>0` | **RUN ACTIVE** |
-| `T-CENTER` | `0<mu<=1/100`, `0<w<=1/20` | tail center overlap | **NOT CERTIFIED** |
-| `T-INTERIOR` | `0<mu<=1/200`, `1/20<=w<=3/4` | log-parameter transfer | **FORMULA AUDIT / NOT CERTIFIED** |
-| `T-POLE` | `0<mu<=1/100`, `3/4<w<1` | tail pole overlap | **NOT CERTIFIED** |
+| `C-HESSIAN` | `1<=lambda<=100`, `w=0` | `Q_parallel>0` | **CERTIFIED** |
+| `C-1` | `1<=lambda<=10`, `0<w<=1/20` | `Psi>0` from `A_second>0` | **CERTIFIED** |
+| `F-CENTER` | `1<=lambda<=100`, `0<w<=1/2` | signed-angle `A_second>0` grid | **RUN QUEUED/ACTIVE** |
+| `F-MIDDLE` | `1<=lambda<=100`, `1/2<=w<=3/4` | signed-angle direct `Psi>0` grid | **RUN QUEUED/ACTIVE** |
+| `F-POLE` | `1<=lambda<=100`, `3/4<=w<=63/64` | signed-angle direct `Psi>0` grid | **RUN QUEUED/ACTIVE** |
+| `P-BOUNDARY` | `1<=lambda<=100`, `w=1^-` | `Phi(lambda)>0` | **CERTIFIED** |
+| `P-DYADIC` | `1<=lambda<=100`, `63/64<=w<=1-2^-24` | signed-angle direct `Psi>0` grid | **RUN QUEUED/ACTIVE** |
+| `P-MODULUS` | `1<=lambda<=100`, `1-2^-24<w<1` | boundary floor minus uniform modulus loss | **RUN QUEUED/ACTIVE** |
+| `T-INTERFACE` | `1/200<=mu<=1/100`, `1/20<=w<=3/4` | signed-angle `H>0` grid | **RUN QUEUED/ACTIVE** |
+| `T-MONO` | `1/400<=mu<=1/200`, `1/20<=w<=3/4` | signed-angle `M>0` grid | **RUN QUEUED/ACTIVE** |
+| `T-CENTER` | `0<mu<=1/100`, `0<w<=1/20` | center tail overlap | **NOT CERTIFIED** |
+| `T-INTERIOR-0` | `0<mu<=1/200`, `1/20<=w<=3/4` | extend `M>0` to `mu=0` | **NOT CERTIFIED** |
+| `T-POLE` | `0<mu<=1/100`, `3/4<w<1` | pole tail overlap | **NOT CERTIFIED** |
 
 ## Certified edges
 
-### Center anchor to finite center cap
+### `C-HESSIAN -> C-1`
 
-`C-HESSIAN -> C-1` is certified by
+Certified by
 
 \[
 \frac{\Psi_\lambda(w)}w
@@ -69,34 +98,56 @@ and
 \int_0^1A_\lambda''(tw)\,dt
 \]
 
-and the certificate
+and the exact `A_second>0` certificate on
 
 \[
-A_\lambda''(v)>0
-\quad
-(0\le v\le1/20,\ 1\le\lambda\le10).
+0\le v\le\frac1{20},
+\qquad
+1\le\lambda\le10.
 \]
 
-### Pole boundary definition
+### `P-BOUNDARY`
 
-`P-BOUNDARY` is an independent direct anchor:
+Independent direct boundary anchor:
 
 \[
-\Phi(\lambda)
-=
-\lim_{w\to1^-}\Psi_\lambda(w)>0
-\quad(1\le\lambda\le100).
+\Phi(\lambda)=\lim_{w\to1^-}\Psi_\lambda(w)>0
+\qquad(1\le\lambda\le100).
 \]
 
-The intended transfer edge `P-BOUNDARY -> P-1` is
+No finite pole-transfer edge is currently required by the formal path. The former `A_second<0` transfer is supporting work only because its `[4,5]` interval run retained terminal boxes.
+
+## Intended finite assembly
+
+Once the strict combined artifacts are certified,
 
 \[
-A_\lambda''(w)<0
-\Longrightarrow
-\Psi_\lambda(w)\ge\Phi(\lambda)>0.
+F\text{-CENTER}\cup F\text{-MIDDLE}\cup F\text{-POLE}
 \]
 
-This edge is not marked certified until the finite pole-transfer artifact is complete.
+covers
+
+\[
+1\le\lambda\le100,
+\qquad
+0<w\le\frac{63}{64}.
+\]
+
+Then
+
+\[
+P\text{-DYADIC}\cup P\text{-MODULUS}
+\]
+
+covers
+
+\[
+1\le\lambda\le100,
+\qquad
+\frac{63}{64}<w<1.
+\]
+
+All combiners must verify exact endpoints, pairwise non-overlap, exact rational area coverage, the expected file count, and terminal 0.
 
 ## Tail edges
 
@@ -106,42 +157,46 @@ For
 H(\mu,w)=\frac{\Psi_{1/\mu}(w)}{\mu w},
 \]
 
-positivity of `H` is equivalent to positivity of `Psi` for `mu,w>0`.
+`H>0` is equivalent to `Psi>0` for `mu,w>0`.
 
-The interface edge from finite lambda to the tail is fixed exactly at
-
-\[
-\lambda=100
-\quad\Longleftrightarrow\quad
-\mu=1/100.
-\]
-
-The candidate unbounded transfer is
+The candidate monotone edge is
 
 \[
-M(\mu,w)
-=-\mu\,\partial_\mu H(\mu,w)>0.
+M(\mu,w)=-\mu\,\partial_\mu H(\mu,w)>0.
 \]
 
-If `T-INTERFACE` and `M>0` on `0<mu<=1/200` are certified, then
+If `T-INTERFACE` and `T-INTERIOR-0` are certified, then
 
 \[
-H(\mu,w)
-\ge
-H(1/200,w)>0
-\qquad(0<\mu\le1/200),
+H(\mu,w)\ge H(1/200,w)>0
+\qquad
+\left(0<\mu\le\frac1{200},\ \frac1{20}\le w\le\frac34\right).
 \]
 
-closing the unbounded interior tail without a separate numerical truncation.
+The exact endpoint information currently available is
+
+\[
+\lim_{\mu\to0}\frac{\Phi(1/\mu)}{\mu}=\frac{\pi^2}{2},
+\]
+
+and
+
+\[
+\frac{A_{1/\mu}''(w)}\mu
+\sim
+\frac{3\pi(1-2w^2)}{\sqrt{1-w^2}}\log(1/\mu).
+\]
+
+These endpoint and coefficient identities are not by themselves proof nodes; uniform remainder bounds are required for `T-CENTER`, `T-INTERIOR-0`, and `T-POLE`.
 
 ## Acceptance rules
 
-The full item 6 theorem may be marked `CERTIFIED` only when:
+The final theorem may be marked `CERTIFIED` only when:
 
 1. every node covering `D` is certified;
-2. all exact interfaces are covered from both sides or by a closed endpoint convention;
-3. every transfer edge points to a certified direct or boundary anchor;
-4. every block combiner reports exact rational adjacency and zero terminal boxes;
-5. the union of finite and tail regions has no gap at `lambda=100`;
-6. the center and pole tail overlaps are explicitly certified;
-7. no statement labelled reference, sampled, running, or formula-only is used as a proof node.
+2. all exact interfaces are covered with no open gap;
+3. every direct grid combiner reports the requested endpoints, exact non-overlapping coverage, expected file count, and terminal 0;
+4. every transfer uses a certified anchor and a certified uniform inequality;
+5. finite and tail regions meet exactly at `lambda=100`;
+6. center and pole tail overlaps are explicit certified nodes;
+7. no sampled, reference, running, formula-only, or incomplete result is used as a proof node.
