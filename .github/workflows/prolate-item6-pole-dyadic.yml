@@ -53,7 +53,8 @@ jobs:
     timeout-minutes: 90
     strategy:
       fail-fast: false
-      max-parallel: 6
+      # Keep runner capacity available for the tail and endpoint certificates.
+      max-parallel: 1
       matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
     steps:
       - uses: actions/checkout@v4
