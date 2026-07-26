@@ -21,7 +21,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - name: Inventory candidate artifacts
+      - name: Export complete artifact inventory
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
@@ -32,7 +32,7 @@ jobs:
           gh api --paginate "/repos/$REPO/actions/artifacts?per_page=100" \
             --jq '.artifacts[] | @json' > item0_artifact_audit/artifacts.jsonl
           python - <<'PY'
-          import json, re
+          import json
           from datetime import datetime
           from pathlib import Path
 
@@ -44,19 +44,16 @@ jobs:
           for rec in records:
               created = datetime.fromisoformat(rec['created_at'].replace('Z', '+00:00'))
               if start <= created < end:
-                  dated.append(rec)
-          name_re = re.compile(r'(item[-_ ]?0|item0|0d|harvest|checkpoint|prolate|certif|kernel|interior)', re.I)
-          candidates = [r for r in dated if name_re.search(r.get('name','')) and not r.get('expired', False)]
+                  dated.append({k: rec.get(k) for k in ('id','name','size_in_bytes','created_at','updated_at','expired','workflow_run')})
           report = {
               'date_window_utc': [start.isoformat(), end.isoformat()],
               'total_artifacts_in_window': len(dated),
-              'candidate_count': len(candidates),
-              'candidates': [{k:r.get(k) for k in ('id','name','size_in_bytes','created_at','expired')} for r in candidates],
+              'artifacts': dated,
           }
-          root.joinpath('inventory.json').write_text(json.dumps(report, indent=2), encoding='utf-8')
-          print(json.dumps(report, indent=2))
+          root.joinpath('complete_inventory.json').write_text(json.dumps(report, indent=2), encoding='utf-8')
+          print('artifacts in window:', len(dated))
           PY
       - uses: actions/upload-artifact@v4
         with:
-          name: item0-artifact-inventory
-          path: item0_artifact_audit/inventory.json
+          name: item0-complete-artifact-inventory
+          path: item0_artifact_audit/complete_inventory.json
