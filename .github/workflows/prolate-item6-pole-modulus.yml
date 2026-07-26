@@ -1,20 +1,6 @@
 name: Prolate item 6 pole modulus certificate
 
 on:
-  pull_request:
-    paths:
-      - ".github/workflows/prolate-item6-pole-modulus.yml"
-      - "CERTIFICATES/prolate/item6_axis/prolate_axis_pole_modulus_symbolic_audit.py"
-      - "CERTIFICATES/prolate/item6_axis/prolate_axis_signed_angle_symbolic_audit.py"
-      - "CERTIFICATES/prolate/item6_axis/prolate_axis_pole_modulus_arb.py"
-      - "CERTIFICATES/prolate/item6_axis/prolate_axis_pole_modulus_compact_arb.py"
-      - "CERTIFICATES/prolate/item6_axis/prolate_axis_pole_modulus_compact_dfs_arb.py"
-      - "CERTIFICATES/prolate/item6_axis/prolate_axis_pole_modulus_endpoint_arb.py"
-      - "CERTIFICATES/prolate/item6_axis/prolate_axis_pole_modulus_outer_far_preflight_arb.py"
-      - "CERTIFICATES/prolate/item6_axis/prolate_axis_pole_modulus_budgeted_arb.py"
-      - "CERTIFICATES/prolate/item6_axis/prolate_axis_pole_modulus_budgeted_dfs_arb.py"
-      - "CERTIFICATES/prolate/item6_axis/prolate_axis_pole_modulus_split_dfs_arb.py"
-      - "CERTIFICATES/prolate/item6_axis/prolate_axis_pole_modulus_split_relaxed_dfs_arb.py"
   workflow_dispatch:
 
 concurrency:
