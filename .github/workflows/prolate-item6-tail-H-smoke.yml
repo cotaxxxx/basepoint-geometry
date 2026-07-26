@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - ".github/workflows/prolate-item6-tail-H-smoke.yml"
+      - "CERTIFICATES/prolate/item6_axis/prolate_axis_interval_constructor_audit.py"
       - "CERTIFICATES/prolate/item6_axis/prolate_axis_tail_H_block_arb.py"
       - "CERTIFICATES/prolate/item6_axis/prolate_axis_tail_H_scaled_block_arb.py"
       - "CERTIFICATES/prolate/item6_axis/prolate_axis_tail_regularized_symbolic_audit.py"
@@ -24,10 +25,11 @@ jobs:
         with:
           python-version: "3.13"
       - name: Install exact audit environment
-        run: python -m pip install sympy==1.14.0
-      - name: Verify cancellation-regularized H kernel
+        run: python -m pip install sympy==1.14.0 python-flint==0.9.0
+      - name: Verify rational intervals and regularized H charts
         working-directory: CERTIFICATES/prolate/item6_axis
         run: |
+          python prolate_axis_interval_constructor_audit.py
           python prolate_axis_tail_regularized_symbolic_audit.py
           python prolate_axis_tail_paired_chart_symbolic_audit.py
       - name: Upload exact audit
@@ -35,6 +37,7 @@ jobs:
         with:
           name: prolate-item6-tail-H-smoke-audit
           path: |
+            CERTIFICATES/prolate/item6_axis/prolate_axis_interval_constructor_audit.json
             CERTIFICATES/prolate/item6_axis/prolate_axis_tail_regularized_symbolic_audit.json
             CERTIFICATES/prolate/item6_axis/prolate_axis_tail_paired_chart_symbolic_audit.json
 
