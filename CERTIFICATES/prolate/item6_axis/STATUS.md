@@ -9,21 +9,6 @@
 
 Item 6 as a whole remains **NOT CERTIFIED**.
 
-## Exact formulas and audits
-
-- exact 1D energy reduction: **FROZEN**
-- exact axial derivative formula: **FROZEN**
-- reflection/evenness audit: **PASSED**
-- moving-layer charts at `c=w`: **EXACTLY AUDITED**
-- center Hessian and finite center-cap kernels: **EXACTLY AUDITED**
-- pole-boundary reduction: **EXACTLY AUDITED**
-- pole second-boundary reduction with `d=2t^2`: **FORMULA FIXED / LATEST CI PENDING**
-- tail normalization by `mu*w`: **CORRECTED**
-- logarithmic coefficient `3*pi*sqrt(1-s)`: **EXACT OUTER/LAURENT AUDIT PASSED**
-- cancellation-regularized tail kernel: **EXACTLY AUDITED**
-- tail log derivative `M=-mu*partial_mu H`: **FACTORED EXACT AUDIT IMPLEMENTED / LATEST CI PENDING**
-- all current Arb drivers and combiners: **IN AUDIT COMPILE SET**
-
 ## Certified nodes
 
 ### `C-HESSIAN`
@@ -50,13 +35,7 @@ Records: `CENTER_EXTENDED_CERTIFICATE.md`, `prolate_axis_center_extended_arb_sum
 \left(1\le\lambda\le10,\ 0<w\le\frac1{20}\right).
 \]
 
-Certified through
-
-\[
-A_\lambda''(v)>0
-\qquad
-\left(0\le v\le\frac1{20},\ 1\le\lambda\le10\right).
-\]
+Certified through `A_lambda''(v)>0` on `0<=v<=1/20`.
 
 - 9 exact adjacent lambda blocks
 - 6203 evaluations
@@ -70,9 +49,7 @@ Records: `CENTER_CAP_CERTIFICATE_1_10.md`, `prolate_axis_center_cap_1_10_summary
 ### `P-BOUNDARY`
 
 \[
-\Phi(\lambda)
-=
-\lim_{w\to1^-}\Psi_\lambda(w)>0
+\Phi(\lambda)=\lim_{w\to1^-}\Psi_\lambda(w)>0
 \qquad(1\le\lambda\le100).
 \]
 
@@ -85,9 +62,49 @@ Records: `CENTER_CAP_CERTIFICATE_1_10.md`, `prolate_axis_center_cap_1_10_summary
 
 Records: `POLE_BOUNDARY_CERTIFICATE_1_100.md`, `prolate_axis_pole_boundary_1_100_summary.json`.
 
-## Active finite-domain proof
+## Exact signed-angle reduction
 
-The preferred finite decomposition is now
+For `0<=w<1`, `-1<=c<=1`, and `lambda>0`, define
+
+\[
+N=1-wc,
+\]
+
+\[
+X=\sqrt{1-c^2}\left(\lambda w-(\lambda-\lambda^{-1})c\right),
+\]
+
+\[
+\delta_\lambda(c,w)=\arctan\frac{X}{N}.
+\]
+
+Because `N>0`,
+
+\[
+\arccos(C_\lambda(c,w))^2=\delta_\lambda(c,w)^2.
+\]
+
+The exact derivatives are
+
+\[
+\partial_w\delta
+=
+\frac{\lambda\sqrt{1-c^2}}
+{1-c^2+\lambda^2(c-w)^2},
+\]
+
+\[
+\partial_w^2\delta
+=
+\frac{2\lambda^3\sqrt{1-c^2}(c-w)}
+{\left(1-c^2+\lambda^2(c-w)^2\right)^2}.
+\]
+
+Consequently the finite-domain Arb drivers no longer require the hypergeometric angle regularization. Exact identities are audited by `prolate_axis_signed_angle_symbolic_audit.py`.
+
+## Finite domain `1<=lambda<=100`
+
+The exact target decomposition is
 
 \[
 0<w\le\frac12,
@@ -97,140 +114,156 @@ The preferred finite decomposition is now
 \frac34\le w<1.
 \]
 
-### Center half
+### Signed finite grid
 
-Target:
+`prolate_axis_signed_rectangle_arb.py` certifies either `Psi>0` or `A_second>0` on one exact rational rectangle. `prolate_axis_grid_combine.py` verifies:
+
+- requested rectangle endpoints;
+- expected block count;
+- pairwise non-overlap;
+- exact rational area coverage;
+- every block status `CERTIFIED`;
+- terminal 0.
+
+The active signed finite grid contains:
+
+- center: 24 rectangles, `A_second>0`, `0<=w<=1/2`;
+- middle: 24 rectangles, `Psi>0`, `1/2<=w<=3/4`;
+- pole: 40 rectangles, direct `Psi>0`, `3/4<=w<=63/64`.
+
+The earlier `A_second<0` pole-transfer path is now supporting evidence only. Its `[4,5]` block ended with 332 `sign_not_certified` terminal boxes, no evaluation errors, and exact partition conservation. Independent point evaluation remains negative; this is interval dependency loss, not a certified counterexample. The formal pole path is therefore direct signed-angle `Psi>0`.
+
+### Final pole layer
+
+The layer
 
 \[
-A_\lambda''(w)>0
+\frac{63}{64}<w<1
+\]
+
+is split into:
+
+1. 144 signed-angle dyadic rectangles covering
+   `63/64<=w<=1-2^-24`, `1<=lambda<=100`;
+2. a uniform modulus theorem on `1-2^-24<w<1`.
+
+The modulus proof uses `u=1-w`, the inner chart `d=u^2 y^2`, the outer chart `d=2t^2`, and the projective corner chart `u=r sqrt(2)t`. The removable `1/N` factors in `C_w` and `C_ww` are cancelled algebraically before interval evaluation. Exact chart identities are audited by `prolate_axis_pole_modulus_symbolic_audit.py`.
+
+## Tail `lambda>=100`
+
+Set
+
+\[
+\mu=\lambda^{-1},
 \qquad
-\left(0\le w\le\frac12,\ 1\le\lambda\le100\right).
+H(\mu,w)=\frac{\Psi_{1/\mu}(w)}{\mu w}.
 \]
 
-This implies `Psi>0` on `0<w<=1/2`. The 16-block run is active; block `[2,3]` is already certified with terminal 0.
-
-### Middle interior
-
-Target:
-
-\[
-\Psi_\lambda(w)>0
-\qquad
-\left(\frac12\le w\le\frac34,\ 1\le\lambda\le100\right).
-\]
-
-The correlation-preserving direct driver and strict generic combiner are implemented. The heavy run is queued/active subject to runner capacity.
-
-The earlier direct tranche
-
-\[
-1\le\lambda\le10,
-\qquad
-\frac1{20}\le w\le\frac34
-\]
-
-remains valid supporting work. Block `[1,2]` is certified with 7299 leaves and terminal 0.
-
-### Pole transfer
-
-The boundary anchor is certified. The active transfer target is
-
-\[
-A_\lambda''(w)<0
-\qquad
-\left(\frac34\le w\le\frac{63}{64},\ 1\le\lambda\le100\right).
-\]
-
-Together with `P-BOUNDARY`, this gives
-
-\[
-\Psi_\lambda(w)\ge\Phi(\lambda)>0.
-\]
-
-Block `[2,3]` is already certified with 1479 leaves and terminal 0. The remaining final pole layer is
-
-\[
-\frac{63}{64}<w<1.
-\]
-
-The boundary second-derivative anchor
-
-\[
-\Theta(\lambda)=\lim_{w\to1^-}A_\lambda''(w)<0
-\]
-
-has successful Arb blocks through the currently completed parameter ranges, but the final archived certificate must be rebound to the corrected positive-branch symbolic audit.
-
-## Tail proof
-
-The exact finite/tail junction is
+The exact junction is
 
 \[
 \lambda_0=100,
 \qquad
-\mu_0=1/100.
+\mu_0=\frac1{100}.
 \]
 
-Define
+With
 
 \[
-H(\mu,w)=\frac{\Psi_{1/\mu}(w)}{\mu w}.
-\]
-
-### Positive interface slab
-
-The first direct target is
-
-\[
-H(\mu,w)>0
+P=(c-w)^2+\mu^2(1-c^2),
 \qquad
-\left(
-\frac1{200}\le\mu\le\frac1{100},
-\frac1{20}\le w\le\frac34
-\right).
+S=1-c^2+\mu^2c^2,
 \]
 
-Both the original moving split and the faster three-chart split
+and the signed angle
+
+\[
+\delta=\arctan\frac{\sqrt{1-c^2}(w-c+\mu^2c)}{\mu(1-wc)},
+\]
+
+one has
+
+\[
+\partial_\mu\delta
+=
+\frac{\sqrt{1-c^2}(1-wc)(c-w+\mu^2c)}{PS}.
+\]
+
+After removing the constant angle term using `integral_{-1}^1 c dc=0`, both
+
+\[
+H(\mu,w)
+\]
+
+and
+
+\[
+M(\mu,w)=-\mu\,\partial_\mu H(\mu,w)
+\]
+
+have exact signed-atan kernels. These are audited by `prolate_axis_signed_tail_symbolic_audit.py` and evaluated by `prolate_axis_signed_tail_block_arb.py` with the correlated three-chart split
 
 \[
 [-1,w-4\mu],
 \quad[w-4\mu,w+4\mu],
-\quad[w+4\mu,1]
+\quad[w+4\mu,1].
 \]
 
-are implemented. The direct Arb runs are active.
-
-### Log-parameter transfer
-
-Define
+The active signed tail grid targets:
 
 \[
-M(\mu,w)=-\mu\,\partial_\mu H(\mu,w).
+H>0
+\quad\text{on}\quad
+\frac1{200}\le\mu\le\frac1{100},
+\quad
+\frac1{20}\le w\le\frac34,
 \]
 
-If `M>0`, then `H` increases when `mu` decreases. A first three-block certificate has been started on
+and
 
 \[
+M>0
+\quad\text{on}\quad
 \frac1{400}\le\mu\le\frac1{200},
-\qquad
+\quad
 \frac1{20}\le w\le\frac34.
 \]
 
-The intended unbounded-tail edge is
+The exact endpoint audits also give
 
 \[
-H(\mu,w)\ge H(1/200,w)>0
-\qquad(0<\mu\le1/200).
+\lim_{\mu\to0}\frac{\Phi(1/\mu)}{\mu}=\frac{\pi^2}{2},
 \]
 
-A final blow-up estimate is still required to include `mu=0` and to certify the center and pole overlaps.
+and the logarithmic coefficient of `A_second/mu`:
 
-## Exact assembly
+\[
+\frac{3\pi(1-2w^2)}{\sqrt{1-w^2}}.
+\]
 
-`DEPENDENCY_DAG.md` now records every proof node, transfer edge, exact interface, and acceptance condition. The full theorem may be marked `CERTIFIED` only after:
+Thus the coefficient is positive on the center tail and negative on the pole tail. A uniform bounded-remainder certificate is still required before either overlap becomes a theorem.
 
-1. all finite center, middle, and pole nodes are certified;
-2. the final thin pole layer is closed;
-3. the positive tail interface and log-parameter transfer are certified;
-4. center and pole tail overlaps are certified;
-5. all strict combiners report requested endpoints, exact adjacency, non-overlap, exact coverage, and terminal 0.
+## Active proof runs
+
+The following new proof paths have been launched and are currently subject to GitHub runner capacity:
+
+- signed-angle representative smoke certificates;
+- signed finite grid;
+- signed dyadic pole grid;
+- signed tail `H/M` grid;
+- audited pole modulus cover;
+- ordinary exact audit workflow.
+
+Heavy proof workflows are manual-only after their first launch. The ordinary audit workflow cancels stale same-PR audits.
+
+## Remaining obligations
+
+1. receive `CERTIFIED` combined outputs for the signed finite grid;
+2. receive `CERTIFIED` combined output for the signed dyadic pole layer;
+3. certify the uniform final-pole modulus inequality;
+4. certify the positive signed-tail `H` interface;
+5. certify `M>0` and extend it to `mu=0`;
+6. certify center and pole tail overlaps through uniform remainder bounds;
+7. assemble the exact dependency DAG with no gaps, no overlaps, exact endpoints, and terminal 0.
+
+The final theorem must remain **NOT CERTIFIED** until every item above is closed.
