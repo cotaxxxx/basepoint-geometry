@@ -52,13 +52,61 @@ jobs:
           python - <<'PY'
           import json
           from pathlib import Path
-          from flint import arb, ctx, fmpq
+          from flint import acb, arb, ctx, fmpq
           import prolate_axis_pole_modulus_endpoint_arb as endpoint
 
           ctx.dps = 50
 
           def closed(lo, hi):
               return arb((lo + hi) / 2, (hi - lo) / 2)
+
+          def diagnose(t, u, lam):
+              one = arb(1)
+              two = arb(2)
+              four = arb(4)
+              values = {}
+
+              def put(name, value):
+                  values[name] = str(value)
+                  return value
+
+              try:
+                  L = put("L", lam * lam)
+                  t2 = put("t2", t * t)
+                  z2 = put("z2", two * t2)
+                  c = put("c", one - z2)
+                  w = put("w", one - u)
+                  one_minus_t = put("one_minus_t", one - t)
+                  one_plus_t = put("one_plus_t", one + t)
+                  rho2 = put("rho2", four * t2 * one_minus_t * one_plus_t)
+                  rho = put("rho", rho2.sqrt())
+                  N = put("N", u + z2 - u * z2)
+                  q = put("q", u - z2)
+                  q2 = put("q2", q * q)
+                  R2 = put("R2", rho2 + L * q2)
+                  reciprocal_lam = put("reciprocal_lam", one / lam)
+                  angle_factor = put(
+                      "angle_factor",
+                      lam * w - (lam - reciprocal_lam) * c,
+                  )
+                  cross = put("cross", rho * angle_factor)
+                  ratio = put("ratio", cross / N)
+                  atan_ratio = put("atan_ratio", ratio.atan())
+                  delta = put("delta_acb", acb(atan_ratio))
+                  delta_w = put("delta_w", acb(lam * rho / R2))
+                  delta_ww = put(
+                      "delta_ww",
+                      acb(two * lam * L * rho * q / (R2 * R2)),
+                  )
+                  transformed = put(
+                      "transformed",
+                      -2 * acb(c) * delta * delta_w
+                      + acb(N) * (delta_w * delta_w + delta * delta_ww),
+                  )
+                  put("density", acb(four * t) * transformed)
+              except Exception as exc:
+                  values["exception"] = f"{type(exc).__name__}: {exc}"
+              return values
 
           boxes = [
               (fmpq(130945, 131072), fmpq(1), fmpq(0), fmpq(1, 65536), fmpq(1), fmpq(17, 16)),
@@ -69,15 +117,17 @@ jobs:
           records = []
           failures = 0
           for tl, th, ul, uh, ll, lh in boxes:
+              t = closed(tl, th)
+              u = closed(ul, uh)
+              lam = closed(ll, lh)
               record = {
                   "t": [str(tl), str(th)],
                   "u": [str(ul), str(uh)],
                   "lambda": [str(ll), str(lh)],
+                  "intermediates": diagnose(t, u, lam),
               }
               try:
-                  value = endpoint.signed_outer_far_density(
-                      closed(tl, th), closed(ul, uh), closed(ll, lh)
-                  )
+                  value = endpoint.signed_outer_far_density(t, u, lam)
                   text = str(value).lower()
                   finite = "nan" not in text and "inf" not in text
                   record.update({
