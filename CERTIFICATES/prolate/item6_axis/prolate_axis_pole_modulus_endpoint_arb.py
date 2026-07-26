@@ -222,22 +222,25 @@ def signed_outer_far_density(
     one = arb(1)
     two = arb(2)
     four = arb(4)
-    L = lam * lam
+    L = lam**2
 
-    t2 = t * t
+    t2 = t**2
     z2 = two * t2
     c = one - z2
     w = one - u
-    rho2 = four * t2 * (one - t) * (one + t)
-    rho = rho2.sqrt()
+    endpoint_gap = abs(one - t)
+    one_plus_t = one + t
+    rho = two * t * endpoint_gap.sqrt() * one_plus_t.sqrt()
+    rho2 = four * t2 * endpoint_gap * one_plus_t
     N = u + z2 - u * z2
     q = u - z2
-    R2 = rho2 + L * q * q
+    q2 = q**2
+    R2 = rho2 + L * q2
 
     cross = rho * (lam * w - (lam - one / lam) * c)
     delta = acb((cross / N).atan())
     delta_w = acb(lam * rho / R2)
-    delta_ww = acb(two * lam * L * rho * q / (R2 * R2))
+    delta_ww = acb(two * lam * L * rho * q / (R2**2))
     c_acb = acb(c)
     N_acb = acb(N)
     transformed = (
@@ -296,8 +299,8 @@ def main() -> None:
         "signed_endpoint_t": str(SIGNED_ENDPOINT_T),
         "method": (
             "factor the complete cosine density without dividing by z^2-2; "
-            "for t>=255/256 use real Arb atan with exact signed-angle derivatives "
-            "and the 4*t outer-chart Jacobian"
+            "for t>=255/256 use exact nonnegative endpoint factors, real Arb "
+            "atan, signed-angle derivatives, and the 4*t outer-chart Jacobian"
         ),
     }
     result["conditions"]["endpoint factorization exact audit passed"] = True
