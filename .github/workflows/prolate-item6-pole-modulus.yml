@@ -45,6 +45,52 @@ jobs:
           prolate_axis_pole_modulus_endpoint_arb.py
           prolate_axis_pole_modulus_outer_far_preflight_arb.py
           prolate_axis_pole_modulus_budgeted_arb.py
+      - name: Smoke-test formerly singular endpoint boxes
+        working-directory: CERTIFICATES/prolate/item6_axis
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from flint import arb, ctx, fmpq
+          import prolate_axis_pole_modulus_endpoint_arb as endpoint
+
+          ctx.dps = 50
+
+          def closed(lo, hi):
+              return arb((lo + hi) / 2, (hi - lo) / 2)
+
+          boxes = [
+              (fmpq(130945, 131072), fmpq(1), fmpq(0), fmpq(1, 65536), fmpq(1), fmpq(17, 16)),
+              (fmpq(130945, 131072), fmpq(1), fmpq(1, 65536), fmpq(1, 32768), fmpq(17, 16), fmpq(9, 8)),
+              (fmpq(65409, 65536), fmpq(1), fmpq(0), fmpq(1, 32768), fmpq(555, 16), fmpq(35)),
+              (fmpq(1), fmpq(1), fmpq(0), fmpq(1, 65536), fmpq(1), fmpq(100)),
+          ]
+          records = []
+          for tl, th, ul, uh, ll, lh in boxes:
+              value = endpoint.signed_outer_far_density(
+                  closed(tl, th), closed(ul, uh), closed(ll, lh)
+              )
+              text = str(value).lower()
+              finite = "nan" not in text and "inf" not in text
+              record = {
+                  "t": [str(tl), str(th)],
+                  "u": [str(ul), str(uh)],
+                  "lambda": [str(ll), str(lh)],
+                  "value": str(value),
+                  "finite": finite,
+                  "imag_contains_zero": bool(0 in value.imag),
+              }
+              records.append(record)
+              if not finite or not record["imag_contains_zero"]:
+                  raise SystemExit(json.dumps(record, indent=2))
+
+          result = {"status": "PASSED", "boxes": records}
+          Path("prolate_axis_pole_modulus_endpoint_smoke.json").write_text(
+              json.dumps(result, indent=2), encoding="utf-8"
+          )
+          print(json.dumps(result, indent=2))
+          PY
       - name: Certify budget-adaptive endpoint-stable pole modulus
         working-directory: CERTIFICATES/prolate/item6_axis
         run: >-
@@ -64,5 +110,6 @@ jobs:
           path: |
             CERTIFICATES/prolate/item6_axis/prolate_axis_pole_modulus_symbolic_audit.json
             CERTIFICATES/prolate/item6_axis/prolate_axis_signed_angle_symbolic_audit.json
+            CERTIFICATES/prolate/item6_axis/prolate_axis_pole_modulus_endpoint_smoke.json
             CERTIFICATES/prolate/item6_axis/prolate_axis_pole_modulus_budgeted.json
             CERTIFICATES/prolate/item6_axis/prolate_axis_pole_modulus_budgeted.json.sha256
