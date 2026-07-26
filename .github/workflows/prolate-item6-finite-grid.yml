@@ -1,9 +1,6 @@
 name: Prolate item 6 signed-angle finite grid certificate
 
 on:
-  pull_request:
-    paths:
-      - ".github/workflows/prolate-item6-finite-grid.yml"
   workflow_dispatch:
 
 concurrency:
