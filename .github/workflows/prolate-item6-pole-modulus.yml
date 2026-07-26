@@ -5,6 +5,7 @@ on:
     paths:
       - ".github/workflows/prolate-item6-pole-modulus.yml"
       - "CERTIFICATES/prolate/item6_axis/prolate_axis_pole_modulus_symbolic_audit.py"
+      - "CERTIFICATES/prolate/item6_axis/prolate_axis_signed_angle_symbolic_audit.py"
       - "CERTIFICATES/prolate/item6_axis/prolate_axis_pole_modulus_arb.py"
       - "CERTIFICATES/prolate/item6_axis/prolate_axis_pole_modulus_compact_arb.py"
       - "CERTIFICATES/prolate/item6_axis/prolate_axis_pole_modulus_endpoint_arb.py"
@@ -30,11 +31,15 @@ jobs:
       - name: Verify pole modulus blow-up formulas
         working-directory: CERTIFICATES/prolate/item6_axis
         run: python prolate_axis_pole_modulus_symbolic_audit.py
+      - name: Verify signed-angle endpoint formulas
+        working-directory: CERTIFICATES/prolate/item6_axis
+        run: python prolate_axis_signed_angle_symbolic_audit.py
       - name: Compile pole modulus drivers
         working-directory: CERTIFICATES/prolate/item6_axis
         run: >-
           python -m py_compile
           prolate_axis_pole_modulus_symbolic_audit.py
+          prolate_axis_signed_angle_symbolic_audit.py
           prolate_axis_pole_modulus_arb.py
           prolate_axis_pole_modulus_compact_arb.py
           prolate_axis_pole_modulus_endpoint_arb.py
@@ -58,5 +63,6 @@ jobs:
           name: prolate-item6-pole-modulus-budgeted
           path: |
             CERTIFICATES/prolate/item6_axis/prolate_axis_pole_modulus_symbolic_audit.json
+            CERTIFICATES/prolate/item6_axis/prolate_axis_signed_angle_symbolic_audit.json
             CERTIFICATES/prolate/item6_axis/prolate_axis_pole_modulus_budgeted.json
             CERTIFICATES/prolate/item6_axis/prolate_axis_pole_modulus_budgeted.json.sha256
