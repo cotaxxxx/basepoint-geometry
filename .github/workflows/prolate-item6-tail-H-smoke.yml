@@ -7,6 +7,7 @@ on:
       - "CERTIFICATES/prolate/item6_axis/prolate_axis_tail_H_block_arb.py"
       - "CERTIFICATES/prolate/item6_axis/prolate_axis_tail_H_scaled_block_arb.py"
       - "CERTIFICATES/prolate/item6_axis/prolate_axis_tail_regularized_symbolic_audit.py"
+      - "CERTIFICATES/prolate/item6_axis/prolate_axis_tail_paired_chart_symbolic_audit.py"
   workflow_dispatch:
 
 concurrency:
@@ -26,18 +27,22 @@ jobs:
         run: python -m pip install sympy==1.14.0
       - name: Verify cancellation-regularized H kernel
         working-directory: CERTIFICATES/prolate/item6_axis
-        run: python prolate_axis_tail_regularized_symbolic_audit.py
+        run: |
+          python prolate_axis_tail_regularized_symbolic_audit.py
+          python prolate_axis_tail_paired_chart_symbolic_audit.py
       - name: Upload exact audit
         uses: actions/upload-artifact@v4
         with:
           name: prolate-item6-tail-H-smoke-audit
-          path: CERTIFICATES/prolate/item6_axis/prolate_axis_tail_regularized_symbolic_audit.json
+          path: |
+            CERTIFICATES/prolate/item6_axis/prolate_axis_tail_regularized_symbolic_audit.json
+            CERTIFICATES/prolate/item6_axis/prolate_axis_tail_paired_chart_symbolic_audit.json
 
   first-six-H:
     name: H-smoke-${{ matrix.name }}
     needs: audit
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       max-parallel: 6
@@ -97,8 +102,8 @@ jobs:
             --tolerance 1e-12 \
             --integration-depth 14 \
             --eval-limit 25000 \
-            --max-split-depth 8 \
-            --max-boxes 64 \
+            --max-split-depth 4 \
+            --max-boxes 8 \
             --mu-lo-num 1 \
             --mu-lo-den 200 \
             --mu-hi-num 3 \
@@ -153,6 +158,7 @@ jobs:
                   "partition": data.get("partition"),
                   "worst_certified_leaf": data.get("worst_certified_leaf"),
                   "first_terminal": (data.get("terminal") or [None])[0],
+                  "evaluation_trace": data.get("evaluation_trace"),
               })
 
           result = {
@@ -160,7 +166,7 @@ jobs:
               "expected_blocks": 6,
               "received_blocks": len(rows),
               "purpose": (
-                  "Early terminal-reason check for the first six H blocks; "
+                  "Component-level interval diagnosis for the first six H blocks; "
                   "this bounded smoke run is not a full positivity certificate."
               ),
               "blocks": rows,

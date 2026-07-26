@@ -23,6 +23,8 @@ import prolate_axis_tail_H_block_arb as base
 
 
 LAYER_RADIUS = 4
+EVALUATION_TRACE: list[dict] = []
+TRACE_LIMIT = 32
 
 
 def paired_tail_H(
@@ -109,7 +111,17 @@ def paired_tail_H(
     far_left = base.rigorous_integral(
         far_left_kernel, tolerance, integration_depth, eval_limit
     )
-    return inner + paired + far_left
+    total = inner + paired + far_left
+    if len(EVALUATION_TRACE) < TRACE_LIMIT:
+        EVALUATION_TRACE.append({
+            "mu_ball": str(mu_value),
+            "w_ball": str(w_value),
+            "inner": base.acb_record(inner),
+            "paired_outer": base.acb_record(paired),
+            "far_left": base.acb_record(far_left),
+            "total": base.acb_record(total),
+        })
+    return total
 
 
 def main() -> None:
@@ -143,6 +155,7 @@ def main() -> None:
         raise ValueError("paired outer chart has nonpositive length")
 
     ctx.dps = args.dps
+    EVALUATION_TRACE.clear()
     base.scaled_tail_H = paired_tail_H
     result = base.certify_block(
         args.dps,
@@ -156,6 +169,7 @@ def main() -> None:
         w_lo,
         w_hi,
     )
+    result["evaluation_trace"] = EVALUATION_TRACE
     result["integration_chart"] = {
         "type": "paired correlation-preserving moving-layer split",
         "layer_radius": LAYER_RADIUS,
@@ -175,6 +189,9 @@ def main() -> None:
     result["regularization_audit_sha256"] = base.sha256_file(
         Path(__file__).with_name("prolate_axis_tail_regularized_symbolic_audit.py")
     )
+    result["paired_chart_audit_sha256"] = base.sha256_file(
+        Path(__file__).with_name("prolate_axis_tail_paired_chart_symbolic_audit.py")
+    )
 
     output = Path(args.json)
     output.write_text(json.dumps(result, indent=2), encoding="utf-8")
@@ -182,6 +199,7 @@ def main() -> None:
         f"{result['script_sha256']}  {Path(__file__).name}\n"
         f"{result['base_driver_sha256']}  prolate_axis_tail_H_block_arb.py\n"
         f"{result['regularization_audit_sha256']}  prolate_axis_tail_regularized_symbolic_audit.py\n"
+        f"{result['paired_chart_audit_sha256']}  prolate_axis_tail_paired_chart_symbolic_audit.py\n"
         f"{base.sha256_file(output)}  {output.name}\n",
         encoding="utf-8",
     )
