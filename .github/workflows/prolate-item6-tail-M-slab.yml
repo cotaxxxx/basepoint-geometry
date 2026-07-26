@@ -1,6 +1,9 @@
 name: Prolate item 6 retired tail-monotonicity workflow
 
 on:
+  pull_request:
+    paths:
+      - ".github/workflows/prolate-item6-tail-M-slab.yml"
   push:
     branches:
       - agent/prolate-item6-axis
