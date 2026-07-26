@@ -15,7 +15,8 @@ def sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
-mu, w, c = sp.symbols("mu w c", positive=True, finite=True)
+mu, w = sp.symbols("mu w", positive=True, finite=True)
+c = sp.symbols("c", real=True, finite=True)
 rho = sp.sqrt(1 - c**2)
 N = 1 - w * c
 P = (c - w) ** 2 + mu**2 * (1 - c**2)
@@ -59,6 +60,15 @@ checks = {
 result = {
     "status": "PASSED" if all(checks.values()) else "FAILED",
     "checks": checks,
+    "domain_certificate": {
+        "mu_positive": True,
+        "w_positive_and_less_than_one_enforced_by_driver": True,
+        "c_integrated_over_minus1_to_1": True,
+        "deduction": (
+            "For 0<w<1 and -1<=c<=1, N=1-w*c>0. Therefore the real atan "
+            "branch is continuous on every certified positive-mu tail box."
+        ),
+    },
     "formulas": {
         "P": str(P),
         "S": str(S),
