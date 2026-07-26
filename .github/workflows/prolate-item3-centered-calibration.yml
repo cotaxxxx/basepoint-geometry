@@ -1,0 +1,65 @@
+name: Prolate item 3 centered calibration
+
+on:
+  pull_request:
+    paths:
+      - "CERTIFICATES/prolate/item3_center_connection/**"
+      - "CERTIFICATES/prolate/item2_circle/vendor/prolate_circle_F_cleanroom.py"
+      - ".github/workflows/prolate-item3-centered-calibration.yml"
+  workflow_dispatch:
+
+jobs:
+  calibration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: python -m pip install --upgrade pip python-flint sympy mpmath
+
+      - name: Compile sources
+        run: |
+          python -m py_compile \
+            CERTIFICATES/prolate/item3_center_connection/vendor/prolate_circle_Frr_ext.py \
+            CERTIFICATES/prolate/item3_center_connection/audit/prolate_item3_frr_symbolic_audit.py \
+            CERTIFICATES/prolate/item3_center_connection/calibration/prolate_item3_centered_calibration.py
+
+      - name: Run symbolic audit
+        working-directory: CERTIFICATES/prolate/item3_center_connection/audit
+        run: python prolate_item3_frr_symbolic_audit.py
+
+      - name: Run resumable strict calibration
+        working-directory: CERTIFICATES/prolate/item3_center_connection/calibration
+        env:
+          PYTHONPATH: ${{ github.workspace }}/CERTIFICATES/prolate/item2_circle/vendor:${{ github.workspace }}/CERTIFICATES/prolate/item3_center_connection/vendor
+        run: |
+          python prolate_item3_centered_calibration.py --fresh --rads 1/256
+          python prolate_item3_centered_calibration.py --rads 1/1024
+          python prolate_item3_centered_calibration.py --rads 1/4096
+          python prolate_item3_centered_calibration.py --verify-only
+
+      - name: Assemble immutable artifact
+        run: |
+          set -euo pipefail
+          out=item3-centered-calibration-final
+          mkdir -p "$out"
+          cp CERTIFICATES/prolate/item3_center_connection/README.md "$out/"
+          cp CERTIFICATES/prolate/item3_center_connection/vendor/prolate_circle_Frr_ext.py "$out/"
+          cp CERTIFICATES/prolate/item3_center_connection/audit/prolate_item3_frr_symbolic_audit.py "$out/"
+          cp CERTIFICATES/prolate/item3_center_connection/audit/item3_frr_symbolic_audit.json "$out/"
+          cp CERTIFICATES/prolate/item3_center_connection/calibration/README.md "$out/CALIBRATION_README.md"
+          cp CERTIFICATES/prolate/item3_center_connection/calibration/prolate_item3_centered_calibration.py "$out/"
+          cp CERTIFICATES/prolate/item3_center_connection/calibration/item3_centered_calibration.json "$out/"
+          cp CERTIFICATES/prolate/item3_center_connection/calibration/EXTERNAL_DEPENDENCIES_CALIBRATION.txt "$out/"
+          (cd "$out" && sha256sum * > SHA256SUMS.txt && sha256sum -c SHA256SUMS.txt)
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: prolate-item3-centered-calibration-final
+          path: item3-centered-calibration-final
+          if-no-files-found: error
