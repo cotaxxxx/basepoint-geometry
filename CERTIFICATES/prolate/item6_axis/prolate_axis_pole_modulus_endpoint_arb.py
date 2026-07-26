@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
 """Endpoint-stable wrapper for the compact item-6 pole-modulus certificate.
 
-The compact base cover is mathematically correct but its generic outer-far
-kernel loses exact correlations near the opposite-pole endpoint ``t=1,u=0``.
-This wrapper verifies the required factorizations symbolically, extracts the
-common ``z^2-2`` factor at the level of the complete transformed density, runs
-the unchanged compact cover, and binds the wrapper SHA and audit results into
-the final certificate.
+The generic cosine/hypergeometric outer-far kernel is efficient away from the
+opposite pole but may produce a spurious branch-point enclosure when a box
+touches ``t=1``. This wrapper uses two exact representations:
 
-No division by ``z^2-2`` is performed.  The factor occurs in two separate
-w-derivative numerators, not as a common numerator/denominator factor of a
-single quotient; cancelling it between those terms would therefore be
-invalid.  Factoring the complete density preserves the exact endpoint zero
-without introducing a removable 0/0 interval form.
+* away from the endpoint, the complete cosine density is factored once by its
+  common ``z^2-2`` numerator factor (never divided out);
+* on the endpoint cap, the audited signed-angle formula
+  ``delta=atan(X/N)`` and its rational-algebraic w derivatives are evaluated
+  directly, avoiding the cosine branch point altogether.
+
+The two formulas are exact representations of the same transformed A''
+density. The compact cover and exact partition accounting are unchanged.
 """
 from __future__ import annotations
 
@@ -22,10 +22,12 @@ import sys
 from pathlib import Path
 
 import sympy as sp
-from flint import acb, arb
+from flint import acb, arb, fmpq
 
 import prolate_axis_pole_modulus_arb as base
 import prolate_axis_pole_modulus_compact_arb as compact
+
+SIGNED_ENDPOINT_T = fmpq(63, 64)
 
 
 def sha256_file(path: Path) -> str:
@@ -38,6 +40,7 @@ def sha256_file(path: Path) -> str:
 
 def endpoint_factorization_audit() -> dict:
     z, r, u, L = sp.symbols("z r u L", nonzero=True, finite=True)
+    t, lam = sp.symbols("t lam", positive=True, finite=True)
     h1, h2 = sp.symbols("h1 h2", finite=True)
     c = 1 - z**2
     n = r + z - r * z**2
@@ -90,16 +93,30 @@ def endpoint_factorization_audit() -> dict:
         )
     )
 
+    z_t = sp.sqrt(2) * t
+    z2_t = 2 * t**2
+    c_t = 1 - z2_t
+    w_t = 1 - u
+    rho2_t = 4 * t**2 * (1 - t) * (1 + t)
+    N_t = u + z2_t - u * z2_t
+    q_t = u - z2_t
+    R2_t = rho2_t + lam**2 * q_t**2
+
     checks = {
         "first_endpoint_factorization": sp.simplify(first_raw - first_claim) == 0,
         "second_endpoint_factorization_after_u_equals_rz": sp.simplify(
             second_raw.subs(r, u / z) - second_far_claim
-        )
-        == 0,
+        ) == 0,
         "complete_outer_far_density_factorization": sp.simplify(
             density_raw - density_factored
-        )
-        == 0,
+        ) == 0,
+        "signed_chart_one_minus_c_squared": sp.expand(1 - c_t**2 - rho2_t) == 0,
+        "signed_chart_N": sp.expand(1 - w_t * c_t - N_t) == 0,
+        "signed_chart_R_squared": sp.expand(
+            1 - c_t**2 + lam**2 * (c_t - w_t) ** 2 - R2_t
+        ) == 0,
+        "signed_chart_c_minus_w": sp.expand(c_t - w_t - q_t) == 0,
+        "outer_t_jacobian": sp.simplify(2 * z_t * sp.sqrt(2) - 4 * t) == 0,
         "opposite_pole_factor_is_z2_minus_2": True,
         "no_division_by_z2_minus_2": True,
     }
@@ -110,31 +127,33 @@ def endpoint_factorization_audit() -> dict:
             "Cw_numerator": str(first_far),
             "Cww_numerator": str(second_far_claim),
             "outer_far_density_factored": str(density_factored),
+            "signed_N": str(N_t),
+            "signed_rho_squared": str(rho2_t),
+            "signed_R_squared": str(R2_t),
+            "signed_delta": "atan(rho*(lambda*w-(lambda-1/lambda)*c)/N)",
+            "signed_delta_w": "lambda*rho/R_squared",
+            "signed_delta_ww": "2*lambda^3*rho*(c-w)/R_squared^2",
+            "outer_t_jacobian": "4*t",
             "far_relation": "u=r*z, z=sqrt(2)*t",
         },
+        "domain_statement": (
+            "On t>=1/128, 0<=u<=1/64 and 1<=lambda<=100, "
+            "N=1-(1-u)(1-2*t^2)>0. Hence signed atan has no branch ambiguity."
+        ),
         "conclusion": (
-            "Both derivative numerators contain the exact factor z^2-2. "
-            "The complete transformed density is evaluated with one common "
-            "factor extracted before Arb arithmetic. No quotient cancellation "
-            "by z^2-2 is used, because the factor is not shared with a common "
-            "denominator of the density."
+            "The cosine density is factored without cancelling z^2-2. Boxes in "
+            "the endpoint cap use the exact signed-angle A'' integrand with "
+            "Jacobian 4*t, eliminating the cosine branch-point enclosure."
         ),
     }
 
 
-def endpoint_stable_outer_far_density(
+def factored_outer_far_density(
     t_value: arb,
     u_value: arb,
     lambda_value: arb,
 ) -> acb:
-    """Correlation-preserving outer-far density on t>=1/128.
-
-    All geometric radicands are assembled from nonnegative endpoint factors.
-    The exact ``z^2-2`` factor common to the first and second w-derivative
-    products is extracted once from the complete density.  It is never divided
-    out, so boxes touching t=1 retain the exact endpoint zero without creating
-    an artificial 0/0 form.
-    """
+    """Factored cosine density away from the opposite-pole endpoint."""
     t = arb(t_value)
     u = arb(u_value)
     lam = arb(lambda_value)
@@ -190,6 +209,56 @@ def endpoint_stable_outer_far_density(
     )
 
 
+def signed_outer_far_density(
+    t_value: arb,
+    u_value: arb,
+    lambda_value: arb,
+) -> acb:
+    """Exact signed-angle transformed A'' density on the endpoint cap."""
+    t = arb(t_value)
+    u = arb(u_value)
+    lam = arb(lambda_value)
+
+    one = arb(1)
+    two = arb(2)
+    four = arb(4)
+    L = lam * lam
+
+    t2 = t * t
+    z2 = two * t2
+    c = one - z2
+    w = one - u
+    rho2 = four * t2 * (one - t) * (one + t)
+    rho = rho2.sqrt()
+    N = u + z2 - u * z2
+    q = u - z2
+    R2 = rho2 + L * q * q
+
+    cross = rho * (lam * w - (lam - one / lam) * c)
+    delta = (acb(cross) / acb(N)).atan()
+    delta_w = acb(lam * rho / R2)
+    delta_ww = acb(two * lam * L * rho * q / (R2 * R2))
+    c_acb = acb(c)
+    N_acb = acb(N)
+    transformed = (
+        -2 * c_acb * delta * delta_w
+        + N_acb * (delta_w * delta_w + delta * delta_ww)
+    )
+    return acb(four * t) * transformed
+
+
+def endpoint_stable_outer_far_density(
+    t_value: arb,
+    u_value: arb,
+    lambda_value: arb,
+) -> acb:
+    """Hybrid exact outer-far density with a signed endpoint cap."""
+    t = arb(t_value)
+    if t.lower() >= arb(SIGNED_ENDPOINT_T):
+        return signed_outer_far_density(t, u_value, lambda_value)
+    return factored_outer_far_density(t, u_value, lambda_value)
+
+
 def requested_output_path() -> Path:
     try:
         index = sys.argv.index("--json")
@@ -224,10 +293,11 @@ def main() -> None:
         "status": "USED",
         "wrapper": wrapper_path.name,
         "wrapper_sha256": sha256_file(wrapper_path),
+        "signed_endpoint_t": str(SIGNED_ENDPOINT_T),
         "method": (
-            "extract one common z^2-2 factor from the complete outer-far "
-            "density; assemble 1-c^2=4*t^2*(1-t)*(1+t); do not divide by "
-            "z^2-2"
+            "factor the complete cosine density without dividing by z^2-2; "
+            "for t>=63/64 use exact signed atan angle derivatives and the 4*t "
+            "outer-chart Jacobian"
         ),
     }
     result["conditions"]["endpoint factorization exact audit passed"] = True
@@ -245,6 +315,8 @@ def main() -> None:
         "prolate_axis_pole_modulus_arb.py\n"
         f"{sha256_file(wrapper_path.with_name('prolate_axis_pole_modulus_symbolic_audit.py'))}  "
         "prolate_axis_pole_modulus_symbolic_audit.py\n"
+        f"{sha256_file(wrapper_path.with_name('prolate_axis_signed_angle_symbolic_audit.py'))}  "
+        "prolate_axis_signed_angle_symbolic_audit.py\n"
         f"{sha256_file(output)}  {output.name}\n",
         encoding="utf-8",
     )
