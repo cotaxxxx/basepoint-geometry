@@ -71,19 +71,22 @@ jobs:
                   return value
 
               try:
-                  L = put("L", lam * lam)
-                  t2 = put("t2", t * t)
+                  L = put("L_integer_power", lam**2)
+                  t2 = put("t2_integer_power", t**2)
                   z2 = put("z2", two * t2)
                   c = put("c", one - z2)
                   w = put("w", one - u)
-                  one_minus_t = put("one_minus_t", one - t)
+                  endpoint_gap = put("endpoint_gap_abs", abs(one - t))
                   one_plus_t = put("one_plus_t", one + t)
-                  rho2 = put("rho2", four * t2 * one_minus_t * one_plus_t)
-                  rho = put("rho", rho2.sqrt())
+                  sqrt_gap = put("sqrt_endpoint_gap", endpoint_gap.sqrt())
+                  sqrt_one_plus_t = put("sqrt_one_plus_t", one_plus_t.sqrt())
+                  rho = put("rho_factored", two * t * sqrt_gap * sqrt_one_plus_t)
+                  rho2 = put("rho2_nonnegative", four * t2 * endpoint_gap * one_plus_t)
                   N = put("N", u + z2 - u * z2)
                   q = put("q", u - z2)
-                  q2 = put("q2", q * q)
-                  R2 = put("R2", rho2 + L * q2)
+                  q2 = put("q2_integer_power", q**2)
+                  Lq2 = put("L_times_q2", L * q2)
+                  R2 = put("R2", rho2 + Lq2)
                   reciprocal_lam = put("reciprocal_lam", one / lam)
                   angle_factor = put(
                       "angle_factor",
@@ -93,11 +96,14 @@ jobs:
                   ratio = put("ratio", cross / N)
                   atan_ratio = put("atan_ratio", ratio.atan())
                   delta = put("delta_acb", acb(atan_ratio))
-                  delta_w = put("delta_w", acb(lam * rho / R2))
-                  delta_ww = put(
-                      "delta_ww",
-                      acb(two * lam * L * rho * q / (R2 * R2)),
+                  delta_w_arb = put("delta_w_arb", lam * rho / R2)
+                  delta_w = put("delta_w", acb(delta_w_arb))
+                  R2_squared = put("R2_squared", R2**2)
+                  delta_ww_arb = put(
+                      "delta_ww_arb",
+                      two * lam * L * rho * q / R2_squared,
                   )
+                  delta_ww = put("delta_ww", acb(delta_ww_arb))
                   transformed = put(
                       "transformed",
                       -2 * acb(c) * delta * delta_w
