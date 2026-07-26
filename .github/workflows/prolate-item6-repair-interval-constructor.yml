@@ -1,6 +1,9 @@
 name: Repair item 6 rational Arb intervals
 
 on:
+  pull_request:
+    paths:
+      - ".github/workflows/prolate-item6-repair-interval-constructor.yml"
   push:
     branches:
       - agent/prolate-item6-axis
@@ -111,7 +114,6 @@ jobs:
           print(json.dumps(result, indent=2))
           raise SystemExit(0 if result["status"] == "PASSED" else 1)
           '''
-          # Remove indentation introduced by the workflow heredoc.
           import textwrap
           audit_path = root / "prolate_axis_interval_constructor_audit.py"
           audit_path.write_text(textwrap.dedent(audit), encoding="utf-8")
