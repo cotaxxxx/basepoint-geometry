@@ -47,12 +47,23 @@ checks = {
     "profile_second_derivative_assembly": sp.simplify(
         second_integrand - claimed_second_integrand
     ) == 0,
-    "positive_dot_on_open_profile": True,
+}
+
+domain_certificate = {
+    "driver_enforces_lambda_positive": True,
+    "driver_enforces_0_le_w_lt_1": True,
+    "integration_domain_is_minus1_le_c_le_1": True,
+    "deduction": (
+        "Because 0<=w<1 and -1<=c<=1, w*c<=w<1, hence N=1-w*c>0. "
+        "This is an exact order argument enforced by the Arb driver input checks, "
+        "not a symbolic polynomial identity."
+    ),
 }
 
 result = {
     "status": "PASSED" if all(checks.values()) else "FAILED",
     "checks": checks,
+    "domain_certificate": domain_certificate,
     "formulas": {
         "N": str(N),
         "signed_cross": str(X),
@@ -65,7 +76,7 @@ result = {
         "A_second_integrand": str(claimed_second_integrand),
     },
     "branch_statement": (
-        "For |w|<1 and |c|<=1, N=1-w*c>0. Hence delta=atan(X/N) lies "
+        "For 0<=w<1 and |c|<=1, N=1-w*c>0. Hence delta=atan(X/N) lies "
         "in (-pi/2,pi/2), cos(delta)=N/sqrt(N^2+X^2)=C, and "
         "acos(C)^2=delta^2."
     ),
