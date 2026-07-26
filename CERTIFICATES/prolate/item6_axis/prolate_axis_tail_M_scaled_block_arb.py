@@ -1,13 +1,11 @@
 #!/usr/bin/env python3
-"""Mu-scaled Arb driver for M(mu,w)=-mu*dH/dmu.
+"""Correlation-preserving Arb driver for M(mu,w)=-mu*dH/dmu.
 
-The driver uses the exact regularized integrand audited in
-``prolate_axis_tail_log_derivative_symbolic_audit.py`` and the three moving-layer
-charts
-
-    [-1,w-4mu], [w-4mu,w+4mu], [w+4mu,1].
-
-A positive certificate implies that H increases as log(1/mu) increases.
+The exact regularized integrand is audited in
+``prolate_axis_tail_log_derivative_symbolic_audit.py``.  The three moving-layer
+charts are evaluated after exact substitution of ``c-w``.  On the inner chart,
+``c=w+mu*q`` and ``P=mu^2(q^2+1-c^2)`` are kept factored, avoiding the interval
+cancellation that occurs when ``c`` and ``w`` are first rounded independently.
 """
 from __future__ import annotations
 
@@ -36,47 +34,81 @@ def tail_M_three_chart(
     mu2 = mu * mu
     radius = acb(LAYER_RADIUS)
 
-    def base_integrand(c: acb, analytic: bool) -> acb:
-        c2 = c * c
-        n = 1 - w * c
-        delta = c - w
-        p = delta * delta + mu2 * (1 - c2)
-        s = 1 - c2 + mu2 * c2
+    def outer_integrand(
+        c: acb,
+        difference: acb,
+        rho2: acb,
+        n: acb,
+        analytic: bool,
+    ) -> acb:
+        p = difference * difference + mu2 * rho2
+        s = rho2 + mu2 * c * c
         root = (p * s).sqrt(analytic=analytic)
         cosine = mu * n / root
         h1, h2 = regular_angle_derivatives(cosine)
         hbar = cover.regular_hbar(cosine)
 
-        b = -c + n * delta / p
-        q = mu2 * ((1 - c2) / p + c2 / s)
-        alpha = 1 - q
-        beta = -2 * mu2 * n * delta * (1 - c2) / p**2
+        b = -c + n * difference / p
+        q_metric = mu2 * (rho2 / p + c * c / s)
+        alpha = 1 - q_metric
+        beta = -2 * mu2 * n * difference * rho2 / (p * p)
         f = -c * hbar + h1 * b
         bracket = (
-            q * f
+            q_metric * f
             + c * alpha * (h1 - hbar)
             - alpha * h2 * cosine * b
             - h1 * beta
         )
         return n * bracket / (2 * w * root)
 
-    left_edge = w - radius * mu
-    right_edge = w + radius * mu
+    left_jacobian = 1 + w - radius * mu
+    right_jacobian = 1 - w - radius * mu
 
     def left_kernel(t: acb, analytic: bool) -> acb:
-        jacobian = 1 + left_edge
-        c = -1 + jacobian * t
-        return jacobian * base_integrand(c, analytic)
+        c = -1 + left_jacobian * t
+        difference = -(1 + w) * (1 - t) - radius * mu * t
+        rho2 = left_jacobian * t * (2 - left_jacobian * t)
+        n = 1 + w - w * left_jacobian * t
+        return left_jacobian * outer_integrand(
+            c, difference, rho2, n, analytic
+        )
 
     def inner_kernel(t: acb, analytic: bool) -> acb:
-        jacobian = 2 * radius * mu
-        c = left_edge + jacobian * t
-        return jacobian * base_integrand(c, analytic)
+        q_coordinate = 2 * radius * t - radius
+        c = w + mu * q_coordinate
+        rho2 = 1 - c * c
+        reduced_p = q_coordinate * q_coordinate + rho2
+        s = rho2 + mu2 * c * c
+        reduced_root = (reduced_p * s).sqrt(analytic=analytic)
+        n = 1 - w * w - mu * w * q_coordinate
+        cosine = n / reduced_root
+        h1, h2 = regular_angle_derivatives(cosine)
+        hbar = cover.regular_hbar(cosine)
+
+        b = -c + n * q_coordinate / (mu * reduced_p)
+        q_metric = rho2 / reduced_p + mu2 * c * c / s
+        alpha = 1 - q_metric
+        beta = -2 * n * q_coordinate * rho2 / (
+            mu * reduced_p * reduced_p
+        )
+        f = -c * hbar + h1 * b
+        bracket = (
+            q_metric * f
+            + c * alpha * (h1 - hbar)
+            - alpha * h2 * cosine * b
+            - h1 * beta
+        )
+        # dc=2*radius*mu*dt and sqrt(P*S)=mu*sqrt(reduced_p*S).
+        return radius * n * bracket / (w * reduced_root)
 
     def right_kernel(t: acb, analytic: bool) -> acb:
-        jacobian = 1 - right_edge
-        c = right_edge + jacobian * t
-        return jacobian * base_integrand(c, analytic)
+        c = w + radius * mu + right_jacobian * t
+        difference = radius * mu + right_jacobian * t
+        rho2 = right_jacobian * (1 - t) * (1 + c)
+        n = 1 - w * w - radius * mu * w - w * right_jacobian * t
+        return right_jacobian * outer_integrand(
+            c, difference, rho2, n, analytic
+        )
 
     left = cover.rigorous_integral(
         left_kernel, tolerance, integration_depth, eval_limit
@@ -109,9 +141,14 @@ def rename_H_to_M(result: dict) -> dict:
     if worst is not None and "H" in worst:
         worst["M"] = worst.pop("H")
     result["integration_chart"] = {
-        "type": "mu-scaled three-chart moving-layer split",
+        "type": "correlation-preserving mu-scaled three-chart split",
         "layer_radius": LAYER_RADIUS,
         "pieces": ["[-1,w-4mu]", "[w-4mu,w+4mu]", "[w+4mu,1]"],
+        "exact_inner_identities": [
+            "c=w+mu*(8t-4)",
+            "c-w=mu*(8t-4)",
+            "P=mu^2*((8t-4)^2+1-c^2)",
+        ],
     }
     result["limitations"] = (
         "This is a compact positive-mu block. A separate blow-up estimate is "
