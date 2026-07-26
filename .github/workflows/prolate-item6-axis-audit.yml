@@ -41,6 +41,9 @@ jobs:
       - name: Run exact tail second-coefficient audit
         working-directory: CERTIFICATES/prolate/item6_axis
         run: python prolate_axis_tail_second_coefficient_symbolic_audit.py
+      - name: Run exact signed-angle tail audit
+        working-directory: CERTIFICATES/prolate/item6_axis
+        run: python prolate_axis_signed_tail_symbolic_audit.py
       - name: Run regularized tail-kernel audit
         working-directory: CERTIFICATES/prolate/item6_axis
         run: python prolate_axis_tail_regularized_symbolic_audit.py
@@ -78,6 +81,7 @@ jobs:
           prolate_axis_center_cap_symbolic_audit.py
           prolate_axis_tail_symbolic_audit.py
           prolate_axis_tail_second_coefficient_symbolic_audit.py
+          prolate_axis_signed_tail_symbolic_audit.py
           prolate_axis_tail_regularized_symbolic_audit.py
           prolate_axis_tail_log_derivative_symbolic_audit.py
           prolate_axis_pole_boundary_symbolic_audit.py
@@ -102,6 +106,7 @@ jobs:
           prolate_axis_tail_H_scaled_block_arb.py
           prolate_axis_tail_H_combine.py
           prolate_axis_tail_M_scaled_block_arb.py
+          prolate_axis_signed_tail_block_arb.py
           prolate_axis_pole_second_boundary_block_arb.py
           prolate_axis_pole_second_boundary_combine.py
           prolate_axis_second_rectangle_arb.py
@@ -119,6 +124,7 @@ jobs:
             CERTIFICATES/prolate/item6_axis/prolate_axis_center_cap_symbolic_audit.json
             CERTIFICATES/prolate/item6_axis/prolate_axis_tail_symbolic_audit.json
             CERTIFICATES/prolate/item6_axis/prolate_axis_tail_second_coefficient_symbolic_audit.json
+            CERTIFICATES/prolate/item6_axis/prolate_axis_signed_tail_symbolic_audit.json
             CERTIFICATES/prolate/item6_axis/prolate_axis_tail_regularized_symbolic_audit.json
             CERTIFICATES/prolate/item6_axis/prolate_axis_tail_log_derivative_symbolic_audit.json
             CERTIFICATES/prolate/item6_axis/prolate_axis_pole_boundary_symbolic_audit.json
