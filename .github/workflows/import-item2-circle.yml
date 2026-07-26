@@ -18,47 +18,64 @@ jobs:
         with:
           ref: main
           fetch-depth: 0
-      - name: Restore exact blobs and commit
+      - name: Restore exact bundle commit
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
         shell: bash
         run: |
           set -euo pipefail
-          put_blob() {
-            local sha="$1" path="$2"
-            mkdir -p "$(dirname "$path")"
-            gh api "/repos/$REPO/git/blobs/$sha" --jq .content | base64 -d > "$path"
-            test "$(git hash-object "$path")" = "$sha"
-          }
-          put_blob 76f1ba70c503451e9a53a9158dafc9638148b26d .github/workflows/prolate-item2-circle-pilot.yml
-          put_blob 987c8485b53520ceedcda3412a7d1894f4c8cfa2 CERTIFICATES/prolate/item2_circle/README.md
-          put_blob b0f5205ab1cf8c06990401298554461ac381625f CERTIFICATES/prolate/item2_circle/prolate_circle_seed.py
-          put_blob 1ab9485e198c5775ec304610da9b83dfb730c149 CERTIFICATES/prolate/item2_circle/prolate_circle_tube_pilot.py
-          put_blob 4e1d87f2144e8db5454240b482e10e7e2b4131f7 CERTIFICATES/prolate/item2_circle/selftest/mock_kernels.py
-          put_blob f9f2bcabbe96aa20c7f0e7e279d9648cecd9cff5 CERTIFICATES/prolate/item2_circle/vendor/README.md
-          git add .github/workflows/prolate-item2-circle-pilot.yml CERTIFICATES/prolate/item2_circle
-          tree="$(git write-tree)"
-          test "$tree" = 1f93bb3234a4b6ed268e481206899518188ac4f8
-          cat > /tmp/item2-message <<'EOF'
-          Scaffold prolate item 2 circle-branch certification
+          paths=(
+            .github/workflows/prolate-item2-circle-pilot.yml
+            CERTIFICATES/prolate/item2_circle/README.md
+            CERTIFICATES/prolate/item2_circle/prolate_circle_seed.py
+            CERTIFICATES/prolate/item2_circle/prolate_circle_tube_pilot.py
+            CERTIFICATES/prolate/item2_circle/selftest/mock_kernels.py
+            CERTIFICATES/prolate/item2_circle/vendor/README.md
+          )
+          shas=(
+            76f1ba70c503451e9a53a9158dafc9638148b26d
+            987c8485b53520ceedcda3412a7d1894f4c8cfa2
+            b0f5205ab1cf8c06990401298554461ac381625f
+            1ab9485e198c5775ec304610da9b83dfb730c149
+            4e1d87f2144e8db5454240b482e10e7e2b4131f7
+            f9f2bcabbe96aa20c7f0e7e279d9648cecd9cff5
+          )
+          for i in "${!paths[@]}"; do
+            tmp="$(mktemp)"
+            gh api "/repos/$REPO/git/blobs/${shas[$i]}" --jq .content | base64 -d > "$tmp"
+            test "$(git hash-object -w "$tmp")" = "${shas[$i]}"
+            rm "$tmp"
+          done
 
-          - DAG: B-KERNEL / B-LOCAL / B-SEED / B-TUBE / B-EXT / B-JOIN / B-DAG
-          - 1-D interval-Krawczyk tube pilot (strict-inclusion criterion),
-            harness validated end-to-end: positive control 16/16 certified,
-            negative control 0/16 (no false certification)
-          - workflow_dispatch-only pilot with SELFTEST guard until the item-0
-            F(r,lambda) kernels are vendored (B-KERNEL debt; module sha256
-            ef065381... recorded in item0d certificate provenance)
-          - artifact JSONs written without trailing newline (hash discipline)
-          EOF
+          target_tree=1f93bb3234a4b6ed268e481206899518188ac4f8
+          found=''
+          for mask in $(seq 0 63); do
+            git read-tree 3888936d44bcd2c8abd84c5ee4dc1f337d93dbdd^{tree}
+            for i in "${!paths[@]}"; do
+              mode=100644
+              if (( (mask >> i) & 1 )); then mode=100755; fi
+              git update-index --add --cacheinfo "$mode,${shas[$i]},${paths[$i]}"
+            done
+            tree="$(git write-tree)"
+            if [ "$tree" = "$target_tree" ]; then
+              found="$mask"
+              echo "Recovered exact tree modes with mask=$mask"
+              break
+            fi
+          done
+          test -n "$found"
+          test "$(git write-tree)" = "$target_tree"
+
+          echo 'U2NhZmZvbGQgcHJvbGF0ZSBpdGVtIDIgY2lyY2xlLWJyYW5jaCBjZXJ0aWZpY2F0aW9uCgotIERBRzogQi1LRVJORUwgLyBCLUxPQ0FMIC8gQi1TRUVEIC8gQi1UVUJFIC8gQi1FWFQgLyBCLUpPSU4gLyBCLURBRwotIDEtRCBpbnRlcnZhbC1LcmF3Y3p5ayB0dWJlIHBpbG90IChzdHJpY3QtaW5jbHVzaW9uIGNyaXRlcmlvbiksCiAgaGFybmVzcyB2YWxpZGF0ZWQgZW5kLXRvLWVuZDogcG9zaXRpdmUgY29udHJvbCAxNi8xNiBjZXJ0aWZpZWQsCiAgbmVnYXRpdmUgY29udHJvbCAwLzE2IChubyBmYWxzZSBjZXJ0aWZpY2F0aW9uKQotIHdvcmtmbG93X2Rpc3BhdGNoLW9ubHkgcGlsb3Qgd2l0aCBTRUxGVEVTVCBndWFyZCB1bnRpbCB0aGUgaXRlbS0wCiAgRihyLGxhbWJkYSkga2VybmVscyBhcmUgdmVuZG9yZWQgKEItS0VSTkVMIGRlYnQ7IG1vZHVsZSBzaGEyNTYKICBlZjA2NTM4MS4uLiByZWNvcmRlZCBpbiBpdGVtMGQgY2VydGlmaWNhdGUgcHJvdmVuYW5jZSkKLSBhcnRpZmFjdCBKU09OcyB3cml0dGVuIHdpdGhvdXQgdHJhaWxpbmcgbmV3bGluZSAoaGFzaCBkaXNjaXBsaW5lKQo=' | base64 -d > /tmp/item2-message
           export GIT_AUTHOR_NAME='Claude (assistant)'
           export GIT_AUTHOR_EMAIL='noreply@anthropic.com'
           export GIT_COMMITTER_NAME='Claude (assistant)'
           export GIT_COMMITTER_EMAIL='noreply@anthropic.com'
           export GIT_AUTHOR_DATE='@1785057380 +0000'
           export GIT_COMMITTER_DATE='@1785057380 +0000'
-          commit="$(git commit-tree "$tree" -p 3888936d44bcd2c8abd84c5ee4dc1f337d93dbdd < /tmp/item2-message)"
+          commit="$(git commit-tree "$target_tree" -p 3888936d44bcd2c8abd84c5ee4dc1f337d93dbdd < /tmp/item2-message)"
+          echo "Reconstructed commit=$commit"
           test "$commit" = 92c46e5de1a56d90ccf707154f535bbc2a8db76d
           git push origin "$commit:refs/heads/agent/prolate-item2-circle"
       - name: Remove import branch
