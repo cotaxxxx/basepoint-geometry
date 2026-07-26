@@ -1,6 +1,9 @@
 name: Prolate item 6 finite-domain grid certificate
 
 on:
+  pull_request:
+    paths:
+      - ".github/workflows/prolate-item6-finite-grid.yml"
   workflow_dispatch:
 
 concurrency:
@@ -52,8 +55,8 @@ jobs:
                               f"{w_hi_num}_{w_hi_den}-l{lo}-{hi}"
                           ),
                           "mode": mode,
-                          "kind": "interior" if mode == "middle" else "second",
-                          "sign": "negative" if mode == "pole" else "positive",
+                          "kind": "second" if mode == "center" else "interior",
+                          "sign": "positive",
                           "w_lo_num": w_lo_num,
                           "w_lo_den": w_lo_den,
                           "w_hi_num": w_hi_num,
@@ -161,12 +164,12 @@ jobs:
           --x-lo 1/2 --x-hi 3/4 --y-lo 1 --y-hi 100
           --expected-blocks 24
           --json prolate_axis_finite_middle_grid_1_100.json
-      - name: Combine pole transfer
+      - name: Combine direct pole interior
         working-directory: CERTIFICATES/prolate/item6_axis
         run: >-
           python prolate_axis_grid_combine.py
           --pattern "finite_grid_outputs/prolate_axis_finite_pole_*.json"
-          --value-key A_second --sign negative
+          --value-key Psi --sign positive
           --x-lo 3/4 --x-hi 63/64 --y-lo 1 --y-hi 100
           --expected-blocks 40
           --json prolate_axis_finite_pole_grid_1_100.json
