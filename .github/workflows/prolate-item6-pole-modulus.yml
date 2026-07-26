@@ -8,6 +8,7 @@ on:
       - "CERTIFICATES/prolate/item6_axis/prolate_axis_pole_modulus_arb.py"
       - "CERTIFICATES/prolate/item6_axis/prolate_axis_pole_modulus_compact_arb.py"
       - "CERTIFICATES/prolate/item6_axis/prolate_axis_pole_modulus_endpoint_arb.py"
+      - "CERTIFICATES/prolate/item6_axis/prolate_axis_pole_modulus_outer_far_preflight_arb.py"
   workflow_dispatch:
 
 concurrency:
@@ -17,7 +18,7 @@ concurrency:
 jobs:
   certify:
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 180
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -36,6 +37,18 @@ jobs:
           prolate_axis_pole_modulus_arb.py
           prolate_axis_pole_modulus_compact_arb.py
           prolate_axis_pole_modulus_endpoint_arb.py
+          prolate_axis_pole_modulus_outer_far_preflight_arb.py
+      - name: Certify outer-far budget viability first
+        working-directory: CERTIFICATES/prolate/item6_axis
+        run: >-
+          python prolate_axis_pole_modulus_outer_far_preflight_arb.py
+          --dps 50
+          --max-split-depth 24
+          --max-boxes 500000
+          --inner-density-limit 100
+          --outer-near-density-limit 144100
+          --max-terminal-records 100
+          --json prolate_axis_pole_modulus_outer_far_preflight.json
       - name: Certify endpoint-stable compact pole modulus
         working-directory: CERTIFICATES/prolate/item6_axis
         run: >-
@@ -44,15 +57,17 @@ jobs:
           --max-split-depth 24
           --max-boxes 1000000
           --inner-density-limit 100
-          --outer-density-limit 144100
+          --outer-density-limit 144184.719
           --max-terminal-records 100
           --json prolate_axis_pole_modulus_compact.json
-      - name: Upload endpoint-stable pole modulus certificate
+      - name: Upload endpoint-stable pole modulus certificates
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: prolate-item6-pole-modulus-endpoint-stable
           path: |
             CERTIFICATES/prolate/item6_axis/prolate_axis_pole_modulus_symbolic_audit.json
+            CERTIFICATES/prolate/item6_axis/prolate_axis_pole_modulus_outer_far_preflight.json
+            CERTIFICATES/prolate/item6_axis/prolate_axis_pole_modulus_outer_far_preflight.json.sha256
             CERTIFICATES/prolate/item6_axis/prolate_axis_pole_modulus_compact.json
             CERTIFICATES/prolate/item6_axis/prolate_axis_pole_modulus_compact.json.sha256
