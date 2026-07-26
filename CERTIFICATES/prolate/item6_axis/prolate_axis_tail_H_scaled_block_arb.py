@@ -1,14 +1,10 @@
 #!/usr/bin/env python3
-"""Signed-angle, paired and endpoint-squared compact-tail driver for H.
+"""Direct-Psi compact-tail certificate on paired signed-angle charts.
 
-The exact signed-angle density is used directly, avoiding all cosine
-hypergeometric endpoint evaluation.  The paired right endpoint ``c=1`` and the
-far-left endpoint ``c=-1`` are integrated with
-
-    t = 1 - (1-s)^2 / 256,
-
-so the vanishing factor in ``rho=sqrt(1-c^2)`` is extracted explicitly.  The
-remaining bulk, paired and inner charts preserve ``c-w`` algebraically.
+On positive compact tail blocks, ``H=Psi/(mu*w)`` has the same sign as Psi.
+The driver therefore certifies Psi directly, before division by ``mu*w``.  This
+removes all artificial ``1/mu`` amplification from the inner moving layer.
+Endpoint-square caps make ``rho=sqrt(1-c^2)`` analytic at ``c=+/-1``.
 """
 from __future__ import annotations
 
@@ -28,26 +24,17 @@ EVALUATION_TRACE: list[dict] = []
 TRACE_LIMIT = 32
 
 
-def mapped_integral(
-    kernel,
-    lo: fmpq,
-    hi: fmpq,
-    tolerance: arb,
-    integration_depth: int,
-    eval_limit: int,
-) -> acb:
+def mapped_integral(kernel, lo, hi, tolerance, depth, limit) -> acb:
     lo_c = acb(arb(str(lo)))
     jacobian = acb(arb(str(hi - lo)))
 
     def mapped(t: acb, analytic: bool) -> acb:
         return jacobian * kernel(lo_c + jacobian * t, analytic)
 
-    return base.rigorous_integral(
-        mapped, tolerance, integration_depth, eval_limit
-    )
+    return base.rigorous_integral(mapped, tolerance, depth, limit)
 
 
-def signed_density(
+def signed_psi_density(
     mu: acb,
     w: acb,
     c: acb,
@@ -62,23 +49,15 @@ def signed_density(
     delta = (rho * y / (mu * n)).atan()
     pi = acb(arb.pi())
     regularized_square = delta * delta - pi * pi / 4
-    return (
-        -c * regularized_square / (2 * mu * w)
-        + n * delta * rho / (w * p)
-    )
+    return -c * regularized_square / 2 + mu * n * delta * rho / p
 
 
-def paired_tail_H(
-    mu_value: arb,
-    w_value: arb,
-    tolerance: arb,
-    integration_depth: int,
-    eval_limit: int,
-) -> acb:
+def paired_tail_Psi(mu_value, w_value, tolerance, depth, limit) -> acb:
     mu = acb(mu_value)
     w = acb(w_value)
     radius = acb(LAYER_RADIUS)
     cap = acb(arb(str(CAP_SIZE_Q)))
+    mu2 = mu * mu
 
     def inner_kernel(t: acb, analytic: bool) -> acb:
         q = 2 * radius * t - radius
@@ -87,30 +66,28 @@ def paired_tail_H(
         rho = rho2.sqrt(analytic=analytic)
         reduced_p = q * q + rho2
         n = 1 - w * c
-        y = -mu * q + mu * mu * c
+        y = -mu * q + mu2 * c
         delta = (rho * y / (mu * n)).atan()
         pi = acb(arb.pi())
         regularized_square = delta * delta - pi * pi / 4
         # dc=8*mu*dt and P=mu^2*reduced_p.
         return (
-            -radius * c * regularized_square / w
-            + 2 * radius * n * delta * rho / (w * mu * reduced_p)
+            -radius * mu * c * regularized_square
+            + 2 * radius * n * delta * rho / reduced_p
         )
 
     pair_jacobian = 1 - w - radius * mu
 
     def paired_bulk_kernel(t: acb, analytic: bool) -> acb:
         x = radius * mu + pair_jacobian * t
-
         c_left = w - x
         rho2_left = (1 - w + x) * (1 + w - x)
         rho_left = rho2_left.sqrt(analytic=analytic)
-        left = signed_density(mu, w, c_left, -x, rho2_left, rho_left)
-
+        left = signed_psi_density(mu, w, c_left, -x, rho2_left, rho_left)
         c_right = w + x
         rho2_right = pair_jacobian * (1 - t) * (1 + w + x)
         rho_right = rho2_right.sqrt(analytic=analytic)
-        right = signed_density(mu, w, c_right, x, rho2_right, rho_right)
+        right = signed_psi_density(mu, w, c_right, x, rho2_right, rho_right)
         return pair_jacobian * (left + right)
 
     def paired_cap_kernel(s: acb, analytic: bool) -> acb:
@@ -118,17 +95,15 @@ def paired_tail_H(
         t = 1 - cap * u * u
         dt_ds = 2 * cap * u
         x = radius * mu + pair_jacobian * t
-
         c_left = w - x
         rho2_left = (1 - w + x) * (1 + w - x)
         rho_left = rho2_left.sqrt(analytic=analytic)
-        left = signed_density(mu, w, c_left, -x, rho2_left, rho_left)
-
+        left = signed_psi_density(mu, w, c_left, -x, rho2_left, rho_left)
         c_right = w + x
         right_factor = pair_jacobian * cap * (1 + w + x)
         rho_right = u * right_factor.sqrt(analytic=analytic)
         rho2_right = rho_right * rho_right
-        right = signed_density(mu, w, c_right, x, rho2_right, rho_right)
+        right = signed_psi_density(mu, w, c_right, x, rho2_right, rho_right)
         return dt_ds * pair_jacobian * (left + right)
 
     def far_bulk_kernel(t: acb, analytic: bool) -> acb:
@@ -136,7 +111,7 @@ def paired_tail_H(
         c = w - x
         rho2 = 4 * w * (1 - t) * (1 - w + w * t)
         rho = rho2.sqrt(analytic=analytic)
-        return 2 * w * signed_density(mu, w, c, -x, rho2, rho)
+        return 2 * w * signed_psi_density(mu, w, c, -x, rho2, rho)
 
     def far_cap_kernel(s: acb, analytic: bool) -> acb:
         u = 1 - s
@@ -147,29 +122,17 @@ def paired_tail_H(
         rho_factor = 4 * w * cap * (1 - w + w * t)
         rho = u * rho_factor.sqrt(analytic=analytic)
         rho2 = rho * rho
-        return dt_ds * 2 * w * signed_density(
-            mu, w, c, -x, rho2, rho
-        )
+        return dt_ds * 2 * w * signed_psi_density(mu, w, c, -x, rho2, rho)
 
-    inner = base.rigorous_integral(
-        inner_kernel, tolerance, integration_depth, eval_limit
-    )
+    inner = base.rigorous_integral(inner_kernel, tolerance, depth, limit)
     paired_bulk = mapped_integral(
-        paired_bulk_kernel,
-        fmpq(0), CAP_START_Q,
-        tolerance, integration_depth, eval_limit,
+        paired_bulk_kernel, fmpq(0), CAP_START_Q, tolerance, depth, limit
     )
-    paired_cap = base.rigorous_integral(
-        paired_cap_kernel, tolerance, integration_depth, eval_limit
-    )
+    paired_cap = base.rigorous_integral(paired_cap_kernel, tolerance, depth, limit)
     far_bulk = mapped_integral(
-        far_bulk_kernel,
-        fmpq(0), CAP_START_Q,
-        tolerance, integration_depth, eval_limit,
+        far_bulk_kernel, fmpq(0), CAP_START_Q, tolerance, depth, limit
     )
-    far_cap = base.rigorous_integral(
-        far_cap_kernel, tolerance, integration_depth, eval_limit
-    )
+    far_cap = base.rigorous_integral(far_cap_kernel, tolerance, depth, limit)
     paired = paired_bulk + paired_cap
     far_left = far_bulk + far_cap
     total = inner + paired + far_left
@@ -191,6 +154,27 @@ def paired_tail_H(
             "total": base.acb_record(total),
         })
     return total
+
+
+def rename_H_to_Psi(result: dict) -> dict:
+    result["scope"] = result["scope"].replace("H(mu,w)>0", "Psi_{1/mu}(w)>0")
+    result["derived_statement"] = (
+        "H(mu,w)>0 on the same block because H=Psi_{1/mu}(w)/(mu*w) and mu*w>0."
+    )
+    result["conditions"] = {
+        key.replace("H > 0", "Psi > 0"): value
+        for key, value in result["conditions"].items()
+    }
+    for leaf in result.get("leaves", []):
+        if "H" in leaf:
+            leaf["Psi"] = leaf.pop("H")
+    for box in result.get("terminal", []):
+        if "H" in box:
+            box["Psi"] = box.pop("H")
+    worst = result.get("worst_certified_leaf")
+    if worst is not None and "H" in worst:
+        worst["Psi"] = worst.pop("H")
+    return result
 
 
 def main() -> None:
@@ -225,25 +209,21 @@ def main() -> None:
 
     ctx.dps = args.dps
     EVALUATION_TRACE.clear()
-    base.scaled_tail_H = paired_tail_H
+    base.scaled_tail_H = paired_tail_Psi
     result = base.certify_block(
-        args.dps,
-        args.tolerance,
-        args.integration_depth,
-        args.eval_limit,
-        args.max_split_depth,
-        args.max_boxes,
-        mu_lo,
-        mu_hi,
-        w_lo,
-        w_hi,
+        args.dps, args.tolerance, args.integration_depth, args.eval_limit,
+        args.max_split_depth, args.max_boxes,
+        mu_lo, mu_hi, w_lo, w_hi,
     )
+    result = rename_H_to_Psi(result)
     result["evaluation_trace"] = EVALUATION_TRACE
+    result["quantity"] = "Psi"
     result["representation"] = (
-        "exact signed atan density; paired outer charts; endpoint-square caps"
+        "direct signed-angle Psi density before division by mu*w; paired charts; "
+        "endpoint-square caps"
     )
     result["integration_chart"] = {
-        "type": "signed-angle paired split with endpoint-square caps",
+        "type": "direct-Psi signed-angle paired split with endpoint-square caps",
         "layer_radius": LAYER_RADIUS,
         "cap_size": str(CAP_SIZE_Q),
         "pieces": [
@@ -253,10 +233,6 @@ def main() -> None:
             "far-left bulk: t in [0,255/256]",
             "far-left endpoint cap: t=1-(1-s)^2/256",
         ],
-        "exact_partition": (
-            "inner plus paired outer plus unmatched far-left equals [-1,1]; "
-            "the exact rational cap [255/256,1] is reparameterized bijectively"
-        ),
     }
     result["script_sha256"] = base.sha256_file(Path(__file__))
     result["base_driver_sha256"] = base.sha256_file(
@@ -265,9 +241,6 @@ def main() -> None:
     result["formula_audit_sha256"] = base.sha256_file(
         Path(__file__).with_name("prolate_axis_signed_tail_symbolic_audit.py")
     )
-    result["paired_chart_audit_sha256"] = base.sha256_file(
-        Path(__file__).with_name("prolate_axis_tail_paired_chart_symbolic_audit.py")
-    )
 
     output = Path(args.json)
     output.write_text(json.dumps(result, indent=2), encoding="utf-8")
@@ -275,7 +248,6 @@ def main() -> None:
         f"{result['script_sha256']}  {Path(__file__).name}\n"
         f"{result['base_driver_sha256']}  prolate_axis_tail_H_block_arb.py\n"
         f"{result['formula_audit_sha256']}  prolate_axis_signed_tail_symbolic_audit.py\n"
-        f"{result['paired_chart_audit_sha256']}  prolate_axis_tail_paired_chart_symbolic_audit.py\n"
         f"{base.sha256_file(output)}  {output.name}\n",
         encoding="utf-8",
     )
