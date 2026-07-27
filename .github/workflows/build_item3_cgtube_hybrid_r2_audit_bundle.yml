@@ -12,6 +12,7 @@ permissions:
 
 env:
   SOURCE_SHA: 5b352a7b9152873802d6c3aa7d58018e80674b34
+  PARENT_SHA: 3a025346da89818273dc22616e6c7995478f25bb
   DIR: CERTIFICATES/prolate/item3_center_connection/c_g_tube
 
 jobs:
@@ -24,7 +25,7 @@ jobs:
         with:
           ref: ${{ env.SOURCE_SHA }}
           path: source
-          fetch-depth: 1
+          fetch-depth: 2
           persist-credentials: false
 
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
@@ -36,6 +37,7 @@ jobs:
         run: |
           set -euo pipefail
           test "$(git -C source rev-parse HEAD)" = "$SOURCE_SHA"
+          test "$(git -C source rev-parse HEAD^)" = "$PARENT_SHA"
           for name in endpoints_chain.jsonl cells_chain.jsonl spots_chain.jsonl \
                       C_G_ENDPOINT_SIGNS.json C_G_TUBE_PILOT.json \
                       C_G_IDENTITY_CROSSCHECK.json CONTROLS.json \
@@ -62,7 +64,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p bundle/source
+          mkdir -p bundle/source bundle/dependencies
           cp "source/$DIR/README.md" bundle/source/
           cp "source/$DIR/c_g_tube_pilot.py" bundle/source/
           cp "source/$DIR/c_g_tube_checker.py" bundle/source/
@@ -70,36 +72,54 @@ jobs:
           cp "source/$DIR/config.json" bundle/source/
           cp "source/$DIR/CONTROLS.json" bundle/
 
+          cp source/CERTIFICATES/prolate/item2_circle/vendor/prolate_circle_F_cleanroom.py \
+             bundle/dependencies/
+          cp source/CERTIFICATES/prolate/item3_center_connection/vendor/prolate_circle_Frr_ext.py \
+             bundle/dependencies/
+          cp source/CERTIFICATES/prolate/item3_center_connection/calibration/item3_centered_calibration.json \
+             bundle/dependencies/
+
           {
             echo "repository=cotaxxxx/geometric-dual-topology"
             echo "source_sha=$SOURCE_SHA"
+            echo "parent_sha=$PARENT_SHA"
             echo "source_branch=agent/prolate-item3-cgtube-hybrid-audit-r2"
             echo "scope=static-audit bundle only; not a mathematical certificate"
             echo "generated_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
             git -C source show -s --format='commit=%H%nparent=%P%nauthor=%an <%ae>%ncommitter=%cn <%ce>%nsubject=%s' HEAD
           } > bundle/PROVENANCE.txt
 
-          sha256sum \
-            "source/$DIR/README.md" \
-            "source/$DIR/c_g_tube_pilot.py" \
-            "source/$DIR/c_g_tube_checker.py" \
-            "source/$DIR/run_controls.py" \
-            "source/$DIR/config.json" \
-            > bundle/SOURCE_SHA256SUMS.txt
+          (
+            cd bundle
+            sha256sum \
+              source/README.md \
+              source/c_g_tube_pilot.py \
+              source/c_g_tube_checker.py \
+              source/run_controls.py \
+              source/config.json \
+              > SOURCE_SHA256SUMS.txt
 
-          sha256sum \
-            source/CERTIFICATES/prolate/item2_circle/vendor/prolate_circle_F_cleanroom.py \
-            source/CERTIFICATES/prolate/item3_center_connection/vendor/prolate_circle_Frr_ext.py \
-            source/CERTIFICATES/prolate/item3_center_connection/calibration/item3_centered_calibration.json \
-            > bundle/DEPENDENCY_SHA256SUMS.txt
+            sha256sum \
+              dependencies/prolate_circle_F_cleanroom.py \
+              dependencies/prolate_circle_Frr_ext.py \
+              dependencies/item3_centered_calibration.json \
+              > DEPENDENCY_SHA256SUMS.txt
+          )
 
           rm -f "source/$DIR/CONTROLS.json"
           rm -rf "source/$DIR/__pycache__"
           test -z "$(git -C source status --porcelain)"
-          find bundle -type f ! -name BUNDLE_FILE_SHA256SUMS.txt -print0 \
-            | sort -z \
-            | xargs -0 sha256sum \
-            > bundle/BUNDLE_FILE_SHA256SUMS.txt
+
+          (
+            cd bundle
+            find . -type f ! -name BUNDLE_FILE_SHA256SUMS.txt -print0 \
+              | sort -z \
+              | xargs -0 sha256sum \
+              > BUNDLE_FILE_SHA256SUMS.txt
+            sha256sum -c SOURCE_SHA256SUMS.txt
+            sha256sum -c DEPENDENCY_SHA256SUMS.txt
+            sha256sum -c BUNDLE_FILE_SHA256SUMS.txt
+          )
 
       - name: Upload audit bundle
         id: artifact
