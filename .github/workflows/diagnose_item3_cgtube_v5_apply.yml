@@ -1,0 +1,88 @@
+name: Diagnose item3 C-G-TUBE v5 apply (non-writing)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/diagnose_item3_cgtube_v5_apply.yml
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+env:
+  TARGET_BRANCH: agent/prolate-item3-cgtube-source-candidate
+  EXPECTED_HEAD: 2ffae275c15a8a465d0018624dd3c4fba479daf7
+  PAYLOAD_SHA256: 0e012f778d9e17258148130b24047ef6a9526ab264453cf25631d61bfad24692
+  PILOT_SHA256: 1195582fab8317124320644644aeeeabe70b47c6f697c82964a3e52fcc66687e
+  CHECKER_SHA256: 4fd1e23942697c2accb48eef6ccd3f4a65e5183fdae419df49a050b3c83f17a9
+  CONTROLS_SHA256: e8314b3e500e167041ca3552bf542b93a109a921fa48b2ea9a96112a48b6c379
+  CONFIG_SHA256: bb6a3655d335240549cbe1f6eec2a9e68e00219eb9c1a2be65796e2e342a0d17
+  CG_TUBE_REPO_ROOT: ${{ github.workspace }}
+
+jobs:
+  diagnose-v5-apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          ref: ${{ env.TARGET_BRANCH }}
+          fetch-depth: 2
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+      - name: Diagnose every apply check
+        shell: bash
+        run: |
+          set +e
+          mkdir -p apply_diagnostic
+          report=apply_diagnostic/report.txt
+          : > "$report"
+          run_check() {
+            label="$1"; shift
+            echo "===== $label =====" | tee -a "$report"
+            "$@" >> "$report" 2>&1
+            rc=$?
+            echo "exit=$rc" | tee -a "$report"
+            return 0
+          }
+
+          echo "workflow_head=${GITHUB_SHA}" | tee -a "$report"
+          echo "candidate_head=$(git rev-parse HEAD)" | tee -a "$report"
+          test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD"
+          echo "fixed_head_exit=$?" | tee -a "$report"
+
+          run_check decode_payload base64 -d .github/payloads/item3_cgtube_v5_payload.b64 -o /tmp/item3-cgtube-v5.tar.gz
+          run_check payload_sha bash -lc "echo '$PAYLOAD_SHA256  /tmp/item3-cgtube-v5.tar.gz' | sha256sum -c -"
+          run_check tar_listing tar -tzf /tmp/item3-cgtube-v5.tar.gz
+          run_check tar_extract tar -xzf /tmp/item3-cgtube-v5.tar.gz -C .
+
+          dir=CERTIFICATES/prolate/item3_center_connection/c_g_tube
+          run_check pilot_sha bash -lc "echo '$PILOT_SHA256  $dir/c_g_tube_pilot.py' | sha256sum -c -"
+          run_check checker_sha bash -lc "echo '$CHECKER_SHA256  $dir/c_g_tube_checker.py' | sha256sum -c -"
+          run_check controls_sha bash -lc "echo '$CONTROLS_SHA256  $dir/run_controls.py' | sha256sum -c -"
+          run_check config_sha bash -lc "echo '$CONFIG_SHA256  $dir/config.json' | sha256sum -c -"
+          run_check py_compile python -m py_compile "$dir/c_g_tube_pilot.py" "$dir/c_g_tube_checker.py" "$dir/run_controls.py"
+          run_check pip_install python -m pip install python-flint==0.9.0
+          run_check checker_controls python "$dir/run_controls.py"
+
+          rm -f "$dir/CONTROLS.json"
+          rm -f .github/payloads/item3_cgtube_v5_payload.b64
+          run_check diff_name_status git diff --name-status
+          run_check status_short git status --short
+          run_check diff_check git diff --check
+          cp "$dir/config.json" apply_diagnostic/config.json
+          cp "$dir/c_g_tube_pilot.py" apply_diagnostic/c_g_tube_pilot.py
+          cp "$dir/c_g_tube_checker.py" apply_diagnostic/c_g_tube_checker.py
+          cp "$dir/run_controls.py" apply_diagnostic/run_controls.py
+          cat "$report"
+      - name: Upload apply diagnostic
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: item3-cgtube-v5-apply-diagnostic-${{ github.run_id }}
+          path: apply_diagnostic/
+          if-no-files-found: error
+          retention-days: 30
