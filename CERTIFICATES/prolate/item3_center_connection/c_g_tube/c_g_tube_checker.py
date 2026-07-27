@@ -33,6 +33,9 @@ CONTROL_EXPECT = {
     "neg_limit_short": 1,
     "neg_spot_leaf_missing": 1,
     "neg_spot_sign_flip": 1,
+    "neg_center_spot_balls_tamper": 1,
+    "neg_center_spot_piece_missing": 1,
+    "neg_center_spot_piece_sign_flip": 1,
 }
 
 
@@ -134,38 +137,59 @@ def weighted_product_bounds(ta: Fr, tb: Fr, flo: arb, fhi: arb):
     return arb((b * flo).lower()), arb((b * fhi).upper())
 
 
-def identity_record_negative(rec: dict) -> bool:
-    n = rec.get("partition_count")
-    if not isinstance(n, int) or n != CONFIG["center_t_partition_count"]:
-        die(f"CENTER IDENTITY PARTITION MISMATCH at {rec.get('a')}..{rec.get('b')}", 1)
-    pieces = rec.get("identity_pieces")
+def identity_piece_bounds(pieces, n: int, label: str) -> tuple[arb, arb]:
     if not isinstance(pieces, list) or len(pieces) != n:
-        die("CENTER IDENTITY PIECE COUNT MISMATCH", 1)
+        die(f"{label} PIECE COUNT MISMATCH", 1)
     dt = qa(Fr(1, n))
     total_lo, total_hi = arb(0), arb(0)
     for i, piece in enumerate(pieces):
-        ta, tb = Fr(piece["t_a"]), Fr(piece["t_b"])
+        if not isinstance(piece, dict):
+            die(f"{label} PIECE IS NOT AN OBJECT", 1)
+        try:
+            ta, tb = Fr(piece["t_a"]), Fr(piece["t_b"])
+        except (KeyError, TypeError, ValueError) as exc:
+            die(f"{label} MALFORMED t-PARTITION: {exc}", 1)
         if ta != Fr(i, n) or tb != Fr(i + 1, n):
-            die("CENTER IDENTITY t-PARTITION MISMATCH", 1)
+            die(f"{label} t-PARTITION MISMATCH", 1)
         fball = piece.get("Frr_ball")
         if not isinstance(fball, list) or len(fball) != 2:
-            die("CENTER IDENTITY Frr BALL MISSING", 1)
+            die(f"{label} Frr BALL MISSING", 1)
         flo, fhi = endpoint_lo(fball[0]), endpoint_hi(fball[1])
         if bool(flo > fhi):
-            die("CENTER IDENTITY Frr BALL REVERSED", 1)
+            die(f"{label} Frr BALL REVERSED", 1)
         plo, phi = weighted_product_bounds(ta, tb, flo, fhi)
         total_lo = arb((total_lo + plo * dt).lower())
         total_hi = arb((total_hi + phi * dt).upper())
-    stored = rec.get("G_prime_ball")
+    return total_lo, total_hi
+
+
+def require_summary_intersects(stored, total_lo: arb, total_hi: arb,
+                               label: str) -> None:
     if not isinstance(stored, list) or len(stored) != 2:
-        die("CENTER IDENTITY SUMMARY BALL MISSING", 1)
+        die(f"{label} SUMMARY BALL MISSING", 1)
     stored_lo, stored_hi = endpoint_lo(stored[0]), endpoint_hi(stored[1])
+    if bool(stored_lo > stored_hi):
+        die(f"{label} SUMMARY BALL REVERSED", 1)
     if bool(stored_hi < total_lo) or bool(total_hi < stored_lo):
-        die("CENTER IDENTITY SUMMARY DISJOINT FROM RECONSTRUCTION", 1)
+        die(f"{label} SUMMARY DISJOINT FROM RECONSTRUCTION", 1)
+
+
+def identity_record_bounds(rec: dict) -> tuple[bool, arb, arb]:
+    n = rec.get("partition_count")
+    if not isinstance(n, int) or n != CONFIG["center_t_partition_count"]:
+        die(f"CENTER IDENTITY PARTITION MISMATCH at {rec.get('a')}..{rec.get('b')}", 1)
+    total_lo, total_hi = identity_piece_bounds(
+        rec.get("identity_pieces"), n, "CENTER IDENTITY")
+    require_summary_intersects(
+        rec.get("G_prime_ball"), total_lo, total_hi, "CENTER IDENTITY")
     negative = bool(total_hi < 0)
     if negative != bool(rec.get("negative")):
         die("CENTER IDENTITY NEGATIVITY MISMATCH", 1)
-    return negative
+    return negative, total_lo, total_hi
+
+
+def identity_record_negative(rec: dict) -> bool:
+    return identity_record_bounds(rec)[0]
 
 
 def cell_record_negative(rec: dict, cell_index: int) -> bool:
@@ -277,6 +301,7 @@ def main() -> int:
     by_index = {r["cell_index"]: r for r in cells}
     cells_ok = True
     unresolved_count = 0
+    center_identity_hulls: dict[int, tuple[arb, arb]] = {}
     for i in range(n_cells):
         rec = by_index.get(i)
         a_exp, b_exp = r_lo + i * width, r_lo + (i + 1) * width
@@ -286,10 +311,31 @@ def main() -> int:
             unresolved_count += 1
             continue
         leaves = []
+        center_bounds = []
         for sub in rec.get("sub", []):
-            if cell_record_negative(sub, i):
+            if i < CONFIG["center_identity_cell_count"]:
+                if sub.get("method") != "center_identity":
+                    die(f"NON-IDENTITY RECORD IN CENTER CELL {i}", 1)
+                negative, bound_lo, bound_hi = identity_record_bounds(sub)
+            else:
+                negative = cell_record_negative(sub, i)
+                bound_lo = bound_hi = None
+            if negative:
                 leaves.append((Fr(sub["a"]), Fr(sub["b"])))
+                if bound_lo is not None:
+                    center_bounds.append((bound_lo, bound_hi))
         tiled = exact_tile(leaves, a_exp, b_exp)
+        if tiled and i < CONFIG["center_identity_cell_count"]:
+            if not center_bounds:
+                die(f"CENTER CELL {i} HAS NO RECONSTRUCTED LEAF BOUNDS", 1)
+            hull_lo, hull_hi = center_bounds[0]
+            for bound_lo, bound_hi in center_bounds[1:]:
+                if bool(bound_lo < hull_lo):
+                    hull_lo = bound_lo
+                if bool(bound_hi > hull_hi):
+                    hull_hi = bound_hi
+            center_identity_hulls[i] = (
+                arb(hull_lo.lower()), arb(hull_hi.upper()))
         if not tiled:
             cells_ok = False
             unresolved_count += 1
@@ -312,9 +358,9 @@ def main() -> int:
             rec["depth_limit"] == CONFIG["int_depth"] and
             rec["evaluation_limit"] == CONFIG["int_limit"]
         )
-        id_lo = endpoint_lo(rec["Gprime_identity_ball"][0])
-        id_hi = endpoint_hi(rec["Gprime_identity_ball"][1])
-        identity_negative = bool(id_hi < 0)
+        stored_identity = rec.get("Gprime_identity_ball")
+        if not isinstance(stored_identity, list) or len(stored_identity) != 2:
+            die("SPOT IDENTITY BALL MISSING", 1)
         method = rec.get("crosscheck_method")
 
         if i < CONFIG["center_identity_cell_count"]:
@@ -324,12 +370,29 @@ def main() -> int:
                 rec.get("cross_depth_limit") == CONFIG["center_int_depth"] and
                 rec.get("cross_evaluation_limit") == CONFIG["center_int_limit"]
             )
-            cross_ball = rec.get("Gprime_cross_ball")
-            if not isinstance(cross_ball, list) or len(cross_ball) != 2:
-                die("REFINED IDENTITY SPOT BALL MISSING", 1)
-            cross_lo, cross_hi = endpoint_lo(cross_ball[0]), endpoint_hi(cross_ball[1])
-            tiling_complete = None
-            terminal_unresolved = None
+            if i not in center_identity_hulls:
+                die(f"CENTER SPOT {i} HAS NO CERTIFIED CELL RECONSTRUCTION", 1)
+            id_lo, id_hi = center_identity_hulls[i]
+            require_summary_intersects(
+                stored_identity, id_lo, id_hi,
+                "CENTER SPOT CELL-LINKED IDENTITY")
+            n_refined = CONFIG["center_refined_t_partition_count"]
+            cross_lo, cross_hi = identity_piece_bounds(
+                rec.get("cross_identity_pieces"), n_refined,
+                "REFINED IDENTITY SPOT")
+            require_summary_intersects(
+                rec.get("Gprime_cross_ball"), cross_lo, cross_hi,
+                "REFINED IDENTITY SPOT")
+            tiling_complete = True
+            terminal_unresolved = 0
+        else:
+            id_lo = endpoint_lo(stored_identity[0])
+            id_hi = endpoint_hi(stored_identity[1])
+
+        identity_negative = bool(id_hi < 0)
+
+        if i < CONFIG["center_identity_cell_count"]:
+            pass
         elif i in adaptive_indices:
             meta_ok = meta_ok and method == "taylor_adaptive"
             max_depth = CONFIG["spot_taylor_max_extra_depth"]
@@ -388,7 +451,8 @@ def main() -> int:
             "intersection_nonempty": intersection,
             "tiling_complete": tiling_complete,
             "terminal_unresolved": terminal_unresolved,
-            "Gprime_identity_ball": rec["Gprime_identity_ball"],
+            "Gprime_identity_ball_stored": rec["Gprime_identity_ball"],
+            "Gprime_identity_ball_reconstructed": [str(id_lo), str(id_hi)],
             "Gprime_cross_ball_reconstructed": [str(cross_lo), str(cross_hi)],
             "verdict": "PASS" if spot_ok else "FAIL",
         })

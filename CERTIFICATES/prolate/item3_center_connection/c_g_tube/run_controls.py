@@ -28,6 +28,9 @@ EXPECT = {
     "neg_limit_short": 1,
     "neg_spot_leaf_missing": 1,
     "neg_spot_sign_flip": 1,
+    "neg_center_spot_balls_tamper": 1,
+    "neg_center_spot_piece_missing": 1,
+    "neg_center_spot_piece_sign_flip": 1,
 }
 
 
@@ -64,15 +67,19 @@ def write_chain(path: Path, payloads: list[dict], config_sha: str,
             previous = hashlib.sha256(line).hexdigest()
 
 
-def center_identity_leaf(a: Fr, b: Fr, *, positive: bool = False) -> dict:
-    n = CONFIG["center_t_partition_count"]
+def identity_pieces(n: int, *, positive: bool = False) -> list[dict]:
     fball = ["0.008", "0.012"] if positive else ["-0.012", "-0.008"]
-    summary = ["0.003", "0.007"] if positive else ["-0.007", "-0.003"]
-    pieces = [
+    return [
         {"t_a": str(Fr(i, n)), "t_b": str(Fr(i + 1, n)),
          "Frr_ball": fball}
         for i in range(n)
     ]
+
+
+def center_identity_leaf(a: Fr, b: Fr, *, positive: bool = False) -> dict:
+    n = CONFIG["center_t_partition_count"]
+    summary = ["0.003", "0.007"] if positive else ["-0.007", "-0.003"]
+    pieces = identity_pieces(n, positive=positive)
     return {
         "method": "center_identity",
         "a": str(a), "b": str(b), "depth": 0,
@@ -144,7 +151,10 @@ def adaptive_spot_record(index: int, a: Fr, b: Fr, *,
 def synth(tmp: Path, *, flip_cell: bool = False, drop_cell: int | None = None,
           tamper: bool = False, unresolved_cell: int | None = None,
           missing_spot_leaf: bool = False,
-          flip_spot_leaf: bool = False) -> None:
+          flip_spot_leaf: bool = False,
+          center_spot_balls_tamper: bool = False,
+          center_spot_piece_missing: bool = False,
+          center_spot_piece_sign_flip: bool = False) -> None:
     shutil.copy(HERE / "config.json", tmp / "config.json")
     shutil.copy(HERE / "c_g_tube_checker.py", tmp / "c_g_tube_checker.py")
     config_sha = hashlib.sha256((tmp / "config.json").read_bytes()).hexdigest()
@@ -207,14 +217,26 @@ def synth(tmp: Path, *, flip_cell: bool = False, drop_cell: int | None = None,
             "intersection_nonempty": True,
         }
         if index < center_count:
+            refined_n = CONFIG["center_refined_t_partition_count"]
+            refined_pieces = identity_pieces(
+                refined_n, positive=center_spot_piece_sign_flip)
+            if center_spot_piece_missing:
+                refined_pieces = refined_pieces[:-1]
+            identity_ball = (["-0.002", "-0.001"]
+                             if center_spot_balls_tamper
+                             else ["-0.007", "-0.003"])
+            cross_ball = (["-0.002", "-0.001"]
+                          if center_spot_balls_tamper
+                          else ["-0.007", "-0.003"])
+            base["Gprime_identity_ball"] = identity_ball
             base.update({
                 "crosscheck_method": "identity_refined",
-                "cross_partition_count":
-                    CONFIG["center_refined_t_partition_count"],
+                "cross_partition_count": refined_n,
                 "cross_depth_limit": CONFIG["center_int_depth"],
                 "cross_evaluation_limit": CONFIG["center_int_limit"],
-                "Gprime_cross_ball": ["-0.011", "-0.009"],
-                "cross_negative": True,
+                "cross_identity_pieces": refined_pieces,
+                "Gprime_cross_ball": cross_ball,
+                "cross_negative": not center_spot_piece_sign_flip,
             })
         else:
             leaf = taylor_leaf(a, b)
@@ -266,6 +288,9 @@ def main() -> int:
         "neg_limit_short": {"unresolved_cell": 40},
         "neg_spot_leaf_missing": {"missing_spot_leaf": True},
         "neg_spot_sign_flip": {"flip_spot_leaf": True},
+        "neg_center_spot_balls_tamper": {"center_spot_balls_tamper": True},
+        "neg_center_spot_piece_missing": {"center_spot_piece_missing": True},
+        "neg_center_spot_piece_sign_flip": {"center_spot_piece_sign_flip": True},
     }
     results = {}
     all_ok = True

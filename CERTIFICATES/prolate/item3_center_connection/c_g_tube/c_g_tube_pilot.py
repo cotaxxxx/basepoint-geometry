@@ -229,6 +229,8 @@ def identity_gprime(kern: Kern, a: Fr, b: Fr, lam: arb, *,
                 "t_a": str(ta),
                 "t_b": str(tb),
                 "Frr_ball": [str(arb(frr.lower())), str(arb(frr.upper()))],
+                # Diagnostic only.  The checker reconstructs this term
+                # independently from t_a, t_b and Frr_ball.
                 "weighted_ball": [str(arb(weighted.lower())),
                                   str(arb(weighted.upper()))],
             })
@@ -370,19 +372,20 @@ def main() -> int:
 
         if index < center_count:
             cross_method = "identity_refined"
-            cross_lo, cross_hi, _ = identity_gprime(
+            cross_lo, cross_hi, cross_pieces = identity_gprime(
                 kern, a, b, lam,
                 partitions=CONFIG["center_refined_t_partition_count"],
                 tol=CONFIG["center_tol"],
                 depth=CONFIG["center_int_depth"],
                 limit=CONFIG["center_int_limit"],
-                keep_pieces=False)
+                keep_pieces=True)
             payload.update({
                 "crosscheck_method": cross_method,
                 "cross_partition_count":
                     CONFIG["center_refined_t_partition_count"],
                 "cross_depth_limit": CONFIG["center_int_depth"],
                 "cross_evaluation_limit": CONFIG["center_int_limit"],
+                "cross_identity_pieces": cross_pieces,
                 "Gprime_cross_ball": [str(cross_lo), str(cross_hi)],
                 "cross_negative": bool(cross_hi < 0),
             })
