@@ -1,21 +1,9 @@
 #!/usr/bin/env python3
-"""Negative controls for the C-G-TUBE checker (Actions).
+"""Fail-closed synthetic controls for the C-G-TUBE v5 checker.
 
-Builds synthetic hash-chained inputs in temp sandboxes and asserts the
-checker's fail-closed behavior. No vendor-kernel numerics are run; the
-checker itself performs Arb interval arithmetic. This validates the CHECKER,
-not the mathematics. The positive chain exercises both v4 cell methods and
-the refined center spot crosscheck.
-
-Controls:
-  positive           synthetic fully-passing hybrid chains -> exit 0
-  neg_sign_flip      center-identity cell with positive Frr -> exit 1
-  neg_missing_cell   cell index 30 absent                  -> exit 1
-  neg_sha_tamper     config_sha256 altered in one record   -> exit 2
-  neg_limit_short    cell with unresolved non-tiling leaves-> exit 1
-
-Writes CONTROLS.json (no trailing newline): PASS iff every control behaves
-exactly as required. Exit 0 PASS / 1 FAIL.
+These controls validate checker behavior, not the mathematical certificate.
+The positive case exercises center-identity cells, outer Taylor cells, refined
+identity spot 0, adaptive Taylor spot 18, and single-Taylor spots 37 and 55.
 """
 from __future__ import annotations
 
@@ -26,139 +14,233 @@ import shutil
 import subprocess
 import sys
 import tempfile
+from decimal import Decimal, localcontext
 from fractions import Fraction as Fr
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 CONFIG = json.loads((HERE / "config.json").read_bytes())
+EXPECT = {
+    "positive": 0,
+    "neg_sign_flip": 1,
+    "neg_missing_cell": 1,
+    "neg_sha_tamper": 2,
+    "neg_limit_short": 1,
+    "neg_spot_leaf_missing": 1,
+    "neg_spot_sign_flip": 1,
+}
 
 
-def dep_sha_from_config():
+def dependency_sha() -> str:
     h = hashlib.sha256()
-    for name, spec in sorted(CONFIG["vendor"].items()):
+    for _, spec in sorted(CONFIG["vendor"].items()):
         h.update(spec["sha256"].encode())
     return h.hexdigest()
 
 
-def chain_write(path: Path, payloads: list[dict], config_sha: str,
+def write_chain(path: Path, payloads: list[dict], config_sha: str,
                 phase: str) -> None:
-    prev = "GENESIS"
-    with path.open("wb") as f:
-        for pl in payloads:
-            rec = {"record_schema": CONFIG["record_schema"],
-                   "writer_id": "controls-synthetic", "run_uuid": "ctrl",
-                   "process_id": 1, "hostname": "ctrl", "phase": phase,
-                   "recorded_at": "-", "started_at": "-", "finished_at": "-",
-                   "config_sha256": config_sha,
-                   "dependency_sha256": dep_sha_from_config(),
-                   "input_state_sha256": prev,
-                   "previous_record_sha256": prev}
-            rec.update(pl)
+    previous = "GENESIS"
+    with path.open("wb") as handle:
+        for payload in payloads:
+            rec = {
+                "record_schema": CONFIG["record_schema"],
+                "writer_id": "controls-synthetic",
+                "run_uuid": "ctrl",
+                "process_id": 1,
+                "hostname": "ctrl",
+                "phase": phase,
+                "recorded_at": "-",
+                "started_at": "-",
+                "finished_at": "-",
+                "config_sha256": config_sha,
+                "dependency_sha256": dependency_sha(),
+                "input_state_sha256": previous,
+                "previous_record_sha256": previous,
+            }
+            rec.update(payload)
             line = json.dumps(rec, separators=(",", ":")).encode()
-            f.write(line + b"\n")
-            prev = hashlib.sha256(line).hexdigest()
+            handle.write(line + b"\n")
+            previous = hashlib.sha256(line).hexdigest()
 
 
-def center_identity_sub(a: Fr, b: Fr, *, positive=False) -> dict:
+def center_identity_leaf(a: Fr, b: Fr, *, positive: bool = False) -> dict:
     n = CONFIG["center_t_partition_count"]
     fball = ["0.008", "0.012"] if positive else ["-0.012", "-0.008"]
     summary = ["0.003", "0.007"] if positive else ["-0.007", "-0.003"]
-    pieces = [{"t_a": str(Fr(i, n)), "t_b": str(Fr(i + 1, n)),
-               "Frr_ball": fball} for i in range(n)]
-    return {"method": "center_identity", "a": str(a), "b": str(b),
-            "depth": 0, "partition_count": n,
-            "G_prime_ball": summary, "identity_pieces": pieces,
-            "negative": not positive}
+    pieces = [
+        {"t_a": str(Fr(i, n)), "t_b": str(Fr(i + 1, n)),
+         "Frr_ball": fball}
+        for i in range(n)
+    ]
+    return {
+        "method": "center_identity",
+        "a": str(a), "b": str(b), "depth": 0,
+        "partition_count": n,
+        "G_prime_ball": summary,
+        "identity_pieces": pieces,
+        "negative": not positive,
+    }
 
 
-def synth(tmp: Path, *, flip_leaf=False, drop_cell=None, tamper=False,
-          unresolved_cell=None) -> None:
+def taylor_leaf(a: Fr, b: Fr, *, depth: int = 0,
+                positive: bool = False, large_c: bool = False) -> dict:
+    gpm = (["0.009", "0.011"] if positive
+           else ["-0.011", "-0.009"])
+    C = "300.0" if large_c else "10.0"
+    # Build a deliberately outward decimal enclosure.  The checker performs
+    # its reconstruction with Arb-directed rounding, so binary-float reprs
+    # are not suitable as containment witnesses.
+    with localcontext() as context:
+        context.prec = 80
+        radius = Decimal((b - a).numerator) / Decimal(2 * (b - a).denominator)
+        c = Decimal(C)
+        padding = Decimal("1e-12")
+        lower = Decimal(gpm[0]) - c * radius - padding
+        upper = Decimal(gpm[1]) + c * radius + padding
+    negative = upper < 0
+    return {
+        "method": "taylor",
+        "a": str(a), "b": str(b), "depth": depth,
+        "G_prime_m": gpm,
+        "C_bound": C,
+        "reconstructed_ball": [format(lower, "f"), format(upper, "f")],
+        "negative": negative,
+    }
+
+
+def adaptive_spot_record(index: int, a: Fr, b: Fr, *,
+                         missing: bool = False,
+                         sign_flip: bool = False) -> dict:
+    mid = (a + b) / 2
+    leaves = [taylor_leaf(a, mid, depth=1)]
+    if not missing:
+        leaves.append(taylor_leaf(mid, b, depth=1, positive=sign_flip))
+    tiled = not missing
+    all_negative = all(leaf["negative"] for leaf in leaves)
+    cross_lo = min(Decimal(leaf["reconstructed_ball"][0]) for leaf in leaves)
+    cross_hi = max(Decimal(leaf["reconstructed_ball"][1]) for leaf in leaves)
+    return {
+        "record_type": "spot",
+        "cell_index": index,
+        "cell_interval": [str(a), str(b)],
+        "t_partition_count": CONFIG["t_partition_count"],
+        "depth_limit": CONFIG["int_depth"],
+        "evaluation_limit": CONFIG["int_limit"],
+        "Gprime_identity_ball": ["-0.012", "-0.008"],
+        "identity_negative": True,
+        "crosscheck_method": "taylor_adaptive",
+        "cross_max_depth": CONFIG["spot_taylor_max_extra_depth"],
+        "cross_leaves": leaves,
+        "cross_terminal_unresolved": [],
+        "cross_tiling_complete": tiled,
+        "Gprime_cross_ball": [format(cross_lo, "f"), format(cross_hi, "f")],
+        "cross_negative": all_negative and tiled,
+        "intersection_ball": ["-0.011", "-0.009"],
+        "intersection_nonempty": True,
+    }
+
+
+def synth(tmp: Path, *, flip_cell: bool = False, drop_cell: int | None = None,
+          tamper: bool = False, unresolved_cell: int | None = None,
+          missing_spot_leaf: bool = False,
+          flip_spot_leaf: bool = False) -> None:
     shutil.copy(HERE / "config.json", tmp / "config.json")
     shutil.copy(HERE / "c_g_tube_checker.py", tmp / "c_g_tube_checker.py")
-    csha = hashlib.sha256((tmp / "config.json").read_bytes()).hexdigest()
-    chain_write(tmp / "endpoints_chain.jsonl", [
+    config_sha = hashlib.sha256((tmp / "config.json").read_bytes()).hexdigest()
+
+    write_chain(tmp / "endpoints_chain.jsonl", [
         {"record_type": "endpoint", "endpoint": "lo", "r": CONFIG["r_lo"],
-         "G": ["[0.0003 +/- 1e-6]", "[0.0004 +/- 1e-6]"],
-         "sign": 1, "want": 1, "ok": True},
+         "G": ["0.000299", "0.000401"], "sign": 1, "want": 1,
+         "ok": True},
         {"record_type": "endpoint", "endpoint": "hi", "r": CONFIG["r_hi"],
-         "G": ["[-4e-5 +/- 1e-6]", "[-3e-5 +/- 1e-6]"],
-         "sign": -1, "want": -1, "ok": True}], csha, "endpoints")
+         "G": ["-0.000041", "-0.000029"], "sign": -1, "want": -1,
+         "ok": True},
+    ], config_sha, "endpoints")
+
     r_lo, r_hi = Fr(CONFIG["r_lo"]), Fr(CONFIG["r_hi"])
     n = CONFIG["n_cells"]
-    w = (r_hi - r_lo) / n
-    cells = []
+    width = (r_hi - r_lo) / n
     center_count = CONFIG["center_identity_cell_count"]
-    for i in range(n):
-        if drop_cell == i:
+    cells = []
+    for index in range(n):
+        if index == drop_cell:
             continue
-        a, b = r_lo + i * w, r_lo + (i + 1) * w
-        if i < center_count and unresolved_cell != i:
-            sub = [center_identity_sub(a, b,
-                                       positive=flip_leaf and i == 7)]
+        a, b = r_lo + index * width, r_lo + (index + 1) * width
+        if index < center_count:
+            sub = [center_identity_leaf(a, b,
+                                        positive=flip_cell and index == 7)]
         else:
-            flip = flip_leaf and i == 7
-            gpm = ["[0.009 +/- 1e-9]", "[0.011 +/- 1e-9]"] if flip \
-                else ["[-0.011 +/- 1e-9]", "[-0.009 +/- 1e-9]"]
-            sub = [{"a": str(a), "b": str(b), "depth": 0,
-                    "G_prime_m": gpm, "C_bound": "10.0",
-                    "negative": not flip}]
-        if unresolved_cell == i:
-            m = (a + b) / 2
-            sub = [{"a": str(a), "b": str(b), "depth": 0,
-                    "G_prime_m": ["[-0.011 +/- 1e-9]",
-                                  "[-0.009 +/- 1e-9]"],
-                    "C_bound": "300.0", "negative": False},
-                   {"a": str(a), "b": str(m), "depth": 1,
-                    "G_prime_m": ["[-0.011 +/- 1e-9]",
-                                  "[-0.009 +/- 1e-9]"],
-                    "C_bound": "10.0", "negative": True}]
-        cells.append({"record_type": "cell", "cell_index": i,
-                      "a": str(a), "b": str(b), "sub": sub,
-                      "certified": not (flip_leaf and i == 7)})
-    chain_write(tmp / "cells_chain.jsonl", cells, csha, "cells")
+            sub = [taylor_leaf(a, b)]
+        certified = all(rec["negative"] for rec in sub)
+        if index == unresolved_cell:
+            mid = (a + b) / 2
+            sub = [taylor_leaf(a, b, large_c=True),
+                   taylor_leaf(a, mid, depth=1)]
+            certified = False
+        cells.append({
+            "record_type": "cell", "cell_index": index,
+            "a": str(a), "b": str(b), "sub": sub,
+            "certified": certified,
+        })
+    write_chain(tmp / "cells_chain.jsonl", cells, config_sha, "cells")
 
     spots = []
-    for i in CONFIG["spot_cell_indices"]:
-        a, b = r_lo + i * w, r_lo + (i + 1) * w
-        rec = {"record_type": "spot", "cell_index": i,
-               "cell_interval": [str(a), str(b)],
-               "t_partition_count": CONFIG["t_partition_count"],
-               "depth_limit": CONFIG["int_depth"],
-               "evaluation_limit": CONFIG["int_limit"],
-               "Gprime_identity_ball": ["[-0.012 +/- 1e-9]",
-                                        "[-0.008 +/- 1e-9]"],
-               "intersection_ball": ["-0.011", "-0.009"],
-               "identity_negative": True,
-               "intersection_nonempty": True}
-        if i < center_count:
-            rec.update({
+    adaptive = set(CONFIG["spot_adaptive_taylor_indices"])
+    for index in CONFIG["spot_cell_indices"]:
+        a, b = r_lo + index * width, r_lo + (index + 1) * width
+        if index in adaptive:
+            spots.append(adaptive_spot_record(
+                index, a, b, missing=missing_spot_leaf,
+                sign_flip=flip_spot_leaf))
+            continue
+        base = {
+            "record_type": "spot",
+            "cell_index": index,
+            "cell_interval": [str(a), str(b)],
+            "t_partition_count": CONFIG["t_partition_count"],
+            "depth_limit": CONFIG["int_depth"],
+            "evaluation_limit": CONFIG["int_limit"],
+            "Gprime_identity_ball": ["-0.012", "-0.008"],
+            "identity_negative": True,
+            "intersection_ball": ["-0.011", "-0.009"],
+            "intersection_nonempty": True,
+        }
+        if index < center_count:
+            base.update({
                 "crosscheck_method": "identity_refined",
                 "cross_partition_count":
                     CONFIG["center_refined_t_partition_count"],
                 "cross_depth_limit": CONFIG["center_int_depth"],
                 "cross_evaluation_limit": CONFIG["center_int_limit"],
-                "Gprime_cross_ball": ["[-0.011 +/- 1e-9]",
-                                      "[-0.009 +/- 1e-9]"],
-                "cross_negative": True})
+                "Gprime_cross_ball": ["-0.011", "-0.009"],
+                "cross_negative": True,
+            })
         else:
-            rec.update({
+            leaf = taylor_leaf(a, b)
+            base.update({
                 "crosscheck_method": "taylor",
-                "Gprime_cross_ball": ["[-0.011 +/- 1e-9]",
-                                      "[-0.009 +/- 1e-9]"],
-                "cross_negative": True})
-        spots.append(rec)
-    chain_write(tmp / "spots_chain.jsonl", spots, csha, "spots")
+                "cross_leaf": leaf,
+                "Gprime_cross_ball": leaf["reconstructed_ball"],
+                "cross_negative": leaf["negative"],
+            })
+        spots.append(base)
+    write_chain(tmp / "spots_chain.jsonl", spots, config_sha, "spots")
 
-    fake = {k: {"expected_exit": v, "observed_exit": v, "ok": True}
-            for k, v in {"positive": 0, "neg_sign_flip": 1,
-                         "neg_missing_cell": 1, "neg_sha_tamper": 2,
-                         "neg_limit_short": 1}.items()}
-    (tmp / "CONTROLS.json").write_bytes(json.dumps(
-        {"label": "synthetic", "verdict": "PASS",
-         "checker_sha256": hashlib.sha256(
-             (tmp / "c_g_tube_checker.py").read_bytes()).hexdigest(),
-         "config_sha256": csha, "controls": fake},
-        separators=(",", ":")).encode())
+    fake_controls = {
+        name: {"expected_exit": expected, "observed_exit": expected,
+               "ok": True}
+        for name, expected in EXPECT.items()
+    }
+    (tmp / "CONTROLS.json").write_bytes(json.dumps({
+        "label": "synthetic",
+        "verdict": "PASS",
+        "checker_sha256": hashlib.sha256(
+            (tmp / "c_g_tube_checker.py").read_bytes()).hexdigest(),
+        "config_sha256": config_sha,
+        "controls": fake_controls,
+    }, separators=(",", ":")).encode())
+
     if tamper:
         lines = (tmp / "cells_chain.jsonl").read_bytes().splitlines()
         rec = json.loads(lines[10])
@@ -169,42 +251,49 @@ def synth(tmp: Path, *, flip_leaf=False, drop_cell=None, tamper=False,
 
 def run_checker(tmp: Path) -> int:
     env = dict(os.environ)
-    r = subprocess.run([sys.executable, str(tmp / "c_g_tube_checker.py")],
-                       capture_output=True, text=True, cwd=tmp, env=env)
-    return r.returncode
+    result = subprocess.run(
+        [sys.executable, str(tmp / "c_g_tube_checker.py")],
+        capture_output=True, text=True, cwd=tmp, env=env)
+    return result.returncode
 
 
 def main() -> int:
-    results = {}
     specs = {
-        "positive": (dict(), 0),
-        "neg_sign_flip": (dict(flip_leaf=True), 1),
-        "neg_missing_cell": (dict(drop_cell=30), 1),
-        "neg_sha_tamper": (dict(tamper=True), 2),
-        "neg_limit_short": (dict(unresolved_cell=3), 1),
+        "positive": {},
+        "neg_sign_flip": {"flip_cell": True},
+        "neg_missing_cell": {"drop_cell": 30},
+        "neg_sha_tamper": {"tamper": True},
+        "neg_limit_short": {"unresolved_cell": 40},
+        "neg_spot_leaf_missing": {"missing_spot_leaf": True},
+        "neg_spot_sign_flip": {"flip_spot_leaf": True},
     }
-    ok = True
-    for name, (kw, want) in specs.items():
-        with tempfile.TemporaryDirectory() as td:
-            tmp = Path(td)
-            synth(tmp, **kw)
-            got = run_checker(tmp)
-            results[name] = {"expected_exit": want, "observed_exit": got,
-                             "ok": got == want}
-            ok = ok and got == want
-    (HERE / "CONTROLS.json").write_bytes(json.dumps(
-        {"label": "item3_C-G-TUBE_pilot_controls",
-         "role": "checker fail-closed validation on synthetic hybrid chains "
-                 "(the checker itself performs Arb interval arithmetic)",
-         "checker_sha256": hashlib.sha256(
-             (HERE / "c_g_tube_checker.py").read_bytes()).hexdigest(),
-         "config_sha256": hashlib.sha256(
-             (HERE / "config.json").read_bytes()).hexdigest(),
-         "controls": results,
-         "verdict": "PASS" if ok else "FAIL"},
-        separators=(",", ":")).encode())
-    print("controls:", "PASS" if ok else "FAIL", results)
-    return 0 if ok else 1
+    results = {}
+    all_ok = True
+    for name, kwargs in specs.items():
+        with tempfile.TemporaryDirectory() as directory:
+            tmp = Path(directory)
+            synth(tmp, **kwargs)
+            observed = run_checker(tmp)
+            expected = EXPECT[name]
+            results[name] = {
+                "expected_exit": expected,
+                "observed_exit": observed,
+                "ok": observed == expected,
+            }
+            all_ok = all_ok and observed == expected
+
+    (HERE / "CONTROLS.json").write_bytes(json.dumps({
+        "label": "item3_C-G-TUBE_pilot_controls",
+        "role": "checker fail-closed validation on synthetic v5 hybrid chains",
+        "checker_sha256": hashlib.sha256(
+            (HERE / "c_g_tube_checker.py").read_bytes()).hexdigest(),
+        "config_sha256": hashlib.sha256(
+            (HERE / "config.json").read_bytes()).hexdigest(),
+        "controls": results,
+        "verdict": "PASS" if all_ok else "FAIL",
+    }, separators=(",", ":")).encode())
+    print("controls:", "PASS" if all_ok else "FAIL", results)
+    return 0 if all_ok else 1
 
 
 if __name__ == "__main__":
