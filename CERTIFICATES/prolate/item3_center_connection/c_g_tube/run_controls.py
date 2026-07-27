@@ -3,15 +3,16 @@
 
 Builds synthetic hash-chained inputs in temp sandboxes and asserts the
 checker's fail-closed behavior. No vendor-kernel numerics are run; the
-checker itself performs Arb interval arithmetic. This validates the
-CHECKER, not the mathematics. Controls:
+checker itself performs Arb interval arithmetic. This validates the CHECKER,
+not the mathematics. The positive chain exercises both v4 cell methods and
+the refined center spot crosscheck.
 
-  positive           synthetic fully-passing chains        -> exit 0
-  neg_sign_flip      one cell leaf with positive upper     -> exit 1
+Controls:
+  positive           synthetic fully-passing hybrid chains -> exit 0
+  neg_sign_flip      center-identity cell with positive Frr -> exit 1
   neg_missing_cell   cell index 30 absent                  -> exit 1
   neg_sha_tamper     config_sha256 altered in one record   -> exit 2
-  neg_limit_short    cell with unresolved (non-tiling)     -> exit 1
-                     certified leaves (max-depth exhaustion)
+  neg_limit_short    cell with unresolved non-tiling leaves-> exit 1
 
 Writes CONTROLS.json (no trailing newline): PASS iff every control behaves
 exactly as required. Exit 0 PASS / 1 FAIL.
@@ -58,6 +59,18 @@ def chain_write(path: Path, payloads: list[dict], config_sha: str,
             prev = hashlib.sha256(line).hexdigest()
 
 
+def center_identity_sub(a: Fr, b: Fr, *, positive=False) -> dict:
+    n = CONFIG["center_t_partition_count"]
+    fball = ["0.008", "0.012"] if positive else ["-0.012", "-0.008"]
+    summary = ["0.003", "0.007"] if positive else ["-0.007", "-0.003"]
+    pieces = [{"t_a": str(Fr(i, n)), "t_b": str(Fr(i + 1, n)),
+               "Frr_ball": fball} for i in range(n)]
+    return {"method": "center_identity", "a": str(a), "b": str(b),
+            "depth": 0, "partition_count": n,
+            "G_prime_ball": summary, "identity_pieces": pieces,
+            "negative": not positive}
+
+
 def synth(tmp: Path, *, flip_leaf=False, drop_cell=None, tamper=False,
           unresolved_cell=None) -> None:
     shutil.copy(HERE / "config.json", tmp / "config.json")
@@ -74,44 +87,68 @@ def synth(tmp: Path, *, flip_leaf=False, drop_cell=None, tamper=False,
     n = CONFIG["n_cells"]
     w = (r_hi - r_lo) / n
     cells = []
+    center_count = CONFIG["center_identity_cell_count"]
     for i in range(n):
         if drop_cell == i:
             continue
         a, b = r_lo + i * w, r_lo + (i + 1) * w
-        flip = flip_leaf and i == 7
-        gpm = ["[0.009 +/- 1e-9]", "[0.011 +/- 1e-9]"] if flip \
-            else ["[-0.011 +/- 1e-9]", "[-0.009 +/- 1e-9]"]
-        sub = [{"a": str(a), "b": str(b), "depth": 0,
-                "G_prime_m": gpm, "C_bound": "10.0",
-                "negative": not flip}]
+        if i < center_count and unresolved_cell != i:
+            sub = [center_identity_sub(a, b,
+                                       positive=flip_leaf and i == 7)]
+        else:
+            flip = flip_leaf and i == 7
+            gpm = ["[0.009 +/- 1e-9]", "[0.011 +/- 1e-9]"] if flip \
+                else ["[-0.011 +/- 1e-9]", "[-0.009 +/- 1e-9]"]
+            sub = [{"a": str(a), "b": str(b), "depth": 0,
+                    "G_prime_m": gpm, "C_bound": "10.0",
+                    "negative": not flip}]
         if unresolved_cell == i:
             m = (a + b) / 2
             sub = [{"a": str(a), "b": str(b), "depth": 0,
-                    "G_prime_m": ["[-0.011 +/- 1e-9]", "[-0.009 +/- 1e-9]"],
+                    "G_prime_m": ["[-0.011 +/- 1e-9]",
+                                  "[-0.009 +/- 1e-9]"],
                     "C_bound": "300.0", "negative": False},
                    {"a": str(a), "b": str(m), "depth": 1,
-                    "G_prime_m": ["[-0.011 +/- 1e-9]", "[-0.009 +/- 1e-9]"],
-                    "C_bound": "10.0", "negative": True}]  # right half missing -> non-tiling
+                    "G_prime_m": ["[-0.011 +/- 1e-9]",
+                                  "[-0.009 +/- 1e-9]"],
+                    "C_bound": "10.0", "negative": True}]
         cells.append({"record_type": "cell", "cell_index": i,
                       "a": str(a), "b": str(b), "sub": sub,
-                      "certified": True})
+                      "certified": not (flip_leaf and i == 7)})
     chain_write(tmp / "cells_chain.jsonl", cells, csha, "cells")
+
     spots = []
     for i in CONFIG["spot_cell_indices"]:
         a, b = r_lo + i * w, r_lo + (i + 1) * w
-        spots.append({"record_type": "spot", "cell_index": i,
-                      "cell_interval": [str(a), str(b)],
-                      "t_partition_count": CONFIG["t_partition_count"],
-                      "depth_limit": CONFIG["int_depth"],
-                      "evaluation_limit": CONFIG["int_limit"],
-                      "Gprime_identity_ball": ["[-0.012 +/- 1e-9]",
-                                               "[-0.008 +/- 1e-9]"],
-                      "Gprime_taylor_ball": ["[-0.011 +/- 1e-9]",
-                                             "[-0.009 +/- 1e-9]"],
-                      "intersection_ball": ["-0.011", "-0.009"],
-                      "identity_negative": True, "taylor_negative": True,
-                      "intersection_nonempty": True})
+        rec = {"record_type": "spot", "cell_index": i,
+               "cell_interval": [str(a), str(b)],
+               "t_partition_count": CONFIG["t_partition_count"],
+               "depth_limit": CONFIG["int_depth"],
+               "evaluation_limit": CONFIG["int_limit"],
+               "Gprime_identity_ball": ["[-0.012 +/- 1e-9]",
+                                        "[-0.008 +/- 1e-9]"],
+               "intersection_ball": ["-0.011", "-0.009"],
+               "identity_negative": True,
+               "intersection_nonempty": True}
+        if i < center_count:
+            rec.update({
+                "crosscheck_method": "identity_refined",
+                "cross_partition_count":
+                    CONFIG["center_refined_t_partition_count"],
+                "cross_depth_limit": CONFIG["center_int_depth"],
+                "cross_evaluation_limit": CONFIG["center_int_limit"],
+                "Gprime_cross_ball": ["[-0.011 +/- 1e-9]",
+                                      "[-0.009 +/- 1e-9]"],
+                "cross_negative": True})
+        else:
+            rec.update({
+                "crosscheck_method": "taylor",
+                "Gprime_cross_ball": ["[-0.011 +/- 1e-9]",
+                                      "[-0.009 +/- 1e-9]"],
+                "cross_negative": True})
+        spots.append(rec)
     chain_write(tmp / "spots_chain.jsonl", spots, csha, "spots")
+
     fake = {k: {"expected_exit": v, "observed_exit": v, "ok": True}
             for k, v in {"positive": 0, "neg_sign_flip": 1,
                          "neg_missing_cell": 1, "neg_sha_tamper": 2,
@@ -157,7 +194,7 @@ def main() -> int:
             ok = ok and got == want
     (HERE / "CONTROLS.json").write_bytes(json.dumps(
         {"label": "item3_C-G-TUBE_pilot_controls",
-         "role": "checker fail-closed validation on synthetic chains "
+         "role": "checker fail-closed validation on synthetic hybrid chains "
                  "(the checker itself performs Arb interval arithmetic)",
          "checker_sha256": hashlib.sha256(
              (HERE / "c_g_tube_checker.py").read_bytes()).hexdigest(),
