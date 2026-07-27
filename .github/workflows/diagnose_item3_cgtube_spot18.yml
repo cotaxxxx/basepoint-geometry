@@ -1,0 +1,197 @@
+name: Diagnose item 3 C-G-TUBE spot 18 (non-certifying)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/diagnose_item3_cgtube_spot18.yml"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+env:
+  CG_TUBE_REPO_ROOT: ${{ github.workspace }}
+  EXPECTED_SOURCE_HEAD: 59d999c9b9af7d2d47a43ae1dd06eaf769f8fb1e
+
+jobs:
+  diagnose-spot18:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    defaults:
+      run:
+        working-directory: CERTIFICATES/prolate/item3_center_connection/c_g_tube
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          ref: 59d999c9b9af7d2d47a43ae1dd06eaf769f8fb1e
+          persist-credentials: false
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with: { python-version: "3.12" }
+
+      - run: pip install python-flint==0.9.0
+
+      - name: Verify fixed source
+        run: |
+          set -euo pipefail
+          actual="$(git rev-parse HEAD)"
+          echo "source_head=$actual"
+          echo "expected_source_head=$EXPECTED_SOURCE_HEAD"
+          test "$actual" = "$EXPECTED_SOURCE_HEAD"
+          echo "config_sha256=$(sha256sum config.json | cut -d' ' -f1)"
+          sha256sum "$CG_TUBE_REPO_ROOT"/CERTIFICATES/prolate/item2_circle/vendor/prolate_circle_F_cleanroom.py \
+                    "$CG_TUBE_REPO_ROOT"/CERTIFICATES/prolate/item3_center_connection/vendor/prolate_circle_Frr_ext.py
+
+      - name: Adaptive Taylor diagnosis for spot 18
+        id: diagnose
+        continue-on-error: true
+        run: |
+          python3 - <<'PY'
+          import hashlib
+          import json
+          import subprocess
+          from fractions import Fraction as Fr
+          from pathlib import Path
+
+          from flint import arb, ctx
+          import c_g_tube_pilot as P
+
+          HERE = Path.cwd()
+          ctx.dps = P.CONFIG["dps"]
+          dependency_sha256 = P.verify_vendor()
+          cells, _, _ = P.cells_list()
+          idx = 18
+          a, b = cells[idx]
+          lam = P.qe(Fr(P.CONFIG["lambda"]))
+          kern = P.Kern()
+
+          id_lo, id_hi, _ = P.identity_gprime(
+              kern, a, b, lam,
+              partitions=P.CONFIG["t_partition_count"],
+              tol=P.CONFIG["tol_box"],
+              depth=P.CONFIG["int_depth"],
+              limit=P.CONFIG["int_limit"],
+              keep_pieces=False,
+          )
+
+          work = [(a, b, 0)]
+          leaves = []
+          unresolved = []
+          max_depth = P.CONFIG["max_extra_depth"]
+          while work:
+              ca, cb, depth = work.pop(0)
+              m, rad = (ca + cb) / 2, (cb - ca) / 2
+              lo, hi, C, Gpm = P.taylor_gprime(kern, m, rad, lam)
+              rec = {
+                  "a": str(ca),
+                  "b": str(cb),
+                  "depth": depth,
+                  "G_prime_ball": [str(lo), str(hi)],
+                  "G_prime_m": [str(Gpm.lower()), str(Gpm.upper())],
+                  "C_bound": str(C),
+                  "negative": bool(hi < 0),
+              }
+              if bool(hi < 0):
+                  leaves.append(rec)
+              elif depth < max_depth:
+                  mid = (ca + cb) / 2
+                  work.insert(0, (ca, mid, depth + 1))
+                  work.insert(1, (mid, cb, depth + 1))
+              else:
+                  unresolved.append(rec)
+
+          ordered = sorted(leaves, key=lambda r: Fr(r["a"]))
+          cur = a
+          tiling = True
+          for leaf in ordered:
+              la, lb = Fr(leaf["a"]), Fr(leaf["b"])
+              if la != cur:
+                  tiling = False
+                  break
+              cur = lb
+          tiling = tiling and cur == b and not unresolved
+
+          cross_lo = None
+          cross_hi = None
+          for leaf in ordered:
+              lo = arb(leaf["G_prime_ball"][0])
+              hi = arb(leaf["G_prime_ball"][1])
+              cross_lo = lo if cross_lo is None or bool(lo < cross_lo) else cross_lo
+              cross_hi = hi if cross_hi is None or bool(hi > cross_hi) else cross_hi
+
+          cross_negative = cross_hi is not None and bool(cross_hi < 0)
+          identity_negative = bool(id_hi < 0)
+          intersection_nonempty = (
+              cross_lo is not None
+              and not (bool(id_hi < cross_lo) or bool(cross_hi < id_lo))
+          )
+          passed = (
+              tiling
+              and identity_negative
+              and cross_negative
+              and intersection_nonempty
+              and len(unresolved) == 0
+          )
+
+          report = {
+              "label": "item3_C-G-TUBE_spot18_adaptive_taylor_diagnostic",
+              "role": "non-certifying diagnosis of an adaptive Taylor spot crosscheck",
+              "source_head": subprocess.check_output(
+                  ["git", "rev-parse", "HEAD"], text=True
+              ).strip(),
+              "config_sha256": hashlib.sha256(
+                  (HERE / "config.json").read_bytes()
+              ).hexdigest(),
+              "dependency_sha256": dependency_sha256,
+              "cell_index": idx,
+              "cell_interval": [str(a), str(b)],
+              "max_extra_depth": max_depth,
+              "identity_ball": [str(id_lo), str(id_hi)],
+              "adaptive_taylor_hull": (
+                  [str(cross_lo), str(cross_hi)] if cross_lo is not None else None
+              ),
+              "identity_negative": identity_negative,
+              "adaptive_taylor_negative": cross_negative,
+              "intersection_nonempty": intersection_nonempty,
+              "tiling_complete": tiling,
+              "certified_leaf_count": len(ordered),
+              "terminal_unresolved_count": len(unresolved),
+              "n_evals": kern.n_evals,
+              "leaves": ordered,
+              "unresolved": unresolved,
+              "verdict": "PASS" if passed else "FAIL",
+          }
+          Path("SPOT18_ADAPTIVE_TAYLOR_DIAGNOSTIC.json").write_bytes(
+              json.dumps(report, separators=(",", ":")).encode()
+          )
+          print(json.dumps({
+              "verdict": report["verdict"],
+              "identity_ball": report["identity_ball"],
+              "adaptive_taylor_hull": report["adaptive_taylor_hull"],
+              "certified_leaf_count": report["certified_leaf_count"],
+              "terminal_unresolved_count": report["terminal_unresolved_count"],
+              "tiling_complete": report["tiling_complete"],
+              "intersection_nonempty": report["intersection_nonempty"],
+              "n_evals": report["n_evals"],
+          }, indent=2))
+          raise SystemExit(0 if passed else 1)
+          PY
+
+      - name: Upload spot 18 diagnostic
+        if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        id: artifact
+        with:
+          name: item3-cgtube-spot18-diagnostic-${{ github.run_id }}
+          if-no-files-found: error
+          path: CERTIFICATES/prolate/item3_center_connection/c_g_tube/SPOT18_ADAPTIVE_TAYLOR_DIAGNOSTIC.json
+
+      - name: Diagnostic artifact digest
+        if: ${{ always() && steps.artifact.outcome == 'success' }}
+        working-directory: .
+        run: echo "artifact_digest=${{ steps.artifact.outputs.artifact-digest }}"
+
+      - name: Enforce diagnostic verdict
+        if: ${{ always() && steps.diagnose.outcome == 'failure' }}
+        run: exit 1
