@@ -54,7 +54,7 @@ jobs:
           test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD"
           echo "fixed_head_exit=$?" | tee -a "$report"
 
-          run_check decode_payload base64 -d .github/payloads/item3_cgtube_v5_payload.b64 -o /tmp/item3-cgtube-v5.tar.gz
+          run_check decode_payload bash -lc "base64 -d .github/payloads/item3_cgtube_v5_payload.b64 > /tmp/item3-cgtube-v5.tar.gz"
           run_check payload_sha bash -lc "echo '$PAYLOAD_SHA256  /tmp/item3-cgtube-v5.tar.gz' | sha256sum -c -"
           run_check tar_listing tar -tzf /tmp/item3-cgtube-v5.tar.gz
           run_check tar_extract tar -xzf /tmp/item3-cgtube-v5.tar.gz -C .
