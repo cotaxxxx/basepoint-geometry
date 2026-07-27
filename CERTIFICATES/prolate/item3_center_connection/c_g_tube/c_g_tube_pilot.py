@@ -13,8 +13,13 @@ Records are hash-chained JSONL (previous_record_sha256); every record
 carries writer_id, run_uuid, process_id, hostname, phase, timestamps,
 config_sha256 and dependency_sha256. Fail-closed:
   - dependency SHA mismatch -> exit 2 before any evaluation
-  - a cell not certified at max_extra_depth is recorded UNCERTIFIED
+  - a cell not certified at its method-specific depth is recorded UNCERTIFIED
   - endpoint signs must be strict
+
+Cells 0..center_identity_cell_count-1 use the center-regular identity
+    G'(r) = integral_0^1 t F_rr(t r) dt,
+which avoids the 1/r and 1/r^2 cancellation in the outer Taylor evaluator.
+Remaining cells retain the original Taylor enclosure.
 """
 from __future__ import annotations
 
@@ -110,20 +115,26 @@ class Kern:
         import prolate_circle_Frr_ext as X
         self.K, self.X, self.n_evals = K, X, 0
 
-    def F(self, r, tol, lam):
+    def F(self, r, tol, lam, *, depth=None, limit=None):
         self.n_evals += 1
-        return self.K.F_arb(r, lam, tol=tol, depth=CONFIG["int_depth"],
-                            limit=CONFIG["int_limit"])
+        return self.K.F_arb(
+            r, lam, tol=tol,
+            depth=CONFIG["int_depth"] if depth is None else depth,
+            limit=CONFIG["int_limit"] if limit is None else limit)
 
-    def Fr(self, r, tol, lam):
+    def Fr(self, r, tol, lam, *, depth=None, limit=None):
         self.n_evals += 1
-        return self.K.dFdr_arb(r, lam, tol=tol, depth=CONFIG["int_depth"],
-                               limit=CONFIG["int_limit"])
+        return self.K.dFdr_arb(
+            r, lam, tol=tol,
+            depth=CONFIG["int_depth"] if depth is None else depth,
+            limit=CONFIG["int_limit"] if limit is None else limit)
 
-    def Frr(self, r, tol, lam):
+    def Frr(self, r, tol, lam, *, depth=None, limit=None):
         self.n_evals += 1
-        return self.X.Frr_arb(r, lam, tol=tol, depth=CONFIG["int_depth"],
-                              limit=CONFIG["int_limit"])
+        return self.X.Frr_arb(
+            r, lam, tol=tol,
+            depth=CONFIG["int_depth"] if depth is None else depth,
+            limit=CONFIG["int_limit"] if limit is None else limit)
 
 
 def cert_sign(v: arb) -> int:
@@ -143,13 +154,38 @@ def taylor_gprime(kern: Kern, m: Fr, rad: Fr, lam: arb):
     Frb = kern.Fr(rb, CONFIG["tol_box"], lam)
     Frrb = kern.Frr(rb, CONFIG["tol_box"], lam)
     Gpp = Frrb / rb - 2 * Frb / (rb * rb) + 2 * Fb / (rb ** 3)
-    # C >= sup|G''| を Arb と厳密有理数のみで構成（binary float 不使用）
     c1, c2 = abs(arb(Gpp.lower())), abs(arb(Gpp.upper()))
     C = c2 if bool(c2 >= c1) else c1
     slack = C * qe(rad)
     ty_upper = arb((arb(Gpm.upper()) + slack).upper())
     ty_lower = arb((arb(Gpm.lower()) - slack).lower())
     return ty_lower, ty_upper, C, Gpm
+
+
+def identity_gprime(kern: Kern, a: Fr, b: Fr, lam: arb, *,
+                    partitions: int, tol: str, depth: int, limit: int,
+                    keep_pieces: bool):
+    """Enclose G' on J=[a,b] through the center-regular F_rr identity."""
+    m, rad = (a + b) / 2, (b - a) / 2
+    J = qe(m) + qe(rad) * arb("+/- 1.0")
+    dt = qe(Fr(1, partitions))
+    total = arb(0)
+    pieces = []
+    for i in range(partitions):
+        ta, tb = Fr(i, partitions), Fr(i + 1, partitions)
+        tm, tr = (ta + tb) / 2, (tb - ta) / 2
+        tbox = qe(tm) + qe(tr) * arb("+/- 1.0")
+        frr = kern.Frr(tbox * J, tol, lam, depth=depth, limit=limit)
+        weighted = tbox * frr * dt
+        total += weighted
+        if keep_pieces:
+            pieces.append({
+                "t_a": str(ta), "t_b": str(tb),
+                "Frr_ball": [str(arb(frr.lower())), str(arb(frr.upper()))],
+                "weighted_ball": [str(arb(weighted.lower())),
+                                  str(arb(weighted.upper()))],
+            })
+    return arb(total.lower()), arb(total.upper()), pieces
 
 
 def cells_list():
@@ -188,21 +224,41 @@ def main() -> int:
 
     if args.phase == "cells":
         ch = Chain(HERE / "cells_chain.jsonl", run_uuid, "cells", dep_sha)
+        center_count = CONFIG["center_identity_cell_count"]
         for idx, (a, b) in enumerate(cells):
             work = [(a, b, 0)]
             subrecs, ok_all = [], True
             while work:
                 ca, cb, d = work.pop(0)
                 m, rad = (ca + cb) / 2, (cb - ca) / 2
-                _tl, ty_upper, C, Gpm = taylor_gprime(kern, m, rad, lam)
-                neg = bool(ty_upper < 0)
-                subrecs.append({"a": str(ca), "b": str(cb), "depth": d,
-                                "G_prime_m": [str(Gpm.lower()),
-                                              str(Gpm.upper())],
-                                "C_bound": str(C),
-                                "negative": neg})
+                if idx < center_count:
+                    lo, hi, pieces = identity_gprime(
+                        kern, ca, cb, lam,
+                        partitions=CONFIG["center_t_partition_count"],
+                        tol=CONFIG["center_tol"],
+                        depth=CONFIG["center_int_depth"],
+                        limit=CONFIG["center_int_limit"],
+                        keep_pieces=True)
+                    neg = bool(hi < 0)
+                    subrecs.append({
+                        "method": "center_identity", "a": str(ca),
+                        "b": str(cb), "depth": d,
+                        "partition_count": CONFIG["center_t_partition_count"],
+                        "G_prime_ball": [str(lo), str(hi)],
+                        "identity_pieces": pieces, "negative": neg})
+                    max_depth = CONFIG["center_max_extra_depth"]
+                else:
+                    _tl, ty_upper, C, Gpm = taylor_gprime(
+                        kern, m, rad, lam)
+                    neg = bool(ty_upper < 0)
+                    subrecs.append({
+                        "method": "taylor", "a": str(ca), "b": str(cb),
+                        "depth": d,
+                        "G_prime_m": [str(Gpm.lower()), str(Gpm.upper())],
+                        "C_bound": str(C), "negative": neg})
+                    max_depth = CONFIG["max_extra_depth"]
                 if not neg:
-                    if d < CONFIG["max_extra_depth"]:
+                    if d < max_depth:
                         work.insert(0, (ca, m, d + 1))
                         work.insert(1, (m, cb, d + 1))
                     else:
@@ -210,8 +266,9 @@ def main() -> int:
             ch.append({"record_type": "cell", "cell_index": idx,
                        "a": str(a), "b": str(b), "sub": subrecs,
                        "certified": ok_all, "n_evals_cum": kern.n_evals})
-            print(f"cell {idx}: certified={ok_all} subs={len(subrecs)} "
-                  f"| tip {ch.prev}", flush=True)
+            method = "center_identity" if idx < center_count else "taylor"
+            print(f"cell {idx}: method={method} certified={ok_all} "
+                  f"subs={len(subrecs)} | tip {ch.prev}", flush=True)
         print("cells done | file sha",
               sha_file(HERE / "cells_chain.jsonl"))
         return 0
@@ -219,39 +276,54 @@ def main() -> int:
     if args.phase == "spots":
         ch = Chain(HERE / "spots_chain.jsonl", run_uuid, "spots", dep_sha)
         N = CONFIG["t_partition_count"]
+        center_count = CONFIG["center_identity_cell_count"]
         for idx in CONFIG["spot_cell_indices"]:
             a, b = cells[idx]
-            m, rad = (a + b) / 2, (b - a) / 2
-            J = qe(m) + qe(rad) * arb("+/- 1.0")
-            total = arb(0)
-            for i in range(N):
-                t_m, t_r = Fr(2 * i + 1, 2 * N), Fr(1, 2 * N)
-                tb = qe(t_m) + qe(t_r) * arb("+/- 1.0")
-                total += tb * kern.Frr(tb * J, CONFIG["tol_box"], lam) \
-                    * qe(Fr(1, N))
-            ty_lower, ty_upper, C, _ = taylor_gprime(kern, m, rad, lam)
-            id_lo, id_hi = arb(total.lower()), arb(total.upper())
-            # 厳密交差判定（Arb 端点比較のみ）
-            disjoint = bool(id_hi < ty_lower) or bool(ty_upper < id_lo)
+            id_lo, id_hi, _ = identity_gprime(
+                kern, a, b, lam, partitions=N, tol=CONFIG["tol_box"],
+                depth=CONFIG["int_depth"], limit=CONFIG["int_limit"],
+                keep_pieces=False)
+            if idx < center_count:
+                cross_method = "identity_refined"
+                cross_lo, cross_hi, _ = identity_gprime(
+                    kern, a, b, lam,
+                    partitions=CONFIG["center_refined_t_partition_count"],
+                    tol=CONFIG["center_tol"],
+                    depth=CONFIG["center_int_depth"],
+                    limit=CONFIG["center_int_limit"], keep_pieces=False)
+                cross_n = CONFIG["center_refined_t_partition_count"]
+            else:
+                cross_method = "taylor"
+                m, rad = (a + b) / 2, (b - a) / 2
+                cross_lo, cross_hi, _C, _Gpm = taylor_gprime(
+                    kern, m, rad, lam)
+                cross_n = None
+            disjoint = bool(id_hi < cross_lo) or bool(cross_hi < id_lo)
             inter = not disjoint
-            i_lo = ty_lower if bool(ty_lower >= id_lo) else id_lo
-            i_hi = ty_upper if bool(ty_upper <= id_hi) else id_hi
-            ch.append({"record_type": "spot", "cell_index": idx,
-                       "cell_interval": [str(a), str(b)],
-                       "t_partition_count": N,
-                       "depth_limit": CONFIG["int_depth"],
-                       "evaluation_limit": CONFIG["int_limit"],
-                       "Gprime_identity_ball": [str(arb(total.lower())),
-                                                str(arb(total.upper()))],
-                       "Gprime_taylor_ball": [str(ty_lower),
-                                              str(ty_upper)],
-                       "intersection_ball":
-                           [str(i_lo), str(i_hi)] if inter else None,
-                       "identity_negative": bool(id_hi < 0),
-                       "taylor_negative": bool(ty_upper < 0),
-                       "intersection_nonempty": inter,
-                       "n_evals_cum": kern.n_evals})
-            print(f"spot {idx} done | tip {ch.prev}", flush=True)
+            i_lo = cross_lo if bool(cross_lo >= id_lo) else id_lo
+            i_hi = cross_hi if bool(cross_hi <= id_hi) else id_hi
+            payload = {
+                "record_type": "spot", "cell_index": idx,
+                "cell_interval": [str(a), str(b)],
+                "t_partition_count": N,
+                "depth_limit": CONFIG["int_depth"],
+                "evaluation_limit": CONFIG["int_limit"],
+                "crosscheck_method": cross_method,
+                "Gprime_identity_ball": [str(id_lo), str(id_hi)],
+                "Gprime_cross_ball": [str(cross_lo), str(cross_hi)],
+                "intersection_ball": [str(i_lo), str(i_hi)] if inter else None,
+                "identity_negative": bool(id_hi < 0),
+                "cross_negative": bool(cross_hi < 0),
+                "intersection_nonempty": inter,
+                "n_evals_cum": kern.n_evals,
+            }
+            if cross_n is not None:
+                payload["cross_partition_count"] = cross_n
+                payload["cross_depth_limit"] = CONFIG["center_int_depth"]
+                payload["cross_evaluation_limit"] = CONFIG["center_int_limit"]
+            ch.append(payload)
+            print(f"spot {idx}: cross={cross_method} done | tip {ch.prev}",
+                  flush=True)
         print("spots done | file sha",
               sha_file(HERE / "spots_chain.jsonl"))
         return 0
