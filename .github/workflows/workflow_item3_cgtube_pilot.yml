@@ -11,7 +11,11 @@ permissions:
   contents: read
 
 env:
-  EXPECTED_SOURCE_HEAD: 3a025346da89818273dc22616e6c7995478f25bb
+  EXPECTED_SOURCE_HEAD: 5b352a7b9152873802d6c3aa7d58018e80674b34
+  EXPECTED_CONFIG_SHA256: bb6a3655d335240549cbe1f6eec2a9e68e00219eb9c1a2be65796e2e342a0d17
+  EXPECTED_F_SHA256: 77e7a93c594ba66ac7d98df29ec3c03107b0c63962a5aa60f8503559082c10ac
+  EXPECTED_FRR_SHA256: 223b7007c9e077b204612fb1ff669b4147a2aa0f9c941cc8e83e81efd975e757
+  EXPECTED_CALIBRATION_SHA256: 39ea268b619eec144d50fa036aa0a465d3a764a9409f8c17cbfb76c2600f930b
   CG_TUBE_REPO_ROOT: ${{ github.workspace }}
 
 jobs:
@@ -22,73 +26,139 @@ jobs:
       run:
         working-directory: CERTIFICATES/prolate/item3_center_connection/c_g_tube
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - name: Checkout audited fixed source
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
           ref: ${{ env.EXPECTED_SOURCE_HEAD }}
           fetch-depth: 1
           persist-credentials: false
+
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
-        with: { python-version: "3.12" }
+        with:
+          python-version: "3.12"
+
       - run: pip install python-flint==0.9.0
+
       - name: Fixed source and clean-room preflight
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$EXPECTED_SOURCE_HEAD"
+          test "$(sha256sum config.json | cut -d' ' -f1)" = "$EXPECTED_CONFIG_SHA256"
           for f in endpoints_chain.jsonl cells_chain.jsonl spots_chain.jsonl \
                    C_G_ENDPOINT_SIGNS.json C_G_TUBE_PILOT.json \
                    C_G_IDENTITY_CROSSCHECK.json CONTROLS.json \
                    DEPENDENCIES.json SHA256SUMS.txt; do
             if [ -e "$f" ]; then echo "PRE-EXISTING ARTIFACT: $f"; exit 2; fi
           done
-      - name: Provenance header
+
+      - name: Provenance and dependency pins
         run: |
+          set -euo pipefail
+          F_PATH="$CG_TUBE_REPO_ROOT/CERTIFICATES/prolate/item2_circle/vendor/prolate_circle_F_cleanroom.py"
+          FRR_PATH="$CG_TUBE_REPO_ROOT/CERTIFICATES/prolate/item3_center_connection/vendor/prolate_circle_Frr_ext.py"
+          CAL_PATH="$CG_TUBE_REPO_ROOT/CERTIFICATES/prolate/item3_center_connection/calibration/item3_centered_calibration.json"
+          test "$(sha256sum "$F_PATH" | cut -d' ' -f1)" = "$EXPECTED_F_SHA256"
+          test "$(sha256sum "$FRR_PATH" | cut -d' ' -f1)" = "$EXPECTED_FRR_SHA256"
+          test "$(sha256sum "$CAL_PATH" | cut -d' ' -f1)" = "$EXPECTED_CALIBRATION_SHA256"
           echo "source_head=$(git rev-parse HEAD)"
           echo "config_sha256=$(sha256sum config.json | cut -d' ' -f1)"
-          sha256sum "$CG_TUBE_REPO_ROOT"/CERTIFICATES/prolate/item2_circle/vendor/prolate_circle_F_cleanroom.py \
-                    "$CG_TUBE_REPO_ROOT"/CERTIFICATES/prolate/item3_center_connection/vendor/prolate_circle_Frr_ext.py
-      - name: Calibration pin verification (PR #15 schema-v2)
+          echo "F_sha256=$EXPECTED_F_SHA256"
+          echo "Frr_sha256=$EXPECTED_FRR_SHA256"
+          echo "calibration_sha256=$EXPECTED_CALIBRATION_SHA256"
+
+      - name: Config pin consistency
         run: |
           python3 - <<'PY'
-          import hashlib, json, os, sys
+          import hashlib
+          import json
+          import os
+          import sys
+
           cfg = json.load(open("config.json"))
-          cal = cfg["calibration"]
-          path = os.path.join(os.environ["CG_TUBE_REPO_ROOT"], cal["path"])
-          got = hashlib.sha256(open(path, "rb").read()).hexdigest()
-          sys.exit(0 if got == cal["sha256"] else 2)
+          expected = {
+              "config": os.environ["EXPECTED_CONFIG_SHA256"],
+              "F": os.environ["EXPECTED_F_SHA256"],
+              "Frr": os.environ["EXPECTED_FRR_SHA256"],
+              "calibration": os.environ["EXPECTED_CALIBRATION_SHA256"],
+          }
+          got_config = hashlib.sha256(open("config.json", "rb").read()).hexdigest()
+          if got_config != expected["config"]:
+              sys.exit(2)
+          vendor_shas = {spec["sha256"] for spec in cfg["vendor"].values()}
+          if expected["F"] not in vendor_shas or expected["Frr"] not in vendor_shas:
+              sys.exit(2)
+          if cfg["calibration"]["sha256"] != expected["calibration"]:
+              sys.exit(2)
           PY
+
       - name: Endpoint signs
         run: python3 c_g_tube_pilot.py --phase endpoints
+
       - name: 56 hybrid cells (8 center identity + 48 outer Taylor)
         run: python3 c_g_tube_pilot.py --phase cells
-      - name: Identity crosschecks [0, 18 adaptive Taylor, 37, 55]
+
+      - name: Identity crosschecks [0 refined identity, 18 adaptive Taylor, 37, 55]
         run: python3 c_g_tube_pilot.py --phase spots
-      - name: Negative controls (checker fail-closed)
-        run: python3 run_controls.py
+
+      - name: Ten negative controls (checker fail-closed)
+        run: |
+          set -euo pipefail
+          python3 run_controls.py
+          python3 - <<'PY'
+          import json
+          import sys
+
+          obj = json.load(open("CONTROLS.json"))
+          controls = obj.get("controls", {})
+          if obj.get("verdict") != "PASS" or len(controls) != 10:
+              sys.exit(1)
+          if not all(item.get("ok") is True for item in controls.values()):
+              sys.exit(1)
+          PY
+
       - name: Checker + eight-condition finalize
         id: checker
         continue-on-error: true
         run: python3 c_g_tube_checker.py
+
       - name: Manifest
         if: always()
         continue-on-error: true
         run: |
           python3 gen_manifest.py
           if [ -f SHA256SUMS.txt ]; then sha256sum SHA256SUMS.txt; fi
-      - name: Upload pilot artifact
-        if: always()
+
+      - name: Upload certified pilot artifact
+        if: steps.checker.outcome == 'success'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        id: art
+        id: certified_artifact
         with:
-          name: item3-cgtube-pilot-${{ github.run_id }}
+          name: item3-cgtube-pilot-certified-${{ github.run_id }}
           path: CERTIFICATES/prolate/item3_center_connection/c_g_tube
           if-no-files-found: error
           retention-days: 30
-      - name: Artifact digest
-        if: always()
+
+      - name: Certified artifact digest
+        if: steps.checker.outcome == 'success'
         working-directory: .
-        run: echo "artifact_digest=${{ steps.art.outputs.artifact-digest }}"
+        run: echo "artifact_digest=${{ steps.certified_artifact.outputs.artifact-digest }}"
+
+      - name: Upload diagnostic artifact
+        if: steps.checker.outcome != 'success'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        id: diagnostic_artifact
+        with:
+          name: item3-cgtube-pilot-diagnostic-${{ github.run_id }}
+          path: CERTIFICATES/prolate/item3_center_connection/c_g_tube
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Diagnostic artifact digest
+        if: steps.checker.outcome != 'success'
+        working-directory: .
+        run: echo "artifact_digest=${{ steps.diagnostic_artifact.outputs.artifact-digest }}"
+
       - name: Enforce checker verdict
         if: always()
         working-directory: .
-        run: |
-          test "${{ steps.checker.outcome }}" = success
+        run: test "${{ steps.checker.outcome }}" = success
