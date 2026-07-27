@@ -1,35 +1,24 @@
 #!/usr/bin/env python3
-"""Independent checker + finalize for the C-G-TUBE pilot (Actions), v3.
+"""Independent checker + finalize for the C-G-TUBE pilot (Actions), v4.
 
-v3: record_schema cgtube-rec-v3 only; legacy 'upper' rejected RECURSIVELY at
-every record level; endpoint records are an explicit record_type; endpoint
-expected signs fixed in this checker; C_bound requires lower >= 0.
+v4: record_schema cgtube-rec-v4 only. Cells may use either:
+  - Taylor leaves, reconstructed as upper(G'(m)) + C_J rho < 0; or
+  - center-identity leaves, reconstructed from a complete rational t-partition
+    and stored rigorous F_rr balls for G'(J)=integral_0^1 t F_rr(tJ) dt.
+Legacy 'upper' is rejected recursively at every record level; endpoint expected
+signs are fixed in this checker; C_bound requires lower >= 0.
 
 Trusts NOTHING self-reported. From raw chain records it re-derives:
   - hash-chain integrity; config_sha256 equality; single dependency_sha256
   - mandatory provenance fields present and non-empty on every record
   - endpoints: exactly one 'lo' and one 'hi'; exact rational r equality
     with config; strict signs recomputed from stored G balls
-  - cells: index 0..55 exactly once (duplicates -> FAIL, never overwritten);
-    exact expected grid a_i = r_lo + i*w, b_i = a_i + w; leaf tiling of each
-    cell by negative leaves where negativity is RECONSTRUCTED as
-        upper(G'(m)) + C_J * rho < 0
-    from stored G_prime_m upper, stored C_bound, and rho recomputed from the
-    leaf's exact endpoints (Arb + exact rationals only; legacy 'upper' is
-    rejected recursively, while stored 'negative' is cross-checked for
-    consistency and is not trusted)
-  - spots: exactly the configured indices; cell_interval matches the
-    expected grid; t_partition_count / depth_limit / evaluation_limit match
-    config; identity and Taylor negativity and intersection recomputed from
-    stored balls with strict Arb endpoint comparisons
-  - vendor kernels re-hashed at finalize time against config pins, and the
-    chains' dependency_sha256 recomputed from those pins
-  - calibration JSON re-hashed against the config pin (repo root via
-    CG_TUBE_REPO_ROOT, default ../../../..)
-  - CONTROLS.json deep-checked: exact control set, expected exit codes
-    {positive:0, neg_sign_flip:1, neg_missing_cell:1, neg_sha_tamper:2,
-    neg_limit_short:1}, observed == expected, all ok, and its recorded
-    checker_sha256 / config_sha256 match the current files
+  - cells: index 0..55 exactly once; exact expected grid; leaf tiling by
+    reconstructed-negative leaves using the configured method for each region
+  - spots: exactly the configured indices; metadata, strict negativity, and
+    nonempty intersection recomputed from stored rigorous balls
+  - vendor kernels and calibration re-hashed against config pins
+  - CONTROLS.json deep-checked against the exact negative-control contract
 Emits C_G_ENDPOINT_SIGNS.json, C_G_IDENTITY_CROSSCHECK.json,
 DEPENDENCIES.json, C_G_TUBE_PILOT.json (all without trailing newline).
 Exit 0 PASS / 1 FAIL / 2 structural or provenance error.
@@ -89,7 +78,7 @@ def load_chain(name: str, phase: str) -> list[dict]:
             die(f"CONFIG SHA MISMATCH IN {name}")
         if rec.get("record_schema") != CONFIG["record_schema"]:
             die(f"RECORD SCHEMA MISMATCH IN {name} "
-                f"(v1/v2 and unknown formats are rejected)")
+                f"(legacy and unknown formats are rejected)")
         if rec.get("phase") != phase:
             die(f"PHASE MISMATCH IN {name}")
         for f in REQUIRED_FIELDS:
@@ -100,21 +89,88 @@ def load_chain(name: str, phase: str) -> list[dict]:
     return out
 
 
-def leaf_negative(sub: dict) -> bool:
+def endpoint_lo(s: str) -> arb:
+    return arb(arb(s).lower())
+
+
+def endpoint_hi(s: str) -> arb:
+    return arb(arb(s).upper())
+
+
+def taylor_leaf_negative(sub: dict) -> bool:
     C = arb(sub["C_bound"])
     if not bool(arb(C.lower()) >= 0):
-        # 負または符号不定の C_bound は偽の負性を作れるため即 FAIL
         die(f"NONNEGATIVITY OF C_bound NOT CERTIFIED at leaf "
             f"{sub['a']}..{sub['b']}", 1)
     rho = (Fr(sub["b"]) - Fr(sub["a"])) / 2
-    upper2 = arb((arb(arb(sub["G_prime_m"][1]).upper())
+    upper2 = arb((endpoint_hi(sub["G_prime_m"][1])
                   + C * qa(rho)).upper())
-    neg2 = bool(upper2 < 0)
-    if neg2 != bool(sub.get("negative")):
-        # 保存フラグは診断値。再構成との不一致は改変兆候として即 FAIL
-        die(f"TAYLOR RECONSTRUCTION MISMATCH at leaf {sub['a']}..{sub['b']}",
-            1)
-    return neg2
+    return bool(upper2 < 0)
+
+
+def weighted_product_bounds(ta: Fr, tb: Fr, flo: arb, fhi: arb):
+    """Bounds for t*f when 0 <= ta <= t <= tb and flo <= f <= fhi."""
+    a, b = qa(ta), qa(tb)
+    if bool(flo >= 0):
+        return arb((a * flo).lower()), arb((b * fhi).upper())
+    if bool(fhi <= 0):
+        return arb((b * flo).lower()), arb((a * fhi).upper())
+    return arb((b * flo).lower()), arb((b * fhi).upper())
+
+
+def identity_leaf_negative(sub: dict) -> bool:
+    n = sub.get("partition_count")
+    if n != CONFIG["center_t_partition_count"] or not isinstance(n, int):
+        die(f"CENTER IDENTITY PARTITION MISMATCH at leaf "
+            f"{sub['a']}..{sub['b']}", 1)
+    pieces = sub.get("identity_pieces")
+    if not isinstance(pieces, list) or len(pieces) != n:
+        die(f"CENTER IDENTITY PIECE COUNT MISMATCH at leaf "
+            f"{sub['a']}..{sub['b']}", 1)
+    dt = qa(Fr(1, n))
+    total_lo, total_hi = arb(0), arb(0)
+    for i, piece in enumerate(pieces):
+        ta, tb = Fr(piece["t_a"]), Fr(piece["t_b"])
+        if ta != Fr(i, n) or tb != Fr(i + 1, n):
+            die(f"CENTER IDENTITY t-PARTITION MISMATCH at leaf "
+                f"{sub['a']}..{sub['b']}", 1)
+        fball = piece.get("Frr_ball")
+        if not isinstance(fball, list) or len(fball) != 2:
+            die("CENTER IDENTITY Frr BALL MISSING", 1)
+        flo, fhi = endpoint_lo(fball[0]), endpoint_hi(fball[1])
+        if bool(flo > fhi):
+            die("CENTER IDENTITY Frr BALL REVERSED", 1)
+        plo, phi = weighted_product_bounds(ta, tb, flo, fhi)
+        total_lo = arb((total_lo + plo * dt).lower())
+        total_hi = arb((total_hi + phi * dt).upper())
+    stored = sub.get("G_prime_ball")
+    if not isinstance(stored, list) or len(stored) != 2:
+        die("CENTER IDENTITY SUMMARY BALL MISSING", 1)
+    stored_lo, stored_hi = endpoint_lo(stored[0]), endpoint_hi(stored[1])
+    if bool(stored_hi < total_lo) or bool(total_hi < stored_lo):
+        die("CENTER IDENTITY SUMMARY DISJOINT FROM RECONSTRUCTION", 1)
+    return bool(total_hi < 0)
+
+
+def leaf_negative(sub: dict, cell_index: int) -> bool:
+    method = sub.get("method", "taylor")
+    center = cell_index < CONFIG["center_identity_cell_count"]
+    if method == "center_identity":
+        if not center:
+            die(f"CENTER IDENTITY METHOD OUTSIDE CENTER REGION: cell {cell_index}",
+                1)
+        neg = identity_leaf_negative(sub)
+    elif method == "taylor":
+        # Synthetic checker controls intentionally use compact Taylor records.
+        if center and sub.get("method") == "taylor":
+            die(f"EXPLICIT TAYLOR METHOD IN CENTER REGION: cell {cell_index}", 1)
+        neg = taylor_leaf_negative(sub)
+    else:
+        die(f"UNKNOWN CELL METHOD {method!r}", 1)
+    if neg != bool(sub.get("negative")):
+        die(f"NEGATIVITY RECONSTRUCTION MISMATCH at leaf "
+            f"{sub['a']}..{sub['b']}", 1)
+    return neg
 
 
 def wj(path: Path, obj) -> None:
@@ -125,7 +181,6 @@ def main() -> int:
     eps = load_chain("endpoints_chain.jsonl", "endpoints")
     cls = load_chain("cells_chain.jsonl", "cells")
     sps = load_chain("spots_chain.jsonl", "spots")
-    # レコード種別と件数の完全固定（fail-closed）
     if len(eps) != 2 or any(
             r.get("record_type") != "endpoint" for r in eps):
         die("ENDPOINTS CHAIN MUST CONTAIN EXACTLY 2 ENDPOINT RECORDS", 1)
@@ -144,24 +199,24 @@ def main() -> int:
     n = CONFIG["n_cells"]
     w = (r_hi - r_lo) / n
 
-    # --- endpoints (duplicates rejected; exact r; strict recomputed sign)
+    # --- endpoints
     ep_recs = [r for r in eps if "endpoint" in r]
     if [r["endpoint"] for r in ep_recs].count("lo") != 1 or \
        [r["endpoint"] for r in ep_recs].count("hi") != 1 or len(ep_recs) != 2:
         die("ENDPOINT RECORD MULTIPLICITY", 1)
-    EXPECTED_SIGN = {"lo": 1, "hi": -1}  # checker 側で固定（正本）
+    expected_sign = {"lo": 1, "hi": -1}
     ep = {}
     for r in ep_recs:
         want_r = r_lo if r["endpoint"] == "lo" else r_hi
         if Fr(r["r"]) != want_r:
             die("ENDPOINT r MISMATCH", 1)
-        if r.get("want") != EXPECTED_SIGN[r["endpoint"]]:
-            die("ENDPOINT WANT FIELD TAMPERED", 1)  # 診断値の照合
-        s = 1 if bool(arb(arb(r["G"][0]).lower()) > 0) else \
-            (-1 if bool(arb(arb(r["G"][1]).upper()) < 0) else 0)
+        if r.get("want") != expected_sign[r["endpoint"]]:
+            die("ENDPOINT WANT FIELD TAMPERED", 1)
+        s = 1 if bool(endpoint_lo(r["G"][0]) > 0) else \
+            (-1 if bool(endpoint_hi(r["G"][1]) < 0) else 0)
         ep[r["endpoint"]] = {"r": r["r"], "G": r["G"], "sign": s,
-                             "want": EXPECTED_SIGN[r["endpoint"]],
-                             "ok": s == EXPECTED_SIGN[r["endpoint"]]}
+                             "want": expected_sign[r["endpoint"]],
+                             "ok": s == expected_sign[r["endpoint"]]}
     ep_ok = ep["lo"]["ok"] and ep["hi"]["ok"]
     wj(HERE / "C_G_ENDPOINT_SIGNS.json",
        {"label": "item3_C-G-TUBE_pilot_endpoint_signs",
@@ -184,7 +239,7 @@ def main() -> int:
             grid_ok = False
             continue
         leaves = sorted(((Fr(s["a"]), Fr(s["b"])) for s in r["sub"]
-                         if leaf_negative(s)))
+                         if leaf_negative(s, i)))
         cur, tile = a_exp, True
         for la, lb in leaves:
             if la != cur:
@@ -210,20 +265,36 @@ def main() -> int:
                    and r["t_partition_count"] == CONFIG["t_partition_count"]
                    and r["depth_limit"] == CONFIG["int_depth"]
                    and r["evaluation_limit"] == CONFIG["int_limit"])
-        id_lo = arb(arb(r["Gprime_identity_ball"][0]).lower())
-        id_hi = arb(arb(r["Gprime_identity_ball"][1]).upper())
-        ty_lo = arb(arb(r["Gprime_taylor_ball"][0]).lower())
-        ty_hi = arb(arb(r["Gprime_taylor_ball"][1]).upper())
+        method = r.get("crosscheck_method", "taylor")
+        if method == "identity_refined":
+            meta_ok = (meta_ok
+                       and i < CONFIG["center_identity_cell_count"]
+                       and r.get("cross_partition_count") ==
+                           CONFIG["center_refined_t_partition_count"]
+                       and r.get("cross_depth_limit") ==
+                           CONFIG["center_int_depth"]
+                       and r.get("cross_evaluation_limit") ==
+                           CONFIG["center_int_limit"])
+        elif method != "taylor":
+            meta_ok = False
+        cross_ball = r.get("Gprime_cross_ball", r.get("Gprime_taylor_ball"))
+        if not isinstance(cross_ball, list) or len(cross_ball) != 2:
+            die("SPOT CROSSCHECK BALL MISSING", 1)
+        id_lo = endpoint_lo(r["Gprime_identity_ball"][0])
+        id_hi = endpoint_hi(r["Gprime_identity_ball"][1])
+        cr_lo = endpoint_lo(cross_ball[0])
+        cr_hi = endpoint_hi(cross_ball[1])
         id_neg = bool(id_hi < 0)
-        ty_neg = bool(ty_hi < 0)
-        inter = not (bool(id_hi < ty_lo) or bool(ty_hi < id_lo))
+        cr_neg = bool(cr_hi < 0)
+        inter = not (bool(id_hi < cr_lo) or bool(cr_hi < id_lo))
         spot_out.append({"cell_index": i, "metadata_ok": meta_ok,
+                         "crosscheck_method": method,
                          "identity_negative": id_neg,
-                         "taylor_negative": ty_neg,
+                         "cross_negative": cr_neg,
                          "intersection_nonempty": inter,
                          "Gprime_identity_ball": r["Gprime_identity_ball"],
-                         "Gprime_taylor_ball": r["Gprime_taylor_ball"]})
-        spots_ok = spots_ok and meta_ok and id_neg and ty_neg and inter
+                         "Gprime_cross_ball": cross_ball})
+        spots_ok = spots_ok and meta_ok and id_neg and cr_neg and inter
     wj(HERE / "C_G_IDENTITY_CROSSCHECK.json",
        {"label": "item3_C-G-TUBE_pilot_identity_crosscheck",
         "role": "independent evaluator audit; not a proof node for "
@@ -231,7 +302,7 @@ def main() -> int:
         "config_sha256": CONFIG_SHA, "spots": spot_out,
         "verdict": "PASS" if spots_ok else "FAIL"})
 
-    # --- vendor re-verify at finalize time
+    # --- vendor and calibration re-verification
     repo_root_v = Path(os.environ.get(
         "CG_TUBE_REPO_ROOT", HERE / "../../../..")).resolve()
     vendor_ok, vendor_actual, h = True, {}, hashlib.sha256()
@@ -243,7 +314,6 @@ def main() -> int:
         h.update(spec["sha256"].encode())
     vendor_ok = vendor_ok and h.hexdigest() == dep_sha
 
-    # --- calibration pin re-verify
     repo_root = Path(os.environ.get(
         "CG_TUBE_REPO_ROOT", HERE / "../../../..")).resolve()
     cal = CONFIG.get("calibration", {})
@@ -287,7 +357,7 @@ def main() -> int:
         "endpoint_lo_positive": ep["lo"]["ok"],
         "endpoint_hi_negative": ep["hi"]["ok"],
         "coverage_complete_no_gap_no_overlap": grid_ok,
-        "all_cells_taylor_negative_reconstructed": cells_neg_ok,
+        "all_cells_negative_reconstructed": cells_neg_ok,
         "spot_crosscheck_pass": spots_ok,
         "vendor_and_calibration_reverified": vendor_ok and cal_ok,
         "negative_controls_deep_pass": ctrl_ok,
@@ -303,7 +373,7 @@ def main() -> int:
                        "G(r_c, 118/25) = 0") if verdict == "PASS" else None,
         "config_sha256": CONFIG_SHA, "dependency_sha256": dep_sha,
         "conditions": conds, "cells": cell_recs, "verdict": verdict})
-    print(f"checker/finalize v3: {verdict} {conds}")
+    print(f"checker/finalize v4: {verdict} {conds}")
     return 0 if verdict == "PASS" else 1
 
 
