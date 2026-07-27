@@ -1,0 +1,1 @@
+{"label":"item3_Frr_audit","symbolic_residuals":{"g1":"0","g2":"0","g3":"0","dFint":"0","d2Fint":"0"},"h3_numeric_max_err":"5.4738221262688166832958186847262348878135232104551e-48","h3_endpoint_exact":true,"n_numeric_points":20,"seed":20260726,"dps":50,"verdict":"PASS"}

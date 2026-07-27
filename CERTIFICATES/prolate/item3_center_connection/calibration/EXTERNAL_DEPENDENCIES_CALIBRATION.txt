@@ -1,0 +1,8 @@
+# External dependencies verified at runtime by SHA-256.
+module: prolate_circle_F_cleanroom.py
+sha256: 77e7a93c594ba66ac7d98df29ec3c03107b0c63962a5aa60f8503559082c10ac
+path: CERTIFICATES/prolate/item2_circle/vendor/prolate_circle_F_cleanroom.py
+
+module: prolate_circle_Frr_ext.py
+sha256: 223b7007c9e077b204612fb1ff669b4147a2aa0f9c941cc8e83e81efd975e757
+path: CERTIFICATES/prolate/item3_center_connection/vendor/prolate_circle_Frr_ext.py
