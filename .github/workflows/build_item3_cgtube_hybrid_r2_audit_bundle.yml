@@ -96,7 +96,10 @@ jobs:
           rm -f "source/$DIR/CONTROLS.json"
           rm -rf "source/$DIR/__pycache__"
           test -z "$(git -C source status --porcelain)"
-          sha256sum bundle/* bundle/source/* > bundle/BUNDLE_FILE_SHA256SUMS.txt
+          find bundle -type f ! -name BUNDLE_FILE_SHA256SUMS.txt -print0 \
+            | sort -z \
+            | xargs -0 sha256sum \
+            > bundle/BUNDLE_FILE_SHA256SUMS.txt
 
       - name: Upload audit bundle
         id: artifact
