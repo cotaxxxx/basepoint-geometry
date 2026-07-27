@@ -1,0 +1,233 @@
+name: Prolate item2 B-KERNEL clean-room audit
+
+on:
+  pull_request:
+    paths:
+      - "CERTIFICATES/prolate/item0d_interior/item0d_certified.zip"
+      - "CERTIFICATES/prolate/item2_circle/**"
+      - ".github/workflows/prolate-item2-bkernel-cleanroom.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: prolate-item2-bkernel-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install audit dependencies
+        run: python -m pip install python-flint==0.9.0 sympy numpy
+      - name: Verify immutable inputs and record repository bytes
+        working-directory: CERTIFICATES/prolate/item2_circle/cleanroom
+        run: |
+          echo "db1c68e4bbf43fcb49bd5f27de5d45a36b44f1f8e77141477832ce16ae68df2a  ../../item0d_interior/item0d_certified.zip" | sha256sum -c -
+          echo "77e7a93c594ba66ac7d98df29ec3c03107b0c63962a5aa60f8503559082c10ac  ../vendor/prolate_circle_F_cleanroom.py" | sha256sum -c -
+          sha256sum bkernel_cleanroom_audit.py ../vendor/prolate_circle_F_cleanroom.py > OBSERVED_INPUT_SHA256.txt
+          python -m py_compile bkernel_cleanroom_audit.py ../vendor/prolate_circle_F_cleanroom.py ../vendor/prolate_circle_kernels.py
+      - name: Rebuild exact fixture and run independent audits
+        working-directory: CERTIFICATES/prolate/item2_circle/cleanroom
+        env:
+          PYTHONPATH: ../vendor
+        run: |
+          python bkernel_cleanroom_audit.py fixture
+          echo "800b12fd6850f1b3dde0d22d3afa13918dbb46687f98ae99f5c8097083ed47eb  item0d_regression_fixture.json" | sha256sum -c -
+          python bkernel_cleanroom_audit.py nonrigorous
+          python bkernel_cleanroom_audit.py controls
+          python - <<'PY'
+          import prolate_circle_kernels as K
+          assert K.FORMULA_STATE == "FILLED"
+          for name in ("F_arb", "dFdr_arb", "F_float", "dFdr_float"):
+              assert callable(getattr(K, name))
+          print("B-KERNEL interface PASS")
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bkernel-preflight
+          path: |
+            CERTIFICATES/prolate/item2_circle/cleanroom/OBSERVED_INPUT_SHA256.txt
+            CERTIFICATES/prolate/item2_circle/cleanroom/item0d_regression_fixture.json
+            CERTIFICATES/prolate/item2_circle/cleanroom/symbolic_formula_audit_pure.json
+            CERTIFICATES/prolate/item2_circle/cleanroom/reference_midpoint_audit.json
+            CERTIFICATES/prolate/item2_circle/cleanroom/regression_harness_controls.json
+          if-no-files-found: error
+
+  regression:
+    needs: preflight
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install python-flint==0.9.0 sympy numpy
+      - name: Rigorous regression shard ${{ matrix.shard }}
+        working-directory: CERTIFICATES/prolate/item2_circle/cleanroom
+        env:
+          PYTHONPATH: ../vendor
+          SHARD: ${{ matrix.shard }}
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          from types import SimpleNamespace
+          import bkernel_cleanroom_audit as A
+
+          shard = int(os.environ["SHARD"])
+          start, end = 14 * shard, 14 * (shard + 1)
+          fixture = A.build_fixture(
+              Path("../../item0d_interior/item0d_certified.zip"),
+              Path("item0d_regression_fixture.json"),
+          )
+          fixture["leaves"] = fixture["leaves"][start:end]
+          args = SimpleNamespace(dps=40, tol="1e-10", depth_limit=12,
+                                 eval_limit=200000, limit_leaves=0)
+          rc = A.run_regression(fixture, args)
+          path = Path("regression_item0d_report.json")
+          report = json.loads(path.read_bytes())
+          report["shard"] = shard
+          report["global_range"] = [start, end]
+          for record in report["records"]:
+              record["index"] += start
+          target = Path(f"regression_item0d_report_{shard:02d}.json")
+          target.write_bytes(json.dumps(report, ensure_ascii=False,
+                                        separators=(",", ":")).encode())
+          raise SystemExit(rc)
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: bkernel-regression-shard-${{ matrix.shard }}
+          path: CERTIFICATES/prolate/item2_circle/cleanroom/regression_item0d_report_*.json
+          if-no-files-found: error
+
+  difference-quotient:
+    needs: preflight
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install python-flint==0.9.0 sympy numpy
+      - name: Difference-quotient shard ${{ matrix.shard }}
+        working-directory: CERTIFICATES/prolate/item2_circle/cleanroom
+        env:
+          PYTHONPATH: ../vendor
+          SHARD: ${{ matrix.shard }}
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          from types import SimpleNamespace
+          import bkernel_cleanroom_audit as A
+
+          shard = int(os.environ["SHARD"])
+          args = SimpleNamespace(points=6, seed=20260726 + shard,
+                                 dps=40, h="1/4096", tol="1e-10",
+                                 depth_limit=12, eval_limit=200000)
+          rc = A.run_dq(args)
+          path = Path("symbolic_audit_dFdr_report.json")
+          report = json.loads(path.read_bytes())
+          report["shard"] = shard
+          target = Path(f"symbolic_audit_dFdr_report_{shard:02d}.json")
+          target.write_bytes(json.dumps(report, ensure_ascii=False,
+                                        separators=(",", ":")).encode())
+          raise SystemExit(rc)
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: bkernel-dq-shard-${{ matrix.shard }}
+          path: CERTIFICATES/prolate/item2_circle/cleanroom/symbolic_audit_dFdr_report_*.json
+          if-no-files-found: error
+
+  aggregate:
+    needs: [preflight, regression, difference-quotient]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: bkernel-preflight
+          path: audit/preflight
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: bkernel-regression-shard-*
+          path: audit/regression
+          merge-multiple: true
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: bkernel-dq-shard-*
+          path: audit/dq
+          merge-multiple: true
+      - name: Verify complete rigorous coverage
+        run: |
+          python - <<'PY'
+          import hashlib, json
+          from pathlib import Path
+
+          regression_files = sorted(Path("audit/regression").glob("*.json"))
+          dq_files = sorted(Path("audit/dq").glob("*.json"))
+          assert len(regression_files) == 16, len(regression_files)
+          assert len(dq_files) == 4, len(dq_files)
+
+          regression = [json.loads(p.read_bytes()) for p in regression_files]
+          assert all(r["verdict"] == "PASS" and r["n_failed"] == 0 for r in regression)
+          indices = sorted(record["index"] for r in regression for record in r["records"])
+          assert indices == list(range(224)), indices
+
+          dq = [json.loads(p.read_bytes()) for p in dq_files]
+          assert all(r["verdict"] == "PASS" and r["difference_quotient"]["n_failed"] == 0 for r in dq)
+          assert sum(len(r["difference_quotient"]["points"]) for r in dq) == 24
+
+          preflight = Path("audit/preflight")
+          fixture = preflight / "item0d_regression_fixture.json"
+          assert hashlib.sha256(fixture.read_bytes()).hexdigest() == "800b12fd6850f1b3dde0d22d3afa13918dbb46687f98ae99f5c8097083ed47eb"
+          for name in ("symbolic_formula_audit_pure.json",
+                       "reference_midpoint_audit.json",
+                       "regression_harness_controls.json"):
+              assert json.loads((preflight / name).read_bytes())["verdict"] == "PASS"
+
+          result = {
+              "label": "prolate_item2_bkernel_cleanroom_final_audit",
+              "provenance": {
+                  "historical_kernel_sha256_unrecovered": "ef065381abd802239f5fb107c3e87f64a12259deccbf98d6909bcd975da7157d",
+                  "cleanroom_kernel_sha256": "77e7a93c594ba66ac7d98df29ec3c03107b0c63962a5aa60f8503559082c10ac",
+                  "fixture_sha256": "800b12fd6850f1b3dde0d22d3afa13918dbb46687f98ae99f5c8097083ed47eb",
+              },
+              "regression": {"shards": 16, "leaves": 224, "failed": 0},
+              "difference_quotient": {"shards": 4, "points": 24, "failed": 0},
+              "verdict": "PASS",
+          }
+          out = Path("audit/B_KERNEL_FINAL_AUDIT.json")
+          out.write_bytes(json.dumps(result, separators=(",", ":")).encode())
+          hashes = []
+          for path in sorted(Path("audit").rglob("*.json")):
+              hashes.append(f"{hashlib.sha256(path.read_bytes()).hexdigest()}  {path}\n")
+          Path("audit/B_KERNEL_ALL_SHA256.txt").write_text("".join(hashes))
+          print(json.dumps(result, indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: prolate-item2-bkernel-cleanroom-final
+          path: audit
+          if-no-files-found: error
