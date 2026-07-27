@@ -46,23 +46,49 @@ jobs:
           PY
       - name: Endpoint signs
         run: python3 c_g_tube_pilot.py --phase endpoints
-      - name: 56 Taylor cells
+      - name: 56 hybrid cells (center identity + outer Taylor)
         run: python3 c_g_tube_pilot.py --phase cells
       - name: Identity spots [0, 18, 37, 55]
         run: python3 c_g_tube_pilot.py --phase spots
       - name: Negative controls (checker fail-closed)
         run: python3 run_controls.py
       - name: Checker + eight-condition finalize
+        id: checker
+        continue-on-error: true
         run: python3 c_g_tube_checker.py
       - name: Manifest
+        if: ${{ steps.checker.outcome == 'success' }}
         run: |
           python3 gen_manifest.py
           sha256sum SHA256SUMS.txt
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - name: Upload certified artifact
+        if: ${{ steps.checker.outcome == 'success' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         id: art
         with:
           name: item3-cgtube-pilot-${{ github.run_id }}
           path: CERTIFICATES/prolate/item3_center_connection/c_g_tube
       - name: Artifact digest
+        if: ${{ steps.checker.outcome == 'success' }}
         working-directory: .
         run: echo "artifact_digest=${{ steps.art.outputs.artifact-digest }}"
+      - name: Upload diagnostic records
+        if: ${{ always() && (failure() || steps.checker.outcome == 'failure') }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        id: diag
+        with:
+          name: item3-cgtube-diagnostics-${{ github.run_id }}
+          if-no-files-found: warn
+          path: |
+            CERTIFICATES/prolate/item3_center_connection/c_g_tube/*_chain.jsonl
+            CERTIFICATES/prolate/item3_center_connection/c_g_tube/C_G_*.json
+            CERTIFICATES/prolate/item3_center_connection/c_g_tube/CONTROLS.json
+            CERTIFICATES/prolate/item3_center_connection/c_g_tube/DEPENDENCIES.json
+            CERTIFICATES/prolate/item3_center_connection/c_g_tube/config.json
+      - name: Diagnostic artifact digest
+        if: ${{ always() && steps.diag.outcome == 'success' }}
+        working-directory: .
+        run: echo "diagnostic_artifact_digest=${{ steps.diag.outputs.artifact-digest }}"
+      - name: Enforce checker verdict
+        if: ${{ always() && steps.checker.outcome == 'failure' }}
+        run: exit 1
