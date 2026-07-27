@@ -1,6 +1,10 @@
 name: Apply item3 C-G-TUBE v5 candidate (one-shot)
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/apply_item3_cgtube_v5_candidate.yml
   workflow_dispatch: {}
 
 permissions:
@@ -10,9 +14,9 @@ env:
   TARGET_BRANCH: agent/prolate-item3-cgtube-source-candidate
   EXPECTED_HEAD: 2ffae275c15a8a465d0018624dd3c4fba479daf7
   PAYLOAD_SHA256: 0e012f778d9e17258148130b24047ef6a9526ab264453cf25631d61bfad24692
-  PILOT_SHA256: 1195582fab8317124320644644aeeeabe70b47c6f697c82964a3e52fcc66687e
-  CHECKER_SHA256: 4fd1e23942697c2accb48eef6ccd3f4a65e5183fdae419df49a050b3c83f17a9
-  CONTROLS_SHA256: e8314b3e500e167041ca3552bf542b93a109a921fa48b2ea9a96112a48b6c379
+  PILOT_SHA256: aa1970c73a29228940f36ad4ed7f317ecbabe9732c61b55f9f5dc5b17019593e
+  CHECKER_SHA256: 37990547bf18df4487e801414e8a0fa02c4095e623856b461a1d4b215eb3a1cf
+  CONTROLS_SHA256: 05ab42208e2e83f8e71ba532a60c7b0589b5e86babe489da7c1370a764dabffd
   CONFIG_SHA256: bb6a3655d335240549cbe1f6eec2a9e68e00219eb9c1a2be65796e2e342a0d17
   CG_TUBE_REPO_ROOT: ${{ github.workspace }}
 
@@ -35,11 +39,38 @@ jobs:
           test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD"
           base64 -d .github/payloads/item3_cgtube_v5_payload.b64 > /tmp/item3-cgtube-v5.tar.gz
           echo "$PAYLOAD_SHA256  /tmp/item3-cgtube-v5.tar.gz" | sha256sum -c -
-      - name: Apply and verify source
+      - name: Apply deterministic control fix and verify source
         run: |
           set -euo pipefail
           tar -xzf /tmp/item3-cgtube-v5.tar.gz -C .
           dir=CERTIFICATES/prolate/item3_center_connection/c_g_tube
+          python - "$dir/run_controls.py" <<'PY'
+          from pathlib import Path
+          import sys
+
+          path = Path(sys.argv[1])
+          text = path.read_text()
+          text = text.replace(
+              "from fractions import Fraction as Fr\n",
+              "from decimal import Decimal, localcontext\nfrom fractions import Fraction as Fr\n",
+              1,
+          )
+          old = '''    C = "300.0" if large_c else "10.0"\n    radius = float((b - a) / 2)\n    center_lo = float(gpm[0])\n    center_hi = float(gpm[1])\n    c = float(C)\n    lower = center_lo - c * radius\n    upper = center_hi + c * radius\n    negative = upper < 0\n    return {\n        "method": "taylor",\n        "a": str(a), "b": str(b), "depth": depth,\n        "G_prime_m": gpm,\n        "C_bound": C,\n        "reconstructed_ball": [repr(lower), repr(upper)],\n        "negative": negative,\n    }\n'''
+          new = '''    C = "300.0" if large_c else "10.0"\n    # Build a deliberately outward decimal enclosure.  The checker performs\n    # its reconstruction with Arb-directed rounding, so binary-float reprs\n    # are not suitable as containment witnesses.\n    with localcontext() as context:\n        context.prec = 80\n        radius = Decimal((b - a).numerator) / Decimal(2 * (b - a).denominator)\n        c = Decimal(C)\n        padding = Decimal("1e-12")\n        lower = Decimal(gpm[0]) - c * radius - padding\n        upper = Decimal(gpm[1]) + c * radius + padding\n    negative = upper < 0\n    return {\n        "method": "taylor",\n        "a": str(a), "b": str(b), "depth": depth,\n        "G_prime_m": gpm,\n        "C_bound": C,\n        "reconstructed_ball": [format(lower, "f"), format(upper, "f")],\n        "negative": negative,\n    }\n'''
+          if old not in text:
+              raise SystemExit("expected taylor witness block not found")
+          text = text.replace(old, new, 1)
+          old = '''    cross_lo = min(float(leaf["reconstructed_ball"][0]) for leaf in leaves)\n    cross_hi = max(float(leaf["reconstructed_ball"][1]) for leaf in leaves)\n'''
+          new = '''    cross_lo = min(Decimal(leaf["reconstructed_ball"][0]) for leaf in leaves)\n    cross_hi = max(Decimal(leaf["reconstructed_ball"][1]) for leaf in leaves)\n'''
+          if old not in text:
+              raise SystemExit("expected adaptive summary block not found")
+          text = text.replace(old, new, 1)
+          old = '        "Gprime_cross_ball": [repr(cross_lo), repr(cross_hi)],\n'
+          new = '        "Gprime_cross_ball": [format(cross_lo, "f"), format(cross_hi, "f")],\n'
+          if old not in text:
+              raise SystemExit("expected adaptive ball serialization not found")
+          path.write_text(text.replace(old, new, 1))
+          PY
           echo "$PILOT_SHA256  $dir/c_g_tube_pilot.py" | sha256sum -c -
           echo "$CHECKER_SHA256  $dir/c_g_tube_checker.py" | sha256sum -c -
           echo "$CONTROLS_SHA256  $dir/run_controls.py" | sha256sum -c -
@@ -47,7 +78,9 @@ jobs:
           python -m py_compile "$dir/c_g_tube_pilot.py" "$dir/c_g_tube_checker.py" "$dir/run_controls.py"
           pip install python-flint==0.9.0
           python "$dir/run_controls.py"
+          test "$(python -c 'import json,sys; print(json.load(open(sys.argv[1]))["verdict"])' "$dir/CONTROLS.json")" = PASS
           rm -f "$dir/CONTROLS.json"
+          rm -rf "$dir/__pycache__"
           rm -f .github/payloads/item3_cgtube_v5_payload.b64
           actual="$(git diff --name-only | sort)"
           expected="$(printf '%s\n' \
