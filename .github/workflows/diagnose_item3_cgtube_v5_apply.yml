@@ -68,6 +68,47 @@ jobs:
           run_check pip_install python -m pip install python-flint==0.9.0
           run_check checker_controls python "$dir/run_controls.py"
 
+          echo "===== positive_trace =====" | tee -a "$report"
+          python - "$dir" >> "$report" 2>&1 <<'PY'
+          import importlib.util
+          import os
+          import subprocess
+          import sys
+          import tempfile
+          from pathlib import Path
+
+          src = Path(sys.argv[1]).resolve()
+          spec = importlib.util.spec_from_file_location("cgtube_controls", src / "run_controls.py")
+          mod = importlib.util.module_from_spec(spec)
+          assert spec.loader is not None
+          spec.loader.exec_module(mod)
+          with tempfile.TemporaryDirectory() as td:
+              tmp = Path(td)
+              mod.synth(tmp)
+              result = subprocess.run(
+                  [sys.executable, str(tmp / "c_g_tube_checker.py")],
+                  cwd=tmp,
+                  env=dict(os.environ),
+                  text=True,
+                  capture_output=True,
+              )
+              print(f"positive_returncode={result.returncode}")
+              print("--- positive stdout ---")
+              print(result.stdout)
+              print("--- positive stderr ---")
+              print(result.stderr)
+              for name in (
+                  "C_G_ENDPOINT_SIGNS.json",
+                  "C_G_IDENTITY_CROSSCHECK.json",
+                  "C_G_TUBE_PILOT.json",
+                  "DEPENDENCIES.json",
+              ):
+                  path = tmp / name
+                  print(f"--- {name} ---")
+                  print(path.read_text() if path.exists() else "MISSING")
+          PY
+          echo "positive_trace_exit=$?" | tee -a "$report"
+
           rm -f "$dir/CONTROLS.json"
           rm -f .github/payloads/item3_cgtube_v5_payload.b64
           run_check diff_name_status git diff --name-status
