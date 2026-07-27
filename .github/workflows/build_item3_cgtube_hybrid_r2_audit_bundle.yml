@@ -1,0 +1,111 @@
+name: Build item3 C-G-TUBE hybrid r2 audit bundle
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/build_item3_cgtube_hybrid_r2_audit_bundle.yml
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+env:
+  SOURCE_SHA: 5b352a7b9152873802d6c3aa7d58018e80674b34
+  DIR: CERTIFICATES/prolate/item3_center_connection/c_g_tube
+
+jobs:
+  audit-bundle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout fixed source
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          ref: ${{ env.SOURCE_SHA }}
+          path: source
+          fetch-depth: 1
+          persist-credentials: false
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+
+      - name: Fixed-source clean-room preflight
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C source rev-parse HEAD)" = "$SOURCE_SHA"
+          for name in endpoints_chain.jsonl cells_chain.jsonl spots_chain.jsonl \
+                      C_G_ENDPOINT_SIGNS.json C_G_TUBE_PILOT.json \
+                      C_G_IDENTITY_CROSSCHECK.json CONTROLS.json \
+                      DEPENDENCIES.json SHA256SUMS.txt; do
+            test ! -e "source/$DIR/$name"
+          done
+
+      - name: Compile and run ten fail-closed controls
+        shell: bash
+        env:
+          CG_TUBE_REPO_ROOT: ${{ github.workspace }}/source
+        run: |
+          set -euo pipefail
+          python -m py_compile \
+            "source/$DIR/c_g_tube_pilot.py" \
+            "source/$DIR/c_g_tube_checker.py" \
+            "source/$DIR/run_controls.py"
+          pip install python-flint==0.9.0
+          python "source/$DIR/run_controls.py"
+          test "$(python -c 'import json,sys; print(json.load(open(sys.argv[1]))["verdict"])' "source/$DIR/CONTROLS.json")" = PASS
+          test "$(python -c 'import json,sys; print(len(json.load(open(sys.argv[1]))["controls"]))' "source/$DIR/CONTROLS.json")" = 10
+
+      - name: Assemble immutable audit bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p bundle/source
+          cp "source/$DIR/README.md" bundle/source/
+          cp "source/$DIR/c_g_tube_pilot.py" bundle/source/
+          cp "source/$DIR/c_g_tube_checker.py" bundle/source/
+          cp "source/$DIR/run_controls.py" bundle/source/
+          cp "source/$DIR/config.json" bundle/source/
+          cp "source/$DIR/CONTROLS.json" bundle/
+
+          {
+            echo "repository=cotaxxxx/geometric-dual-topology"
+            echo "source_sha=$SOURCE_SHA"
+            echo "source_branch=agent/prolate-item3-cgtube-hybrid-audit-r2"
+            echo "scope=static-audit bundle only; not a mathematical certificate"
+            echo "generated_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            git -C source show -s --format='commit=%H%nparent=%P%nauthor=%an <%ae>%ncommitter=%cn <%ce>%nsubject=%s' HEAD
+          } > bundle/PROVENANCE.txt
+
+          sha256sum \
+            "source/$DIR/README.md" \
+            "source/$DIR/c_g_tube_pilot.py" \
+            "source/$DIR/c_g_tube_checker.py" \
+            "source/$DIR/run_controls.py" \
+            "source/$DIR/config.json" \
+            > bundle/SOURCE_SHA256SUMS.txt
+
+          sha256sum \
+            source/CERTIFICATES/prolate/item2_circle/vendor/prolate_circle_F_cleanroom.py \
+            source/CERTIFICATES/prolate/item3_center_connection/vendor/prolate_circle_Frr_ext.py \
+            source/CERTIFICATES/prolate/item3_center_connection/calibration/item3_centered_calibration.json \
+            > bundle/DEPENDENCY_SHA256SUMS.txt
+
+          rm -f "source/$DIR/CONTROLS.json"
+          rm -rf "source/$DIR/__pycache__"
+          test -z "$(git -C source status --porcelain)"
+          sha256sum bundle/* bundle/source/* > bundle/BUNDLE_FILE_SHA256SUMS.txt
+
+      - name: Upload audit bundle
+        id: artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: item3-cgtube-hybrid-r2-audit-bundle-${{ github.run_id }}
+          path: bundle
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Artifact digest
+        run: echo "artifact_digest=${{ steps.artifact.outputs.artifact-digest }}"
