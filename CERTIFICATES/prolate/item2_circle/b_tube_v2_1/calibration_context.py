@@ -47,7 +47,9 @@ from numeric_schema import (  # noqa: E402
 
 CONFIG_SCHEMA = "btube-calibration-config-v1"
 DESIGN_VERSION = "btube-calibration-design-v1"
-LAMBDA_START_STATUS = "UNBOUND_BLOCAL_PLACEHOLDER"
+CALIBRATION_MODE = "DIAGNOSTIC_ONLY"
+BLOCAL_STATUS = "UNPINNED"
+BLOCAL_STAGE1_UPPER = Rational(206539, 100000)
 KERNEL_SHA256 = "77e7a93c594ba66ac7d98df29ec3c03107b0c63962a5aa60f8503559082c10ac"
 AUDITED_SOURCE_COMMIT = "dbff78474399c47011906631de9cde75992b6d25"
 DESIGN_COMMIT = "4a1b12a2a1e4f89712c33bc554646b44190f6f5b"
@@ -63,11 +65,16 @@ FORBIDDEN_RESULT_PREFIX = "CERT" + "IFIED_"
 FORBIDDEN_RESULT_KEYS = {"verdict", "certified", "production_match"}
 SOURCE_FILE_LIST = ('CALIBRATION_ONLY_WORKFLOW_DESIGN.md', 'affine_geometry.py', 'calibration.py', 'calibration_context.py', 'calibration_config.py', 'calibration_security.py', 'calibration_numeric.py', 'calibration_candidate.py', 'calibration_runner.py', 'calibration_verify.py', 'calibration_delivery.py', 'calibration_receipt.py', 'config.calibration.json', 'numeric_schema.py', 'record_layout_contract.py', 'record_layout_verifier.py', 'requirements-calibration.txt', 'tests/test_calibration.py', 'tests/test_calibration_config.py', 'tests/test_calibration_guards.py', 'tests/test_calibration_records.py', 'tests/test_selftest.py')
 EXPECTED_CONFIG_KEYS = {
-    "audited_source_commit", "candidate_lambda_widths", "candidate_tube_radii",
-    "cg_match_dependency", "checker_dps", "design_commit", "design_version", "dps",
-    "evaluation_budget", "lambda_end", "lambda_start", "lambda_start_status", "max_cells",
-    "max_subdivisions", "predictor_refresh", "production_kernel_sha256",
-    "q_evaluation_rule", "record_chain_genesis_domain", "schema",
+    "audited_source_commit", "binding_to_final_lambda_start", "blocal_dependency",
+    "candidate_lambda_widths", "candidate_tube_radii", "cg_match_dependency",
+    "checker_dps", "design_commit", "design_version", "diagnostic_lambda_start", "dps",
+    "evaluation_budget", "lambda_end", "max_cells", "max_subdivisions", "mode",
+    "predictor_refresh", "production_kernel_sha256", "q_evaluation_rule",
+    "record_chain_genesis_domain", "schema",
+}
+EXPECTED_BLOCAL_KEYS = {
+    "artifact_zip_sha256", "certificate_sha256", "config_sha256", "lambda_start",
+    "machine_conclusion", "source_head", "status",
 }
 EXPECTED_CG_KEYS = {
     "artifact_zip_sha256", "b_kernel_sha256", "cg_kernel_sha256", "config_sha256",
