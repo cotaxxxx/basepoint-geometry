@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import replace
 import pathlib
 import sys
 import unittest
@@ -8,7 +9,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 import mock_kernel
-from b_tube_checker import check_bundle
+from b_tube_checker import CheckError, check_bundle
 from b_tube_selftest_runner import build_bundle
 from checker_common import SELFTEST_MOCK_KERNEL_FILE_SHA256
 from numeric_schema import (
@@ -87,6 +88,18 @@ class CheckerTests(unittest.TestCase):
     def test_full_and_core_verdicts(self):
         self.assertEqual(check_bundle(build_bundle(full=True)).verdict, "CERTIFIED_B_TUBE_FULL")
         self.assertEqual(check_bundle(build_bundle(full=False)).verdict, "CERTIFIED_CORE_INTERVAL")
+
+    def test_real_analytic_present_and_false(self):
+        bundle = build_bundle()
+        summary = parse_canonical_json_bytes(bundle.summary_bytes)
+        summary["machine_conclusion"].pop("real_analytic")
+        with self.assertRaises(CheckError):
+            check_bundle(replace(bundle, summary_bytes=canonical_json_bytes(summary)))
+
+        summary = parse_canonical_json_bytes(bundle.summary_bytes)
+        summary["machine_conclusion"]["real_analytic"] = True
+        with self.assertRaises(CheckError):
+            check_bundle(replace(bundle, summary_bytes=canonical_json_bytes(summary)))
 
     def test_tight_cell(self):
         self.assertEqual(check_bundle(build_bundle(tight=True)).cells, 2)
