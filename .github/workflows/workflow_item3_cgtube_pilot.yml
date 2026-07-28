@@ -8,7 +8,7 @@ on:
   workflow_dispatch: {}
 
 permissions:
-  contents: read
+  contents: write
 
 env:
   EXPECTED_SOURCE_HEAD: 1e0f671c91798b9c044c04c7a4224a21e1e67830
@@ -32,6 +32,77 @@ jobs:
           ref: ${{ env.EXPECTED_SOURCE_HEAD }}
           fetch-depth: 1
           persist-credentials: false
+
+      - name: Publish run start receipt
+        working-directory: .
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RECEIPT_STATUS: running
+          CHECKER_OUTCOME: pending
+          JOB_STATUS: running
+          CERTIFIED_DIGEST: ""
+          DIAGNOSTIC_DIGEST: ""
+        run: |
+          python3 - <<'PY'
+          import base64
+          import json
+          import os
+          import urllib.error
+          import urllib.request
+          from datetime import datetime, timezone
+
+          repo = os.environ["GITHUB_REPOSITORY"]
+          path = ".github/run-receipts/item3-cgtube-latest.json"
+          api = f"https://api.github.com/repos/{repo}/contents/{path}"
+          headers = {
+              "Authorization": f"Bearer {os.environ['GITHUB_TOKEN']}",
+              "Accept": "application/vnd.github+json",
+              "X-GitHub-Api-Version": "2022-11-28",
+              "User-Agent": "item3-cgtube-run-receipt",
+          }
+          receipt = {
+              "schema": "item3-cgtube-run-receipt-v1",
+              "workflow": "workflow_item3_cgtube_pilot.yml",
+              "status": os.environ["RECEIPT_STATUS"],
+              "job_status": os.environ["JOB_STATUS"],
+              "checker_outcome": os.environ["CHECKER_OUTCOME"],
+              "run_id": int(os.environ["GITHUB_RUN_ID"]),
+              "run_attempt": int(os.environ["GITHUB_RUN_ATTEMPT"]),
+              "run_url": f"https://github.com/{repo}/actions/runs/{os.environ['GITHUB_RUN_ID']}",
+              "trigger_sha": os.environ["GITHUB_SHA"],
+              "trigger_ref": os.environ["GITHUB_REF"],
+              "source_head": os.environ["EXPECTED_SOURCE_HEAD"],
+              "config_sha256": os.environ["EXPECTED_CONFIG_SHA256"],
+              "certified_artifact_digest": os.environ["CERTIFIED_DIGEST"] or None,
+              "diagnostic_artifact_digest": os.environ["DIAGNOSTIC_DIGEST"] or None,
+              "recorded_at": datetime.now(timezone.utc).isoformat(),
+          }
+          sha = None
+          try:
+              req = urllib.request.Request(api + "?ref=main", headers=headers)
+              with urllib.request.urlopen(req) as response:
+                  sha = json.load(response)["sha"]
+          except urllib.error.HTTPError as exc:
+              if exc.code != 404:
+                  raise
+          body = {
+              "message": f"Record item3 C-G-TUBE run {receipt['run_id']} {receipt['status']}",
+              "content": base64.b64encode(
+                  (json.dumps(receipt, indent=2, sort_keys=True) + "\n").encode()
+              ).decode(),
+              "branch": "main",
+          }
+          if sha is not None:
+              body["sha"] = sha
+          req = urllib.request.Request(
+              api,
+              data=json.dumps(body).encode(),
+              headers={**headers, "Content-Type": "application/json"},
+              method="PUT",
+          )
+          with urllib.request.urlopen(req) as response:
+              json.load(response)
+          PY
 
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
@@ -163,6 +234,78 @@ jobs:
         if: steps.checker.outcome != 'success'
         working-directory: .
         run: echo "artifact_digest=${{ steps.diagnostic_artifact.outputs.artifact-digest }}"
+
+      - name: Publish final run receipt
+        if: always()
+        working-directory: .
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RECEIPT_STATUS: completed
+          CHECKER_OUTCOME: ${{ steps.checker.outcome || 'not-run' }}
+          JOB_STATUS: ${{ job.status }}
+          CERTIFIED_DIGEST: ${{ steps.certified_artifact.outputs.artifact-digest || '' }}
+          DIAGNOSTIC_DIGEST: ${{ steps.diagnostic_artifact.outputs.artifact-digest || '' }}
+        run: |
+          python3 - <<'PY'
+          import base64
+          import json
+          import os
+          import urllib.error
+          import urllib.request
+          from datetime import datetime, timezone
+
+          repo = os.environ["GITHUB_REPOSITORY"]
+          path = ".github/run-receipts/item3-cgtube-latest.json"
+          api = f"https://api.github.com/repos/{repo}/contents/{path}"
+          headers = {
+              "Authorization": f"Bearer {os.environ['GITHUB_TOKEN']}",
+              "Accept": "application/vnd.github+json",
+              "X-GitHub-Api-Version": "2022-11-28",
+              "User-Agent": "item3-cgtube-run-receipt",
+          }
+          receipt = {
+              "schema": "item3-cgtube-run-receipt-v1",
+              "workflow": "workflow_item3_cgtube_pilot.yml",
+              "status": os.environ["RECEIPT_STATUS"],
+              "job_status": os.environ["JOB_STATUS"],
+              "checker_outcome": os.environ["CHECKER_OUTCOME"],
+              "run_id": int(os.environ["GITHUB_RUN_ID"]),
+              "run_attempt": int(os.environ["GITHUB_RUN_ATTEMPT"]),
+              "run_url": f"https://github.com/{repo}/actions/runs/{os.environ['GITHUB_RUN_ID']}",
+              "trigger_sha": os.environ["GITHUB_SHA"],
+              "trigger_ref": os.environ["GITHUB_REF"],
+              "source_head": os.environ["EXPECTED_SOURCE_HEAD"],
+              "config_sha256": os.environ["EXPECTED_CONFIG_SHA256"],
+              "certified_artifact_digest": os.environ["CERTIFIED_DIGEST"] or None,
+              "diagnostic_artifact_digest": os.environ["DIAGNOSTIC_DIGEST"] or None,
+              "recorded_at": datetime.now(timezone.utc).isoformat(),
+          }
+          sha = None
+          try:
+              req = urllib.request.Request(api + "?ref=main", headers=headers)
+              with urllib.request.urlopen(req) as response:
+                  sha = json.load(response)["sha"]
+          except urllib.error.HTTPError as exc:
+              if exc.code != 404:
+                  raise
+          body = {
+              "message": f"Record item3 C-G-TUBE run {receipt['run_id']} {receipt['status']}",
+              "content": base64.b64encode(
+                  (json.dumps(receipt, indent=2, sort_keys=True) + "\n").encode()
+              ).decode(),
+              "branch": "main",
+          }
+          if sha is not None:
+              body["sha"] = sha
+          req = urllib.request.Request(
+              api,
+              data=json.dumps(body).encode(),
+              headers={**headers, "Content-Type": "application/json"},
+              method="PUT",
+          )
+          with urllib.request.urlopen(req) as response:
+              json.load(response)
+          PY
 
       - name: Enforce checker verdict
         if: always()
