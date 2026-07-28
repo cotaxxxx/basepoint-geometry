@@ -1,6 +1,7 @@
 """Source, workflow, namespace, and kernel security checks."""
 from calibration_context import *
 
+
 def _source_forbidden_code(source: str) -> list[str]:
     patterns = (
         "flo" + "at(", "Dec" + "imal(", "." + "str(",
@@ -13,6 +14,7 @@ def _source_forbidden_code(source: str) -> list[str]:
     )
     return [pattern for pattern in patterns if pattern in code]
 
+
 def assert_clean_source_tree(root: Path = BTUBE_ROOT) -> None:
     offenders: dict[str, list[str]] = {}
     for path in sorted(root.rglob("*.py")):
@@ -22,12 +24,16 @@ def assert_clean_source_tree(root: Path = BTUBE_ROOT) -> None:
     if offenders:
         raise CalibrationError(f"source scan failed: {offenders}")
 
+
 def assert_workflow_security(path: Path = WORKFLOW_PATH) -> None:
     text = path.read_text(encoding="utf-8")
     required = (
         "permissions:\n  contents: read", "persist-credentials: false",
         "btube-v2-1-calibration-approved-*", "github.sha", "--require-hashes",
         "--only-binary=:all:",
+        "Enforce B-LOCAL binding gate before any result-bearing step",
+        "binding_to_final_lambda_start",
+        "B-LOCAL/B-ENTRY unpinned: workflow binding run prohibited",
     )
     if any(token not in text for token in required):
         raise CalibrationError("workflow security/authorization guard missing")
@@ -38,6 +44,7 @@ def assert_workflow_security(path: Path = WORKFLOW_PATH) -> None:
     if any(token in text for token in forbidden):
         raise CalibrationError("workflow contains forbidden write/dispatch capability")
 
+
 def assert_no_stale_inputs(out_dir: Path) -> None:
     if out_dir.exists():
         raise CalibrationError("fresh-only output path already exists")
@@ -47,6 +54,7 @@ def assert_no_stale_inputs(out_dir: Path) -> None:
     }:
         if (HERE / name).exists():
             raise CalibrationError(f"stale calibration input present: {name}")
+
 
 def assert_result_namespace(value: Any, path: str = "$") -> None:
     if isinstance(value, dict):
@@ -60,6 +68,7 @@ def assert_result_namespace(value: Any, path: str = "$") -> None:
     elif isinstance(value, str) and FORBIDDEN_RESULT_PREFIX in value:
         raise CalibrationError(f"{path}: production certification string forbidden")
 
+
 def _assert_repo_regular_file(path: Path, repo_root: Path = REPO_ROOT) -> Path:
     if path.is_symlink():
         raise CalibrationError("dependency path is a symlink")
@@ -72,6 +81,7 @@ def _assert_repo_regular_file(path: Path, repo_root: Path = REPO_ROOT) -> Path:
     if not resolved.is_file():
         raise CalibrationError("dependency is not a regular file")
     return resolved
+
 
 def load_production_kernel(repo_root: Path = REPO_ROOT):
     kernel_path = _assert_repo_regular_file(repo_root / KERNEL_RELATIVE, repo_root)
@@ -91,5 +101,6 @@ def load_production_kernel(repo_root: Path = REPO_ROOT):
         if function is None or getattr(function, "__module__", None) != module.__name__:
             raise CalibrationError("F and F_r must be supplied by the single pinned file")
     return module, kernel_path
+
 
 __all__ = [name for name in globals() if not name.startswith("__")]
