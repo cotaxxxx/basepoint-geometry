@@ -45,6 +45,27 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Enforce B-LOCAL binding gate before any result-bearing step
+        working-directory: CERTIFICATES/prolate/item2_circle/b_tube_v2_1
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          config = json.loads(Path("config.calibration.json").read_text(encoding="utf-8"))
+          dependency = config.get("blocal_dependency")
+          if (
+              config.get("binding_to_final_lambda_start") is not True
+              or not isinstance(dependency, dict)
+              or dependency.get("status") != "PINNED"
+          ):
+              raise SystemExit(
+                  "B-LOCAL/B-ENTRY unpinned: workflow binding run prohibited"
+              )
+          PY
+
       - name: Install hash-locked calibration dependency
         shell: bash
         run: |
