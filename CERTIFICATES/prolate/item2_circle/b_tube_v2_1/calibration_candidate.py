@@ -2,11 +2,12 @@
 from calibration_context import *
 from calibration_numeric import *
 
-def _candidate_run(*, config, kernel, arb_type, width, radius, candidate_index,
+
+def _candidate_run(*, config, kernel, arb_type, start, width, radius, candidate_index,
                    records, previous):
-    start = Rational.from_json(config["lambda_start"]).as_fraction()
+    start_fraction = start.as_fraction()
     end = Rational.from_json(config["lambda_end"]).as_fraction()
-    cells = _cell_partition(start, end, width.as_fraction(), config["max_cells"])
+    cells = _cell_partition(start_fraction, end, width.as_fraction(), config["max_cells"])
     tol = "1e-20"
     depth = config["max_subdivisions"]
     limit = config["evaluation_budget"]
@@ -151,5 +152,6 @@ def _candidate_run(*, config, kernel, arb_type, width, radius, candidate_index,
         "lambda_width": width.to_json(),
         "tube_radius": radius.to_json(),
     }
+
 
 __all__ = [name for name in globals() if not name.startswith("__")]
