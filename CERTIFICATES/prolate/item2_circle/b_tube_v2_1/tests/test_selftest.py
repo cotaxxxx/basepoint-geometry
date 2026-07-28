@@ -7,15 +7,19 @@ import unittest
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+import mock_kernel
 from b_tube_checker import check_bundle
 from b_tube_selftest_runner import build_bundle
+from checker_common import SELFTEST_MOCK_KERNEL_FILE_SHA256
 from numeric_schema import (
     Dyadic,
     DyadicInterval,
     Rational,
     arb_ball_to_exact_interval,
     canonical_json_bytes,
+    canonical_source_forbidden,
     parse_canonical_json_bytes,
+    sha256_hex,
 )
 from run_controls import run_all_controls
 
@@ -67,6 +71,16 @@ class NumericSchemaTests(unittest.TestCase):
         self.assertEqual(Rational.from_json({"p": "118", "q": "25"}), Rational(118, 25))
         with self.assertRaises(ValueError):
             Rational.from_json({"p": "236", "q": "50"})
+
+    def test_module_source_self_scan_and_kernel_pin(self):
+        offenders = {}
+        for path in sorted(ROOT.glob("*.py")):
+            hits = canonical_source_forbidden(path.read_text(encoding="utf-8"))
+            if hits:
+                offenders[path.name] = hits
+        self.assertEqual(offenders, {})
+        kernel_path = pathlib.Path(mock_kernel.__file__)
+        self.assertEqual(sha256_hex(kernel_path.read_bytes()), SELFTEST_MOCK_KERNEL_FILE_SHA256)
 
 
 class CheckerTests(unittest.TestCase):
