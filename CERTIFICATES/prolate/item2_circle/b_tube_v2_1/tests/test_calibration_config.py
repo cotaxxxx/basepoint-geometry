@@ -4,15 +4,13 @@ from pathlib import Path
 import sys
 import tempfile
 import unittest
-from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 import calibration
-from numeric_schema import D_ZERO, Dyadic, Rational, canonical_json_bytes, canonical_jsonl, chain_genesis, parse_canonical_json_bytes, parse_canonical_jsonl, sha256_hex
-from record_layout_contract import _partition
-from record_layout_verifier import verify_record_layout
+from numeric_schema import Rational, canonical_json_bytes
+
 
 class CalibrationConfigTests(unittest.TestCase):
     def _config(self):
@@ -23,13 +21,67 @@ class CalibrationConfigTests(unittest.TestCase):
         path.write_bytes(canonical_json_bytes(obj))
         return path
 
-    def test_valid_config_and_precision_equality(self):
+    def test_valid_diagnostic_profile_and_precision_equality(self):
         config, raw = calibration.load_config()
         self.assertEqual(config["checker_dps"], config["dps"])
-        self.assertEqual(
-            config["lambda_start_status"], calibration.LAMBDA_START_STATUS
-        )
+        self.assertEqual(config["mode"], "DIAGNOSTIC_ONLY")
+        self.assertIs(config["binding_to_final_lambda_start"], False)
+        self.assertNotIn("lambda_start", config)
         self.assertEqual(raw, canonical_json_bytes(config))
+
+    def test_diagnostic_start_is_exact_and_above_stage1_upper(self):
+        config = self._config()
+        start = Rational.from_json(config["diagnostic_lambda_start"])
+        self.assertEqual(start, Rational(21, 10))
+        self.assertLess(calibration.BLOCAL_STAGE1_UPPER, start)
+        self.assertLess(start, Rational.from_json(config["lambda_end"]))
+
+    def test_unpinned_blocal_tuple_is_explicit_and_null(self):
+        dependency = self._config()["blocal_dependency"]
+        self.assertEqual(dependency["status"], "UNPINNED")
+        for key in (
+            "artifact_zip_sha256", "certificate_sha256", "config_sha256",
+            "lambda_start", "machine_conclusion", "source_head",
+        ):
+            self.assertIsNone(dependency[key])
+
+    def test_false_blocal_tuple_promotion_rejected(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            config = self._config()
+            config["blocal_dependency"]["status"] = "PINNED"
+            with self.assertRaises(calibration.CalibrationError):
+                calibration.load_config(self._write(Path(temporary), config))
+
+    def test_nonnull_unpinned_blocal_field_rejected(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            config = self._config()
+            config["blocal_dependency"]["source_head"] = "0" * 40
+            with self.assertRaises(calibration.CalibrationError):
+                calibration.load_config(self._write(Path(temporary), config))
+
+    def test_binding_flag_must_remain_false(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            config = self._config()
+            config["binding_to_final_lambda_start"] = True
+            with self.assertRaises(calibration.CalibrationError):
+                calibration.load_config(self._write(Path(temporary), config))
+
+    def test_diagnostic_start_not_safely_above_boundary_rejected(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            config = self._config()
+            config["diagnostic_lambda_start"] = {"p": "206539", "q": "100000"}
+            with self.assertRaises(calibration.CalibrationError):
+                calibration.load_config(self._write(Path(temporary), config))
+
+    def test_blocal_dependency_gate_is_fail_closed(self):
+        with self.assertRaisesRegex(
+            calibration.CalibrationError, "B-LOCAL/B-ENTRY dependency is not pinned"
+        ):
+            calibration.require_blocal_dependency(self._config())
+
+    def test_diagnostic_gate_returns_nonbinding_start(self):
+        start = calibration.require_diagnostic_mode(self._config())
+        self.assertEqual(start, Rational(21, 10))
 
     def test_kernel_pin_mismatch(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -44,26 +96,6 @@ class CalibrationConfigTests(unittest.TestCase):
             config["cg_match_dependency"]["source_head"] = "0" * 40
             with self.assertRaises(calibration.CalibrationError):
                 calibration.load_config(self._write(Path(temporary), config))
-
-    def test_lambda_start_placeholder_is_not_frozen_blocal_input(self):
-        with tempfile.TemporaryDirectory() as temporary:
-            config = self._config()
-            config["lambda_start"] = {"p": "3", "q": "1"}
-            loaded, _ = calibration.load_config(self._write(Path(temporary), config))
-            self.assertEqual(loaded["lambda_start"], {"p": "3", "q": "1"})
-
-    def test_lambda_start_status_mismatch_rejected(self):
-        with tempfile.TemporaryDirectory() as temporary:
-            config = self._config()
-            config["lambda_start_status"] = "BLOCAL_PINNED"
-            with self.assertRaises(calibration.CalibrationError):
-                calibration.load_config(self._write(Path(temporary), config))
-
-    def test_blocal_dependency_gate_is_fail_closed(self):
-        with self.assertRaisesRegex(
-            calibration.CalibrationError, "B-LOCAL/B-ENTRY dependency is not pinned"
-        ):
-            calibration.require_blocal_dependency(self._config())
 
     def test_lambda_end_exact(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -101,3 +133,7 @@ class CalibrationConfigTests(unittest.TestCase):
             path.write_text(json.dumps(config, sort_keys=True, separators=(",", ":")))
             with self.assertRaises(ValueError):
                 calibration.load_config(path)
+
+
+if __name__ == "__main__":
+    unittest.main()
