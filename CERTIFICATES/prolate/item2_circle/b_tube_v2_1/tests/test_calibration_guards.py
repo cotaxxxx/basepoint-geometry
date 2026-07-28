@@ -1,18 +1,15 @@
 from __future__ import annotations
-import json
 from pathlib import Path
 import sys
 import tempfile
 import unittest
-from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 import calibration
-from numeric_schema import D_ZERO, Dyadic, Rational, canonical_json_bytes, canonical_jsonl, chain_genesis, parse_canonical_json_bytes, parse_canonical_jsonl, sha256_hex
-from record_layout_contract import _partition
-from record_layout_verifier import verify_record_layout
+from numeric_schema import parse_canonical_json_bytes, sha256_hex
+
 
 class CalibrationGuardTests(unittest.TestCase):
     def test_all_repository_python_sources_self_scan_clean(self):
@@ -51,7 +48,7 @@ class CalibrationGuardTests(unittest.TestCase):
             with self.assertRaises(calibration.CalibrationError):
                 calibration._assert_repo_regular_file(link, root)
 
-    def test_calibration_run_blocked_until_blocal_is_pinned(self):
+    def test_binding_calibration_run_blocked_until_blocal_is_pinned(self):
         with tempfile.TemporaryDirectory() as temporary:
             out = Path(temporary) / "run"
             with self.assertRaisesRegex(
@@ -60,12 +57,21 @@ class CalibrationGuardTests(unittest.TestCase):
                 calibration.run_calibration(out)
             self.assertFalse(out.exists())
 
+    def test_diagnostic_mode_is_explicit_and_nonbinding(self):
+        config = calibration.load_config()[0]
+        self.assertEqual(calibration.require_diagnostic_mode(config), calibration.Rational(21, 10))
+        self.assertIs(config["binding_to_final_lambda_start"], False)
+
     def test_affine_rule_is_frozen(self):
         config = calibration.load_config()[0]
         self.assertEqual(config["q_evaluation_rule"], "exact_endpoint_convex_hull_v1")
 
     def test_workflow_has_tag_head_guard_and_no_dispatch(self):
         calibration.assert_workflow_security()
+
+    def test_workflow_does_not_authorize_diagnostic_execution(self):
+        text = calibration.WORKFLOW_PATH.read_text(encoding="utf-8")
+        self.assertNotIn("--diagnostic", text)
 
     def test_result_merge_rejects_surviving_workflow(self):
         with self.assertRaises(calibration.CalibrationError):
@@ -81,3 +87,7 @@ class CalibrationGuardTests(unittest.TestCase):
         original = b"alpha"
         recorded = sha256_hex(original)
         self.assertNotEqual(sha256_hex(original + b"x"), recorded)
+
+
+if __name__ == "__main__":
+    unittest.main()
