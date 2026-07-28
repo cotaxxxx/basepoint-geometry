@@ -15,10 +15,11 @@ import sys
 from fractions import Fraction as Fr
 from pathlib import Path
 
-from flint import arb
+from flint import arb, ctx
 
 HERE = Path(__file__).resolve().parent
 CONFIG = json.loads((HERE / "config.json").read_bytes())
+ctx.dps = CONFIG["dps"]
 CONFIG_SHA = hashlib.sha256((HERE / "config.json").read_bytes()).hexdigest()
 REQUIRED_FIELDS = (
     "writer_id", "run_uuid", "process_id", "hostname", "phase",
