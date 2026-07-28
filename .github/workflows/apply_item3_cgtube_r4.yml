@@ -1,0 +1,65 @@
+name: Apply item3 C-G-TUBE r4 precision patch
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/apply_item3_cgtube_r4.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apply-item3-cgtube-r4
+  cancel-in-progress: false
+
+jobs:
+  apply-r4:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Apply exact checker precision fix
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path("CERTIFICATES/prolate/item3_center_connection/c_g_tube/c_g_tube_checker.py")
+          text = path.read_text()
+          old_import = "from flint import arb\n"
+          new_import = "from flint import arb, ctx\n"
+          old_config = 'CONFIG = json.loads((HERE / "config.json").read_bytes())\nCONFIG_SHA ='
+          new_config = 'CONFIG = json.loads((HERE / "config.json").read_bytes())\nctx.dps = CONFIG["dps"]\nCONFIG_SHA ='
+
+          if text.count(old_import) != 1:
+              raise SystemExit("unexpected flint import state")
+          if text.count(old_config) != 1:
+              raise SystemExit("unexpected CONFIG initialization state")
+
+          text = text.replace(old_import, new_import, 1)
+          text = text.replace(old_config, new_config, 1)
+          path.write_text(text)
+          PY
+
+          python3 -m py_compile CERTIFICATES/prolate/item3_center_connection/c_g_tube/c_g_tube_checker.py
+          grep -n '^from flint import arb, ctx$' CERTIFICATES/prolate/item3_center_connection/c_g_tube/c_g_tube_checker.py
+          grep -n '^ctx.dps = CONFIG\["dps"\]$' CERTIFICATES/prolate/item3_center_connection/c_g_tube/c_g_tube_checker.py
+
+      - name: Commit source fix and remove one-shot workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm .github/workflows/apply_item3_cgtube_r4.yml
+          git add CERTIFICATES/prolate/item3_center_connection/c_g_tube/c_g_tube_checker.py \
+                  .github/workflows/apply_item3_cgtube_r4.yml
+          git diff --cached --check
+          git commit -m "Align C-G-TUBE checker precision with config"
+          git push origin HEAD:main
