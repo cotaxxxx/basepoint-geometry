@@ -18,8 +18,11 @@ The later production B-TUBE node covers the exact parameter interval
    `K(J_i; lambda_i) strict-subset int(J_i)`;
 4. continuity of the unique joined roots.
 
-Real analyticity is deliberately absent from the machine conclusion. It remains
-a paper-level implicit-function lemma recorded in `logical_dependencies.json`.
+The machine conclusion must contain the explicit field `real_analytic: false`.
+The checker requires the complete conclusion object exactly as specified, so
+omission, `true`, or an unapproved extra field is rejected. Real analyticity
+remains a paper-level implicit-function lemma recorded in
+`logical_dependencies.json`, not a machine-certified conclusion.
 
 ## Canonical numeric representation
 
@@ -91,14 +94,23 @@ number similarity must not be used to substitute another artifact.
 
 The self-test pins:
 
+- imported `mock_kernel.py` file bytes by SHA256
+  `94cb10829302dea74741f019915f1d7ae225033f3cd70032c6ea19f1fd844062`;
 - C-G artifact ZIP SHA256
   `c0f624a955657f906c09c45b016a92f7bcdfa70d26c2508efeb3f06dd7d27381`;
 - C-G source head `1e0f671c91798b9c044c04c7a4224a21e1e67830`;
 - C-G config SHA256
   `bb6a3655d335240549cbe1f6eec2a9e68e00219eb9c1a2be65796e2e342a0d17`;
 - exact match parameter `118/25` and root bracket `(1/64,11/256)`;
-- equality of the B and C-G kernel SHA values;
+- equality of the B and C-G reference-kernel SHA values;
 - paper/interface lemma `F_G_FIXED_SLICE_IDENTITY_V1`.
+
+The imported mock-source SHA is checked from the actual file bytes through
+`mock_kernel.__file__`; it is not inferred from a label inside the module. The
+legacy exported name `MOCK_KERNEL_SHA256` is treated only as the reference
+F-kernel identity fixture and is aliased accordingly by the checker. The mock
+file itself remains byte-identical so that the independently audited
+`94cb1082...` source pin stays valid.
 
 Only after these identity pins pass does strict containment of the reconstructed
 B-side match Krawczyk image in the C-G bracket identify the two roots.
@@ -132,5 +144,6 @@ python b_tube_checker.py /tmp/btube-selftest
 8. Exact left and right parameter endpoints.
 9. CORE/DEFERRED and FULL separation.
 10. Both precision-boundary controls.
-11. C-G artifact, kernel identity, and F/G lemma pins.
+11. Imported kernel file bytes, C-G artifact identity, reference-kernel equality,
+    and the F/G lemma are pinned independently.
 12. Every negative control rejected; no workflow or GitHub-write implementation.
