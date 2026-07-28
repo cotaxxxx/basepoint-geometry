@@ -23,7 +23,12 @@ from b_tube_selftest_runner import (
     FG_LEMMA,
     Bundle,
 )
-from mock_kernel import F_interval, MOCK_KERNEL_SHA256, dFdr_interval
+import mock_kernel
+from mock_kernel import (
+    F_interval,
+    MOCK_KERNEL_SHA256 as REFERENCE_F_KERNEL_SHA256,
+    dFdr_interval,
+)
 from numeric_schema import (
     D_ZERO,
     Dyadic,
@@ -36,6 +41,8 @@ from numeric_schema import (
     parse_canonical_jsonl,
     sha256_hex,
 )
+
+SELFTEST_MOCK_KERNEL_FILE_SHA256 = "94cb10829302dea74741f019915f1d7ae225033f3cd70032c6ea19f1fd844062"
 
 
 class CheckError(RuntimeError):
@@ -60,6 +67,19 @@ def _fail(message: str) -> None:
 
 def _dependency_fail(message: str) -> None:
     raise DependencyError(message)
+
+
+def _check_imported_kernel_file() -> None:
+    source = getattr(mock_kernel, "__file__", None)
+    if not isinstance(source, str):
+        _dependency_fail("imported mock kernel has no source file")
+    path = Path(source)
+    try:
+        actual = sha256_hex(path.read_bytes())
+    except OSError as exc:
+        _dependency_fail(f"cannot read imported mock kernel bytes: {exc}")
+    if actual != SELFTEST_MOCK_KERNEL_FILE_SHA256:
+        _dependency_fail("imported mock kernel file SHA256 mismatch")
 
 
 def _exact_interval_equal(left: DyadicInterval, right: DyadicInterval, where: str) -> None:
@@ -92,6 +112,7 @@ def _parse_bundle(bundle: Bundle) -> tuple[dict[str, Any], dict[str, Any], list[
 
 
 def _check_config_and_dependencies(config: dict[str, Any], dependencies: dict[str, Any]) -> None:
+    _check_imported_kernel_file()
     if config.get("schema") != "btube-selftest-config-v2.1" or config.get("mode") != "SELFTEST_ONLY":
         _fail("unsupported self-test config")
     dps = config.get("dps")
@@ -114,8 +135,8 @@ def _check_config_and_dependencies(config: dict[str, Any], dependencies: dict[st
         "artifact_zip_sha256": CG_ARTIFACT_SHA256,
         "config_sha256": CG_CONFIG_SHA256,
         "source_head": CG_SOURCE_HEAD,
-        "b_kernel_sha256": MOCK_KERNEL_SHA256,
-        "cg_kernel_sha256": MOCK_KERNEL_SHA256,
+        "b_kernel_sha256": REFERENCE_F_KERNEL_SHA256,
+        "cg_kernel_sha256": REFERENCE_F_KERNEL_SHA256,
         "paper_lemma_id": FG_LEMMA,
     }
     for key, expected in required.items():
@@ -157,7 +178,6 @@ def _check_chain(
     if summary.get("chain_tip_sha256") != previous:
         _fail("summary chain tip mismatch")
     return parsed
-
 
 
 __all__ = [name for name in globals() if not name.startswith("__")]
