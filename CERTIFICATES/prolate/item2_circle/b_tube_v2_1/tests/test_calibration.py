@@ -1,22 +1,188 @@
 from __future__ import annotations
 
+import argparse
+from fractions import Fraction
 import json
 from pathlib import Path
+import sys
 import tempfile
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
-import sys
 sys.path.insert(0, str(ROOT))
 
 import calibration
 from numeric_schema import (
+    D_ZERO,
+    Dyadic,
+    Rational,
     canonical_json_bytes,
     canonical_jsonl,
     chain_genesis,
     parse_canonical_json_bytes,
+    parse_canonical_jsonl,
     sha256_hex,
 )
+
+
+def _partition(start: Fraction, end: Fraction, width: Fraction) -> list[tuple[Fraction, Fraction]]:
+    cells = []
+    left = start
+    while left < end:
+        right = min(left + width, end)
+        cells.append((left, right))
+        left = right
+    return cells
+
+
+def _positive_width(record: dict) -> bool:
+    try:
+        return D_ZERO < Dyadic.from_json(record["width"], "join.width")
+    except (KeyError, ValueError):
+        return False
+
+
+def verify_record_layout(out_dir: Path, *, source_head: str | None = None,
+                         update_checker: bool = False) -> dict:
+    """Independently verify every candidate/start/cell/JOIN/end record in order."""
+    config, _ = calibration.load_config(out_dir / "config.calibration.json")
+    parsed = parse_canonical_jsonl((out_dir / "calibration_records.jsonl").read_bytes())
+    records = [record for record, _ in parsed]
+
+    previous = chain_genesis(calibration.CHAIN_DOMAIN)
+    for record, raw in parsed:
+        if record.get("previous_record_sha256") != previous:
+            raise calibration.CalibrationError("layout verifier: record chain mismatch")
+        calibration.assert_result_namespace(record)
+        previous = sha256_hex(raw)
+
+    pairs = calibration._candidate_pairs(config)
+    start = Rational.from_json(config["lambda_start"]).as_fraction()
+    end = Rational.from_json(config["lambda_end"]).as_fraction()
+    cursor = 0
+    pass_flags = []
+
+    for candidate_index, (width, radius) in enumerate(pairs):
+        if cursor >= len(records):
+            raise calibration.CalibrationError("layout verifier: missing candidate_start")
+        candidate_start = records[cursor]
+        cursor += 1
+        expected_start = {
+            "candidate_index": candidate_index,
+            "lambda_width": width.to_json(),
+            "record_type": "candidate_start",
+            "tube_radius": radius.to_json(),
+        }
+        for key, value in expected_start.items():
+            if candidate_start.get(key) != value:
+                raise calibration.CalibrationError(
+                    f"layout verifier: candidate_start mismatch at {candidate_index}"
+                )
+
+        cells = _partition(start, end, width.as_fraction())
+        cell_records = []
+        for cell_index, (left, right) in enumerate(cells):
+            if cursor >= len(records):
+                raise calibration.CalibrationError("layout verifier: missing cell record")
+            record = records[cursor]
+            cursor += 1
+            if record.get("record_type") != "cell":
+                raise calibration.CalibrationError("layout verifier: expected cell record")
+            if record.get("candidate_index") != candidate_index or record.get("cell_index") != cell_index:
+                raise calibration.CalibrationError("layout verifier: cell index mismatch")
+            expected_interval = {
+                "lo": Rational.from_fraction(left).to_json(),
+                "hi": Rational.from_fraction(right).to_json(),
+            }
+            if record.get("lambda_interval") != expected_interval:
+                raise calibration.CalibrationError("layout verifier: cell coverage mismatch")
+            if not isinstance(record.get("passed"), bool):
+                raise calibration.CalibrationError("layout verifier: cell passed must be bool")
+            cell_records.append(record)
+
+        join_records = []
+        for join_index in range(max(len(cells) - 1, 0)):
+            if cursor >= len(records):
+                raise calibration.CalibrationError("layout verifier: missing JOIN record")
+            record = records[cursor]
+            cursor += 1
+            if record.get("record_type") != "join":
+                raise calibration.CalibrationError("layout verifier: expected JOIN record")
+            if record.get("candidate_index") != candidate_index or record.get("join_index") != join_index:
+                raise calibration.CalibrationError("layout verifier: JOIN index mismatch")
+            join_records.append(record)
+
+        if cursor >= len(records):
+            raise calibration.CalibrationError("layout verifier: missing candidate_end")
+        candidate_end = records[cursor]
+        cursor += 1
+        if candidate_end.get("record_type") != "candidate_end":
+            raise calibration.CalibrationError("layout verifier: expected candidate_end")
+        if candidate_end.get("candidate_index") != candidate_index:
+            raise calibration.CalibrationError("layout verifier: candidate_end index mismatch")
+
+        cell_pass_count = sum(record["passed"] for record in cell_records)
+        joins_pass = all(record.get("failure_reason") is None and _positive_width(record)
+                         for record in join_records)
+        expected_pass = cell_pass_count == len(cell_records) and joins_pass
+        final_evaluation_count = cell_records[-1].get("evaluation_count", 0) if cell_records else 0
+        expected_end = {
+            "cells_attempted": len(cell_records),
+            "cells_passed": cell_pass_count,
+            "evaluation_count": final_evaluation_count,
+            "joins_passed": joins_pass,
+            "passed": expected_pass,
+        }
+        for key, value in expected_end.items():
+            if candidate_end.get(key) != value:
+                raise calibration.CalibrationError(
+                    f"layout verifier: candidate_end {key} mismatch at {candidate_index}"
+                )
+        pass_flags.append(expected_pass)
+
+    if cursor != len(records):
+        raise calibration.CalibrationError("layout verifier: extra record after final candidate")
+
+    summary = parse_canonical_json_bytes(
+        (out_dir / "CALIBRATION_SUMMARY.json").read_bytes(), allow_display=False
+    )
+    calibration.assert_result_namespace(summary)
+    if summary.get("record_count") != len(records) or summary.get("chain_tip") != previous:
+        raise calibration.CalibrationError("layout verifier: summary chain/count mismatch")
+    if summary.get("candidate_count") != len(pairs):
+        raise calibration.CalibrationError("layout verifier: summary candidate count mismatch")
+    first = next((index for index, passed in enumerate(pass_flags) if passed), None)
+    recommendation = None
+    if first is not None:
+        width, radius = pairs[first]
+        recommendation = {
+            "candidate_index": first,
+            "lambda_width": width.to_json(),
+            "tube_radius": radius.to_json(),
+        }
+    expected_state = "CALIBRATION_COMPLETE" if recommendation is not None else "CALIBRATION_INCOMPLETE"
+    if summary.get("recommendation") != recommendation or summary.get("state") != expected_state:
+        raise calibration.CalibrationError("layout verifier: recommendation/state mismatch")
+
+    if source_head is not None:
+        checker_path = out_dir / "CHECKER_REPORT.json"
+        checker = parse_canonical_json_bytes(checker_path.read_bytes(), allow_display=False)
+        if checker.get("source_head") != source_head or checker.get("verifier") != "PASS":
+            raise calibration.CalibrationError("layout verifier: checker/source-head mismatch")
+        if update_checker:
+            checker["record_layout_verifier"] = "PASS"
+            checker_path.write_bytes(canonical_json_bytes(checker))
+    return summary
+
+
+def _rechain(records: list[dict]) -> tuple[list[dict], str]:
+    chained = []
+    previous = chain_genesis(calibration.CHAIN_DOMAIN)
+    for original in records:
+        body = dict(original)
+        body.pop("previous_record_sha256", None)
+        previous = calibration._append_record(chained, previous, body)
+    return chained, previous
 
 
 class CalibrationConfigTests(unittest.TestCase):
@@ -157,22 +323,48 @@ class CalibrationRecordTests(unittest.TestCase):
         config, config_raw = calibration.load_config()
         pairs = calibration._candidate_pairs(config)
         self.assertEqual(len(passes), len(pairs))
+        start = Rational.from_json(config["lambda_start"]).as_fraction()
+        end = Rational.from_json(config["lambda_end"]).as_fraction()
         records = []
         previous = chain_genesis(calibration.CHAIN_DOMAIN)
-        for index, passed in enumerate(passes):
-            previous = calibration._append_record(
-                records,
-                previous,
-                {
+        for index, (passed, pair) in enumerate(zip(passes, pairs)):
+            width, radius = pair
+            previous = calibration._append_record(records, previous, {
+                "candidate_index": index,
+                "lambda_width": width.to_json(),
+                "record_type": "candidate_start",
+                "tube_radius": radius.to_json(),
+            })
+            cells = _partition(start, end, width.as_fraction())
+            for cell_index, (left, right) in enumerate(cells):
+                previous = calibration._append_record(records, previous, {
                     "candidate_index": index,
-                    "cells_attempted": 1,
-                    "cells_passed": 1 if passed else 0,
-                    "evaluation_count": 1,
-                    "joins_passed": passed,
+                    "cell_index": cell_index,
+                    "evaluation_count": 3 * (cell_index + 1),
+                    "lambda_interval": {
+                        "lo": Rational.from_fraction(left).to_json(),
+                        "hi": Rational.from_fraction(right).to_json(),
+                    },
                     "passed": passed,
-                    "record_type": "candidate_end",
-                },
-            )
+                    "record_type": "cell",
+                })
+            for join_index in range(max(len(cells) - 1, 0)):
+                previous = calibration._append_record(records, previous, {
+                    "candidate_index": index,
+                    "failure_reason": None,
+                    "join_index": join_index,
+                    "record_type": "join",
+                    "width": Dyadic(1, 20).to_json(),
+                })
+            previous = calibration._append_record(records, previous, {
+                "candidate_index": index,
+                "cells_attempted": len(cells),
+                "cells_passed": len(cells) if passed else 0,
+                "evaluation_count": 3 * len(cells),
+                "joins_passed": True,
+                "passed": passed,
+                "record_type": "candidate_end",
+            })
         first = next((index for index, passed in enumerate(passes) if passed), None)
         recommendation = None
         if first is not None:
@@ -206,6 +398,7 @@ class CalibrationRecordTests(unittest.TestCase):
             self._write_case(out, passes)
             _, summary, _ = calibration._verify_records(out)
             self.assertEqual(summary["recommendation"]["candidate_index"], 3)
+            self.assertEqual(verify_record_layout(out)["recommendation"]["candidate_index"], 3)
 
     def test_incomplete_positive_control_has_no_recommendation(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -215,16 +408,28 @@ class CalibrationRecordTests(unittest.TestCase):
             _, summary, _ = calibration._verify_records(out)
             self.assertEqual(summary["state"], "CALIBRATION_INCOMPLETE")
             self.assertIsNone(summary["recommendation"])
+            self.assertEqual(verify_record_layout(out)["state"], "CALIBRATION_INCOMPLETE")
 
-    def test_missing_attempted_candidate_rejected(self):
+    def test_missing_attempted_cell_rejected_after_rechain(self):
         with tempfile.TemporaryDirectory() as temporary:
             out = Path(temporary) / "case"
             count = len(calibration._candidate_pairs(calibration.load_config()[0]))
             self._write_case(out, [False] * count)
-            raw = (out / "calibration_records.jsonl").read_bytes().split(b"\n")
-            (out / "calibration_records.jsonl").write_bytes(b"\n".join(raw[:-1]))
+            parsed = parse_canonical_jsonl((out / "calibration_records.jsonl").read_bytes())
+            records = [record for record, _ in parsed]
+            missing = next(
+                index for index, record in enumerate(records)
+                if record.get("record_type") == "cell" and record.get("candidate_index") == 0
+            )
+            del records[missing]
+            chained, tip = _rechain(records)
+            (out / "calibration_records.jsonl").write_bytes(canonical_jsonl(chained))
+            summary = parse_canonical_json_bytes((out / "CALIBRATION_SUMMARY.json").read_bytes())
+            summary["record_count"] = len(chained)
+            summary["chain_tip"] = tip
+            (out / "CALIBRATION_SUMMARY.json").write_bytes(canonical_json_bytes(summary))
             with self.assertRaises(calibration.CalibrationError):
-                calibration._verify_records(out)
+                verify_record_layout(out)
 
     def test_record_chain_tamper_rejected(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -251,5 +456,18 @@ class CalibrationRecordTests(unittest.TestCase):
                 calibration._verify_records(out)
 
 
-if __name__ == "__main__":
+def _main() -> int:
+    if len(sys.argv) > 1 and sys.argv[1] == "verify-output":
+        parser = argparse.ArgumentParser()
+        parser.add_argument("verify-output")
+        parser.add_argument("--out", type=Path, required=True)
+        parser.add_argument("--source-head", required=True)
+        args = parser.parse_args()
+        verify_record_layout(args.out, source_head=args.source_head, update_checker=True)
+        return 0
     unittest.main()
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(_main())
