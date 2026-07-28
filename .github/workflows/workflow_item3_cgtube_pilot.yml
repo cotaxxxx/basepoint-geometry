@@ -11,7 +11,7 @@ permissions:
   contents: read
 
 env:
-  EXPECTED_SOURCE_HEAD: 5b352a7b9152873802d6c3aa7d58018e80674b34
+  EXPECTED_SOURCE_HEAD: c05affd36a2bbef4d9e6bea2cbe594e493887a76
   EXPECTED_CONFIG_SHA256: bb6a3655d335240549cbe1f6eec2a9e68e00219eb9c1a2be65796e2e342a0d17
   EXPECTED_F_SHA256: 77e7a93c594ba66ac7d98df29ec3c03107b0c63962a5aa60f8503559082c10ac
   EXPECTED_FRR_SHA256: 223b7007c9e077b204612fb1ff669b4147a2aa0f9c941cc8e83e81efd975e757
@@ -100,7 +100,7 @@ jobs:
       - name: Identity crosschecks [0 refined identity, 18 adaptive Taylor, 37, 55]
         run: python3 c_g_tube_pilot.py --phase spots
 
-      - name: Ten negative controls (checker fail-closed)
+      - name: Ten controls plus Taylor serialization shrink control
         run: |
           set -euo pipefail
           python3 run_controls.py
@@ -113,6 +113,12 @@ jobs:
           if obj.get("verdict") != "PASS" or len(controls) != 10:
               sys.exit(1)
           if not all(item.get("ok") is True for item in controls.values()):
+              sys.exit(1)
+          guard = obj.get("neg_reconstructed_ball_shrink", {})
+          subcases = guard.get("subcases", {})
+          if guard.get("ok") is not True:
+              sys.exit(1)
+          if subcases != {"cell_taylor": 1, "spot_taylor": 1}:
               sys.exit(1)
           PY
 
