@@ -1,6 +1,6 @@
 # B-TUBE v2.1 — calibration-only workflow design
 
-Status: **DESIGN APPROVED; IMPLEMENTATION PRESENT; RUN NOT AUTHORIZED**
+Status: **DESIGN APPROVED; IMPLEMENTATION PRESENT; B-LOCAL DEPENDENCY UNPINNED; RUN BLOCKED**
 
 Design commit: `4a1b12a2a1e4f89712c33bc554646b44190f6f5b`
 
@@ -23,8 +23,12 @@ The only permitted terminal states are:
 Every `CERTIFIED_*` value and every production verdict field is forbidden in
 calibration output.
 
-`lambda_start` is the fixed exact-rational B-LOCAL input. Calibration must not
-discover, optimize, move, or round it. The terminal endpoint is exactly `118/25`.
+The current `lambda_start = 2/1` is a nonbinding self-test-derived placeholder,
+not a B-LOCAL result. Its status is explicitly
+`UNBOUND_BLOCAL_PLACEHOLDER`. Calibration execution, pre-verification, delivery,
+and final verification are fail-closed until a later audited commit replaces it
+with the exact B-LOCAL/B-ENTRY output and pins the complete dependency tuple. The
+terminal endpoint remains exactly `118/25`.
 
 ## 2. Source and dependency boundary
 
@@ -48,6 +52,12 @@ from any other module or file is forbidden.** The implementation verifies that
 both `F_arb` and `dFdr_arb` are defined by the single loaded module. This closes
 carryover G1 and prevents a later separate derivative module from escaping the pin.
 
+B-LOCAL/B-ENTRY is now the critical-path dependency. Its design must consume the
+Stage-1 certificate as a pinned proof node, including the certified interval for
+`lambda_boundary`, the certificate SHA-256, source/config identities, and an exact
+machine conclusion. The present implementation intentionally contains no schema by
+which an unreviewed value can be promoted to `BLOCAL_PINNED`.
+
 The C-G terminal identity tuple remains frozen:
 
 - artifact ZIP SHA-256 `c0f624a955657f906c09c45b016a92f7bcdfa70d26c2508efeb3f06dd7d27381`;
@@ -66,7 +76,8 @@ conclusion.
 `config.calibration.json` is canonical JSON with no trailing newline, duplicate
 keys, floating JSON numbers, BOM, or CR/LF. Its normative fields are limited to:
 
-- exact `lambda_start` and `lambda_end`;
+- exact placeholder `lambda_start`, its explicit unbound status, and exact
+  `lambda_end`;
 - ordered unique dyadic parameter widths;
 - ordered unique dyadic tube radii;
 - predictor refresh cadence;
@@ -78,17 +89,18 @@ keys, floating JSON numbers, BOM, or CR/LF. Its normative fields are limited to:
 
 Candidate order is normative. The cross-product order is parameter-width order
 followed by tube-radius order. The first passing pair is the only permitted
-recommendation. Environment variables cannot replace normative configuration
-values.
+recommendation after B-LOCAL is pinned. Environment variables cannot replace
+normative configuration values.
 
 Calibration is fresh-only. Resume files, checkpoints, caches, prior output, and
 pre-existing output directories are rejected.
 
 ## 4. Evaluation protocol
 
-For each candidate pair the runner covers the entire fixed parameter interval in
-deterministic exact-rational cells. It records every attempted cell, including
-failures.
+Only after the B-LOCAL/B-ENTRY dependency is pinned may the runner cover the
+resulting fixed parameter interval in deterministic exact-rational cells. The
+current placeholder cannot support any coverage statement or calibration artifact.
+For an authorized run, every attempted cell, including failures, is recorded.
 
 Predictor endpoint values are exact dyadics. The only affine rule is
 `exact_endpoint_convex_hull_v1`; midpoint substitution for correlated interval
@@ -124,12 +136,14 @@ The verifier:
    audited canonical-byte routines;
 2. rejects duplicate keys, floats, BOM, CR, final JSONL LF, and noncanonical bytes;
 3. verifies the chain over canonical record-object bytes, excluding JSONL linefeeds;
-4. verifies candidate completeness and recomputes the deterministic first passing
+4. reconstructs width-major/radius-minor candidate order locally from config by
+   explicit nested loops, without importing the runner's candidate-pair helper;
+5. verifies candidate completeness and recomputes the deterministic first passing
    recommendation;
-5. independently re-hashes the actual production F/F_r file bytes;
-6. rejects every `CERTIFIED_*` string and production verdict field;
-7. requires `machine_conclusion` to be exactly `{"real_analytic":false}`;
-8. verifies exact receipt, archive, manifest, workflow, config, source-head, and
+6. independently re-hashes the actual production F/F_r file bytes;
+7. rejects every `CERTIFIED_*` string and production verdict field;
+8. requires `machine_conclusion` to be exactly `{"real_analytic":false}`;
+9. verifies exact receipt, archive, manifest, workflow, config, source-head, and
    kernel-byte consistency.
 
 Runner success alone cannot authorize upload.
@@ -166,8 +180,11 @@ on:
 ```
 
 No tag is created by the implementation commit, so implementation publication does
-not start a run. After implementation audit and separate run approval, authorization
-consists of creating the exact tag
+not start a run. While `lambda_start_status` is
+`UNBOUND_BLOCAL_PLACEHOLDER`, no approval tag is valid and every result-bearing
+entry point stops before numerical evaluation or artifact creation. After the
+B-LOCAL dependency is pinned, the replacement implementation is audited, and a
+separate run approval is issued, authorization consists of creating the exact tag
 
 `btube-v2-1-calibration-approved-<40-character audited implementation SHA>`
 
@@ -200,25 +217,27 @@ The implementation contains fail-closed controls for:
 2. path escape or symlink substitution;
 3. alternate-module F_r supply;
 4. any C-G tuple mismatch;
-5. changed `lambda_start`;
-6. terminal endpoint not exactly `118/25`;
-7. `checker_dps < dps`;
-8. duplicate or unordered candidates;
-9. floating or noncanonical JSON;
-10. forbidden affine/midpoint path;
-11. missing attempted candidate/cell record;
-12. non-deterministic recommendation;
-13. any `CERTIFIED_*` output or production verdict field;
-14. payload mutation after manifest creation;
-15. archive mutation after receipt creation;
-16. noncanonical or inconsistent receipt;
-17. stale resume/cache/output input;
-18. write-capable or credential-persisting workflow;
-19. run tag/head mismatch;
-20. executable workflow surviving the result merge.
+5. attempted execution while B-LOCAL/B-ENTRY remains unpinned;
+6. false promotion of the placeholder status to a pinned B-LOCAL input;
+7. terminal endpoint not exactly `118/25`;
+8. `checker_dps < dps`;
+9. duplicate or unordered candidates;
+10. floating or noncanonical JSON;
+11. forbidden affine/midpoint path;
+12. missing attempted candidate/cell record;
+13. non-deterministic recommendation;
+14. any `CERTIFIED_*` output or production verdict field;
+15. payload mutation after manifest creation;
+16. archive mutation after receipt creation;
+17. noncanonical or inconsistent receipt;
+18. stale resume/cache/output input;
+19. write-capable or credential-persisting workflow;
+20. run tag/head mismatch;
+21. executable workflow surviving the result merge.
 
-Positive controls include precision equality and a valid
-`CALIBRATION_INCOMPLETE` artifact with no recommendation.
+Positive controls include precision equality, an explicit fail-closed B-LOCAL gate,
+and synthetic record-layout fixtures. No current fixture is evidence for parameter
+coverage or a binding calibration recommendation.
 
 ## 9. Whole-source self-scan and static-audit gate
 
@@ -228,6 +247,7 @@ constructs its forbidden spellings by adjacent string fragments so the scanner d
 not detect its own guard vocabulary. This restores the full `.py` self-scan and
 closes carryover G3.
 
-This implementation commit authorizes static audit only. It does not authorize
+This implementation commit authorizes static audit only. B-LOCAL/B-ENTRY design,
+implementation, and certification are the critical path. It does not authorize
 creation of the approval tag, a calibration run, a production configuration, or a
 production B-TUBE run.
