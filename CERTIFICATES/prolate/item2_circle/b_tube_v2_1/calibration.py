@@ -16,6 +16,7 @@ def _main() -> int:
     subparsers = parser.add_subparsers(dest="command", required=True)
     run_parser = subparsers.add_parser("run")
     run_parser.add_argument("--out", type=Path, required=True)
+    run_parser.add_argument("--diagnostic", action="store_true")
     verify_parser = subparsers.add_parser("verify")
     verify_parser.add_argument("--phase", choices=("pre", "final"), required=True)
     verify_parser.add_argument("--source-head", required=True)
@@ -29,7 +30,7 @@ def _main() -> int:
     subparsers.add_parser("verify-config")
     args = parser.parse_args()
     if args.command == "run":
-        return run_calibration(args.out)
+        return run_calibration(args.out, diagnostic=args.diagnostic)
     if args.command == "deliver":
         return deliver(args.out, args.delivery, args.source_head)
     if args.command == "verify-config":
