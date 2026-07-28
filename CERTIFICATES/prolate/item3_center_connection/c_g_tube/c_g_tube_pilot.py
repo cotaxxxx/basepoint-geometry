@@ -145,6 +145,40 @@ def cert_sign(value: arb) -> int:
     return 0
 
 
+def text_lower(text: str) -> arb:
+    """Parse a stored Arb string and return its directed lower endpoint."""
+    return arb(arb(text).lower())
+
+
+def text_upper(text: str) -> arb:
+    """Parse a stored Arb string and return its directed upper endpoint."""
+    return arb(arb(text).upper())
+
+
+def reconstruct_taylor_bounds(a: Fr, b: Fr, gpm: list[str],
+                              c_text: str) -> tuple[arb, arb]:
+    """Reconstruct exactly from the strings consumed by the checker."""
+    radius = (b - a) / 2
+    C = arb(c_text)
+    lower = arb((text_lower(gpm[0]) - C * qe(radius)).lower())
+    upper = arb((text_upper(gpm[1]) + C * qe(radius)).upper())
+    return lower, upper
+
+
+def outward_pair(lower: arb, upper: arb) -> tuple[list[str], arb, arb]:
+    """Serialize an interval with a verified outward round-trip guard."""
+    guard_exponent = max(12, CONFIG["dps"] - 8)
+    guard = arb(f"1e-{guard_exponent}")
+    for _ in range(12):
+        lo_text = str(arb((lower - guard).lower()))
+        hi_text = str(arb((upper + guard).upper()))
+        stored_lo, stored_hi = text_lower(lo_text), text_upper(hi_text)
+        if not bool(stored_lo > lower) and not bool(stored_hi < upper):
+            return [lo_text, hi_text], stored_lo, stored_hi
+        guard = guard * 10
+    raise RuntimeError("could not serialize an outward Taylor enclosure")
+
+
 def taylor_gprime(kern: Kern, m: Fr, radius: Fr, lam: arb):
     Fm = kern.F(qe(m), CONFIG["tol_point"], lam)
     Frm = kern.Fr(qe(m), CONFIG["tol_point"], lam)
@@ -164,15 +198,19 @@ def taylor_gprime(kern: Kern, m: Fr, radius: Fr, lam: arb):
 
 def taylor_record(kern: Kern, a: Fr, b: Fr, depth: int, lam: arb) -> dict:
     m, radius = (a + b) / 2, (b - a) / 2
-    lower, upper, C, Gpm = taylor_gprime(kern, m, radius, lam)
+    _, _, C, Gpm = taylor_gprime(kern, m, radius, lam)
+    gpm_text = [str(Gpm.lower()), str(Gpm.upper())]
+    c_text = str(C)
+    lower, upper = reconstruct_taylor_bounds(a, b, gpm_text, c_text)
+    stored_ball, _, _ = outward_pair(lower, upper)
     return {
         "method": "taylor",
         "a": str(a),
         "b": str(b),
         "depth": depth,
-        "G_prime_m": [str(Gpm.lower()), str(Gpm.upper())],
-        "C_bound": str(C),
-        "reconstructed_ball": [str(lower), str(upper)],
+        "G_prime_m": gpm_text,
+        "C_bound": c_text,
+        "reconstructed_ball": stored_ball,
         "negative": bool(upper < 0),
     }
 
@@ -194,16 +232,15 @@ def adaptive_taylor(kern: Kern, a: Fr, b: Fr, lam: arb,
         else:
             unresolved.append(rec)
     if leaves:
-        lowers = [arb(rec["reconstructed_ball"][0]) for rec in leaves]
-        uppers = [arb(rec["reconstructed_ball"][1]) for rec in leaves]
-        hull_lo = lowers[0]
-        hull_hi = uppers[0]
-        for value in lowers[1:]:
-            if bool(value < hull_lo):
-                hull_lo = value
-        for value in uppers[1:]:
-            if bool(value > hull_hi):
-                hull_hi = value
+        bounds = [reconstruct_taylor_bounds(
+            Fr(rec["a"]), Fr(rec["b"]), rec["G_prime_m"], rec["C_bound"])
+            for rec in leaves]
+        hull_lo, hull_hi = bounds[0]
+        for lower, upper in bounds[1:]:
+            if bool(lower < hull_lo):
+                hull_lo = lower
+            if bool(upper > hull_hi):
+                hull_hi = upper
         return leaves, unresolved, arb(hull_lo.lower()), arb(hull_hi.upper())
     return leaves, unresolved, arb(0), arb(0)
 
@@ -395,25 +432,27 @@ def main() -> int:
             leaves, unresolved, cross_lo, cross_hi = adaptive_taylor(
                 kern, a, b, lam, max_depth)
             tiled = exact_tiling(leaves, a, b)
+            cross_summary, _, _ = outward_pair(cross_lo, cross_hi)
             payload.update({
                 "crosscheck_method": cross_method,
                 "cross_max_depth": max_depth,
                 "cross_leaves": leaves,
                 "cross_terminal_unresolved": unresolved,
                 "cross_tiling_complete": tiled,
-                "Gprime_cross_ball": [str(cross_lo), str(cross_hi)],
+                "Gprime_cross_ball": cross_summary,
                 "cross_negative": bool(tiled and not unresolved and
                                        leaves and cross_hi < 0),
             })
         else:
             cross_method = "taylor"
             rec = taylor_record(kern, a, b, 0, lam)
-            cross_lo = arb(rec["reconstructed_ball"][0])
-            cross_hi = arb(rec["reconstructed_ball"][1])
+            cross_lo, cross_hi = reconstruct_taylor_bounds(
+                a, b, rec["G_prime_m"], rec["C_bound"])
+            cross_summary, _, _ = outward_pair(cross_lo, cross_hi)
             payload.update({
                 "crosscheck_method": cross_method,
                 "cross_leaf": rec,
-                "Gprime_cross_ball": [str(cross_lo), str(cross_hi)],
+                "Gprime_cross_ball": cross_summary,
                 "cross_negative": bool(cross_hi < 0),
             })
 
