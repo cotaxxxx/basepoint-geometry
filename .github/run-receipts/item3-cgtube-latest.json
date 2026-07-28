@@ -1,0 +1,17 @@
+{
+  "certified_artifact_digest": null,
+  "checker_outcome": "pending",
+  "config_sha256": "bb6a3655d335240549cbe1f6eec2a9e68e00219eb9c1a2be65796e2e342a0d17",
+  "diagnostic_artifact_digest": null,
+  "job_status": "running",
+  "recorded_at": "2026-07-28T06:17:29.555067+00:00",
+  "run_attempt": 1,
+  "run_id": 30334306238,
+  "run_url": "https://github.com/cotaxxxx/geometric-dual-topology/actions/runs/30334306238",
+  "schema": "item3-cgtube-run-receipt-v1",
+  "source_head": "1e0f671c91798b9c044c04c7a4224a21e1e67830",
+  "status": "running",
+  "trigger_ref": "refs/heads/main",
+  "trigger_sha": "87c68a1f4403166daa091e3c24f7f007102a5615",
+  "workflow": "workflow_item3_cgtube_pilot.yml"
+}
