@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/btube-selftest-config-v2.1.schema.json",
+  "title": "B-TUBE v2.1 self-test configuration",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "mode",
+    "dps",
+    "checker_dps",
+    "q_evaluation_rule",
+    "lambda_start",
+    "lambda_match",
+    "chain_genesis_domain",
+    "chain_genesis_sha256",
+    "boundary_dependency_sha256",
+    "cg_match_dependency"
+  ],
+  "properties": {
+    "schema": {"const": "btube-selftest-config-v2.1"},
+    "mode": {"const": "SELFTEST_ONLY"},
+    "dps": {"type": "integer", "minimum": 1},
+    "checker_dps": {"type": "integer", "minimum": 1},
+    "q_evaluation_rule": {"const": "exact_endpoint_convex_hull_v1"},
+    "lambda_start": {"$ref": "#/$defs/rational"},
+    "lambda_match": {"$ref": "#/$defs/rational"},
+    "chain_genesis_domain": {"const": "B-TUBE-RECORD-CHAIN-GENESIS-v1"},
+    "chain_genesis_sha256": {"$ref": "#/$defs/sha256"},
+    "boundary_dependency_sha256": {"$ref": "#/$defs/sha256"},
+    "cg_match_dependency": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifact_zip_sha256",
+        "config_sha256",
+        "source_head",
+        "run_id",
+        "artifact_id",
+        "artifact_name",
+        "lambda",
+        "root_interval",
+        "b_kernel_sha256",
+        "cg_kernel_sha256",
+        "paper_lemma_id"
+      ],
+      "properties": {
+        "artifact_zip_sha256": {"const": "c0f624a955657f906c09c45b016a92f7bcdfa70d26c2508efeb3f06dd7d27381"},
+        "config_sha256": {"const": "bb6a3655d335240549cbe1f6eec2a9e68e00219eb9c1a2be65796e2e342a0d17"},
+        "source_head": {"const": "1e0f671c91798b9c044c04c7a4224a21e1e67830"},
+        "run_id": {"const": 30334858060},
+        "artifact_id": {"const": 8680673043},
+        "artifact_name": {"const": "item3-cgtube-pilot-certified-30334858060"},
+        "lambda": {"$ref": "#/$defs/rational"},
+        "root_interval": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["lo", "hi"],
+          "properties": {
+            "lo": {"$ref": "#/$defs/rational"},
+            "hi": {"$ref": "#/$defs/rational"}
+          }
+        },
+        "b_kernel_sha256": {"$ref": "#/$defs/sha256"},
+        "cg_kernel_sha256": {"$ref": "#/$defs/sha256"},
+        "paper_lemma_id": {"const": "F_G_FIXED_SLICE_IDENTITY_V1"}
+      }
+    }
+  },
+  "$defs": {
+    "integerString": {"type": "string", "pattern": "^-?(0|[1-9][0-9]*)$"},
+    "positiveIntegerString": {"type": "string", "pattern": "^[1-9][0-9]*$"},
+    "rational": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["p", "q"],
+      "properties": {
+        "p": {"$ref": "#/$defs/integerString"},
+        "q": {"$ref": "#/$defs/positiveIntegerString"}
+      }
+    },
+    "dyadic": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["m", "e"],
+      "properties": {
+        "m": {"$ref": "#/$defs/integerString"},
+        "e": {"type": "integer", "minimum": 0}
+      }
+    },
+    "dyadicInterval": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["lo", "hi"],
+      "properties": {
+        "lo": {"$ref": "#/$defs/dyadic"},
+        "hi": {"$ref": "#/$defs/dyadic"}
+      }
+    },
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}
