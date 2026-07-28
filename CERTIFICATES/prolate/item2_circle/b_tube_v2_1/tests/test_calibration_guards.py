@@ -69,6 +69,18 @@ class CalibrationGuardTests(unittest.TestCase):
     def test_workflow_has_tag_head_guard_and_no_dispatch(self):
         calibration.assert_workflow_security()
 
+    def test_workflow_has_independent_unpinned_binding_gate(self):
+        text = calibration.WORKFLOW_PATH.read_text(encoding="utf-8")
+        marker = "B-LOCAL/B-ENTRY unpinned: workflow binding run prohibited"
+        self.assertIn(marker, text)
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "workflow.yml"
+            path.write_text(text.replace(marker, "binding gate removed"), encoding="utf-8")
+            with self.assertRaisesRegex(
+                calibration.CalibrationError, "workflow security/authorization guard missing"
+            ):
+                calibration.assert_workflow_security(path)
+
     def test_workflow_does_not_authorize_diagnostic_execution(self):
         text = calibration.WORKFLOW_PATH.read_text(encoding="utf-8")
         self.assertNotIn("--diagnostic", text)
