@@ -9,16 +9,59 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
 import calibration
-from numeric_schema import Rational, canonical_json_bytes, chain_genesis, parse_canonical_json_bytes, parse_canonical_jsonl, sha256_hex
-from record_layout_contract import _partition, _positive_width, candidate_pairs_from_config
+from numeric_schema import D_ZERO, Dyadic, Rational, canonical_json_bytes, chain_genesis, parse_canonical_json_bytes, parse_canonical_jsonl, sha256_hex
+from record_layout_contract import _partition, _positive_width
+
+
+def _layout_candidate_pairs(config: dict) -> list[tuple[Dyadic, Dyadic]]:
+    """Locally reconstruct width-major/radius-minor order from raw config fields."""
+    width_items = config.get("candidate_lambda_widths")
+    radius_items = config.get("candidate_tube_radii")
+    if not isinstance(width_items, list) or not width_items:
+        raise calibration.CalibrationError("layout verifier: width candidates missing")
+    if not isinstance(radius_items, list) or not radius_items:
+        raise calibration.CalibrationError("layout verifier: radius candidates missing")
+    widths = [
+        Dyadic.from_json(item, f"candidate_lambda_widths[{index}]")
+        for index, item in enumerate(width_items)
+    ]
+    radii = [
+        Dyadic.from_json(item, f"candidate_tube_radii[{index}]")
+        for index, item in enumerate(radius_items)
+    ]
+    for name, values in (("width", widths), ("radius", radii)):
+        if any(value <= D_ZERO for value in values):
+            raise calibration.CalibrationError(
+                f"layout verifier: {name} candidates must be positive"
+            )
+        if len(set(values)) != len(values):
+            raise calibration.CalibrationError(
+                f"layout verifier: duplicate {name} candidate"
+            )
+        if any(not values[index + 1] < values[index] for index in range(len(values) - 1)):
+            raise calibration.CalibrationError(
+                f"layout verifier: {name} candidates not strictly decreasing"
+            )
+    pairs = []
+    for width in widths:
+        for radius in radii:
+            pairs.append((width, radius))
+    return pairs
+
 
 def verify_record_layout(out_dir: Path, *, source_head: str | None = None,
                          update_checker: bool = False,
                          allow_unbound_fixture: bool = False) -> dict:
     """Independently verify every candidate/start/cell/JOIN/end record in order."""
     config, _ = calibration.load_config(out_dir / "config.calibration.json")
-    if not allow_unbound_fixture:
+    if allow_unbound_fixture:
+        start_rational = calibration.require_diagnostic_mode(config)
+    else:
         calibration.require_blocal_dependency(config)
+        start_rational = Rational.from_json(
+            config["blocal_dependency"]["lambda_start"],
+            "blocal_dependency.lambda_start",
+        )
     parsed = parse_canonical_jsonl((out_dir / "calibration_records.jsonl").read_bytes())
     records = [record for record, _ in parsed]
 
@@ -29,8 +72,8 @@ def verify_record_layout(out_dir: Path, *, source_head: str | None = None,
         calibration.assert_result_namespace(record)
         previous = sha256_hex(raw)
 
-    pairs = candidate_pairs_from_config(config)
-    start = Rational.from_json(config["lambda_start"]).as_fraction()
+    pairs = _layout_candidate_pairs(config)
+    start = start_rational.as_fraction()
     end = Rational.from_json(config["lambda_end"]).as_fraction()
     cursor = 0
     pass_flags = []
@@ -97,8 +140,9 @@ def verify_record_layout(out_dir: Path, *, source_head: str | None = None,
         cell_pass_count = sum(record["passed"] for record in cell_records)
         joins_pass = all(record.get("failure_reason") is None and _positive_width(record)
                          for record in join_records)
-        expected_pass = cell_pass_count == len(cell_records) and joins_pass
         final_evaluation_count = cell_records[-1].get("evaluation_count", 0) if cell_records else 0
+        expected_pass = (cell_pass_count == len(cell_records) and joins_pass
+                         and final_evaluation_count <= config["evaluation_budget"])
         expected_end = {
             "cells_attempted": len(cell_records),
             "cells_passed": cell_pass_count,
@@ -125,17 +169,29 @@ def verify_record_layout(out_dir: Path, *, source_head: str | None = None,
     if summary.get("candidate_count") != len(pairs):
         raise calibration.CalibrationError("layout verifier: summary candidate count mismatch")
     first = next((index for index, passed in enumerate(pass_flags) if passed), None)
-    recommendation = None
+    first_passing = None
     if first is not None:
         width, radius = pairs[first]
-        recommendation = {
+        first_passing = {
             "candidate_index": first,
             "lambda_width": width.to_json(),
             "tube_radius": radius.to_json(),
         }
-    expected_state = "CALIBRATION_COMPLETE" if recommendation is not None else "CALIBRATION_INCOMPLETE"
-    if summary.get("recommendation") != recommendation or summary.get("state") != expected_state:
-        raise calibration.CalibrationError("layout verifier: recommendation/state mismatch")
+
+    if config["mode"] == calibration.CALIBRATION_MODE:
+        recommendation = None
+        expected_state = "CALIBRATION_INCOMPLETE"
+        expected_coverage = False
+    else:
+        recommendation = first_passing
+        expected_state = "CALIBRATION_COMPLETE" if recommendation is not None else "CALIBRATION_INCOMPLETE"
+        expected_coverage = recommendation is not None
+    if (summary.get("recommendation") != recommendation
+            or summary.get("state") != expected_state
+            or summary.get("coverage_claim") is not expected_coverage
+            or summary.get("binding_to_final_lambda_start") is not config["binding_to_final_lambda_start"]
+            or summary.get("mode") != config["mode"]):
+        raise calibration.CalibrationError("layout verifier: recommendation/state policy mismatch")
 
     if source_head is not None:
         checker_path = out_dir / "CHECKER_REPORT.json"
