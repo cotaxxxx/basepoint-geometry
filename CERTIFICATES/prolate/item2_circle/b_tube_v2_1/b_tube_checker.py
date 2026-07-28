@@ -3,6 +3,14 @@
 from checker_common import *
 from checker_records import *
 
+EXPECTED_MACHINE_CONCLUSION = {
+    "each_lambda_has_exactly_one_tube_root": True,
+    "slope_strictly_negative": True,
+    "cell_roots_form_one_continuous_branch": True,
+    "real_analytic": False,
+}
+
+
 def check_bundle(bundle: Bundle) -> CheckResult:
     try:
         config, dependencies, records_raw, summary = _parse_bundle(bundle)
@@ -11,8 +19,8 @@ def check_bundle(bundle: Bundle) -> CheckResult:
         if summary.get("unresolved_terminal") != 0:
             _fail("unresolved terminal is nonzero")
         conclusion = summary.get("machine_conclusion")
-        if not isinstance(conclusion, dict) or conclusion.get("real_analytic") is not False:
-            _fail("machine conclusion must exclude real analyticity")
+        if conclusion != EXPECTED_MACHINE_CONCLUSION:
+            _fail("machine conclusion schema/value mismatch")
         boundary_records = [record for record in records if record.get("phase") == "boundary"]
         cell_records = [record for record in records if record.get("phase") == "cell"]
         join_records = [record for record in records if record.get("phase") == "join"]
