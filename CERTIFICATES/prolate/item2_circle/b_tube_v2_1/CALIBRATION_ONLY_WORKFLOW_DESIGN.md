@@ -1,17 +1,18 @@
-# B-TUBE v2.1 calibration-only workflow design
+# B-TUBE v2.1 — calibration-only workflow design
 
-Status: **DESIGN FOR STATIC AUDIT — NOT AN EXECUTABLE WORKFLOW**
+Status: **DESIGN APPROVED; IMPLEMENTATION PRESENT; RUN NOT AUTHORIZED**
 
-Base: main merge `21618e1b0096de83db7bac5f11eed2b419681b32`
+Design commit: `4a1b12a2a1e4f89712c33bc554646b44190f6f5b`
 
 Audited harness source: `CERTIFICATES/prolate/item2_circle/b_tube_v2_1/`
 
 ## 1. Purpose and non-purpose
 
-This stage selects candidate numerical operating parameters for the later production
+This stage selects candidate numerical operating parameters for a later production
 B-TUBE run. It may measure Krawczyk margins, interval inflation, JOIN widths,
-subdivision counts, and runtime. It does **not** certify a branch, emit a B-TUBE
-verdict, alter theorem endpoints, or discharge any paper-level dependency.
+subdivision counts, and evaluation budgets. It does not certify a branch, alter
+theorem endpoints, discharge a paper-level dependency, or emit a production
+B-TUBE verdict.
 
 The only permitted terminal states are:
 
@@ -19,187 +20,214 @@ The only permitted terminal states are:
 - `CALIBRATION_INCOMPLETE`
 - `CALIBRATION_FAILED`
 
-The strings `CERTIFIED_B_TUBE_FULL`, `CERTIFIED_CORE_INTERVAL`, and any other
-`CERTIFIED_*` value are forbidden in calibration output.
+Every `CERTIFIED_*` value and every production verdict field is forbidden in
+calibration output.
 
-`lambda_start` is a fixed external exact-rational input from B-LOCAL. Calibration
-must not discover, optimize, move, or round it. The terminal endpoint remains the
-exact rational `118/25`.
+`lambda_start` is the fixed exact-rational B-LOCAL input. Calibration must not
+discover, optimize, move, or round it. The terminal endpoint is exactly `118/25`.
 
 ## 2. Source and dependency boundary
 
-The implementation must start from the audited v2.1 checker/schema source without
-copying or forking its canonical-byte, dyadic, chain, JOIN, or affine-evaluation
-rules. Calibration code may call shared audited helpers but must not weaken them.
+The implementation calls the audited v2.1 canonical-byte, dyadic, chain, affine,
+Krawczyk, and JOIN primitives. It must not copy or weaken those rules.
 
-Before importing the production kernel, the runner must hash the actual bytes of:
+The actual imported file bytes of
 
 `CERTIFICATES/prolate/item2_circle/vendor/prolate_circle_F_cleanroom.py`
 
-and require SHA-256:
+must hash to
 
-`77e7a93c594ba66ac7d98df29ec3c03107b0c63962a5aa60f8503559082c10ac`
+`77e7a93c594ba66ac7d98df29ec3c03107b0c63962a5aa60f8503559082c10ac`.
 
-The check must use `Path(imported_module.__file__).read_bytes()` after resolving the
-module path, not a module label, exported constant, manifest string, or configured
-filename alone. The resolved path must remain inside the checked-out repository.
-Symlinks and path escape are rejected.
+The resolved imported path must be a regular non-symlink file inside the checkout.
+The check uses the actual imported module path and file bytes, not an exported
+constant, configured label, manifest name, or wrapper-module identity.
 
-The C-G terminal dependency remains pinned to the already frozen identity tuple:
+**F and F_r must both be supplied only by this same pinned file. Supplying F_r
+from any other module or file is forbidden.** The implementation verifies that
+both `F_arb` and `dFdr_arb` are defined by the single loaded module. This closes
+carryover G1 and prevents a later separate derivative module from escaping the pin.
+
+The C-G terminal identity tuple remains frozen:
 
 - artifact ZIP SHA-256 `c0f624a955657f906c09c45b016a92f7bcdfa70d26c2508efeb3f06dd7d27381`;
 - source head `1e0f671c91798b9c044c04c7a4224a21e1e67830`;
 - config SHA-256 `bb6a3655d335240549cbe1f6eec2a9e68e00219eb9c1a2be65796e2e342a0d17`;
-- fixed-slice identity `F_G_FIXED_SLICE_IDENTITY_V1`;
-- exact match parameter `118/25` and bracket `(1/64,11/256)`.
+- reference-kernel SHA equal to the production-kernel SHA above;
+- paper/interface lemma `F_G_FIXED_SLICE_IDENTITY_V1`;
+- exact match parameter `118/25`;
+- exact bracket `(1/64,11/256)`.
 
-Calibration may report a diagnostic endpoint margin, but it must not emit the
-production MATCH conclusion.
+Calibration may record endpoint diagnostics but may not emit the production MATCH
+conclusion.
 
-## 3. Immutable calibration configuration
+## 3. Immutable configuration
 
-A later implementation commit must add one canonical JSON configuration whose
-normative fields are limited to:
+`config.calibration.json` is canonical JSON with no trailing newline, duplicate
+keys, floating JSON numbers, BOM, or CR/LF. Its normative fields are limited to:
 
-- exact `lambda_start` and exact `lambda_end = 118/25`;
-- a finite ordered list of candidate dyadic parameter widths;
-- a finite ordered list of candidate dyadic tube radii;
-- exact predictor refresh cadence;
-- Arb working precision and checker precision, with `checker_dps >= dps`;
-- explicit maximum cells, maximum subdivisions, and evaluation budget;
-- the audited-source commit and all external dependency pins;
-- a schema version and calibration design version.
+- exact `lambda_start` and `lambda_end`;
+- ordered unique dyadic parameter widths;
+- ordered unique dyadic tube radii;
+- predictor refresh cadence;
+- Arb working and checker precision with `checker_dps >= dps`;
+- maximum cells, subdivisions, and evaluation budget;
+- audited-source and design commits;
+- production and C-G dependency pins;
+- exact affine rule, schema, design version, and chain domain.
 
-No floating JSON numbers are permitted. Candidate order is normative and provides
-the deterministic tie-break rule. Environment variables may not override
-normative configuration values.
+Candidate order is normative. The cross-product order is parameter-width order
+followed by tube-radius order. The first passing pair is the only permitted
+recommendation. Environment variables cannot replace normative configuration
+values.
 
-Calibration is fresh-only. Resume files, caches, prior artifacts, and untracked
-workspace state are not accepted as mathematical or operational input.
+Calibration is fresh-only. Resume files, checkpoints, caches, prior output, and
+pre-existing output directories are rejected.
 
 ## 4. Evaluation protocol
 
-For each candidate pair, the runner must process the entire fixed interval in a
-deterministic order and record every attempted cell, including failures. It may use
-rigorous Arb evaluations, but the result remains calibration evidence only.
+For each candidate pair the runner covers the entire fixed parameter interval in
+deterministic exact-rational cells. It records every attempted cell, including
+failures.
 
-Required diagnostics per cell are:
+Predictor endpoint values are exact dyadics. The only affine rule is
+`exact_endpoint_convex_hull_v1`; midpoint substitution for correlated interval
+expressions is forbidden.
+
+Each cell record contains:
 
 - exact parameter endpoints;
-- exact affine predictor endpoints;
-- exact stored tube interval;
+- exact predictor endpoints and tube interval;
+- residual and derivative enclosures;
+- exact preconditioner;
 - reconstructed Krawczyk image;
-- strict-inclusion margin or the precise failure reason;
-- `sup F_r` diagnostic enclosure;
-- JOIN intersection width at every shared endpoint;
+- strict left and right margins or a precise failure reason;
+- derivative-sign diagnostic;
 - evaluation and subdivision counts.
 
-The runner must never substitute a midpoint for a correlated interval expression.
-The only affine rule remains `exact_endpoint_convex_hull_v1`.
+Each shared endpoint receives a separate exact JOIN intersection record and width.
+A candidate passes only when all cells satisfy strict Krawczyk inclusion, the
+derivative enclosure is strictly negative, all JOINs have positive width, and all
+fixed budgets are respected.
 
-The selected recommendation is the first candidate, in configured order, for which
-all calibration diagnostics complete within the fixed budgets. This is an
-engineering recommendation only. Production parameters must be copied into a new,
-separately audited production-config commit; calibration output must not rewrite
-production configuration automatically.
+A recommendation remains engineering evidence only. It cannot rewrite a production
+configuration.
 
-## 5. Independent calibration verifier
+## 5. Independent verification
 
-The workflow implementation must run a verifier in a fresh process after the
-runner exits. The verifier must:
+The workflow invokes `calibration.py verify` in fresh Python processes after the
+runner and after delivery.
 
-1. parse stored bytes using the audited canonical JSON/JSONL routines;
-2. reject duplicate keys, floats, BOM, CR, final JSONL LF, and noncanonical bytes;
-3. verify the record chain over canonical object bytes, excluding JSONL linefeeds;
-4. recompute candidate completeness and deterministic recommendation selection;
-5. re-hash the imported production-kernel file bytes independently;
-6. reject every `CERTIFIED_*` string and every production verdict field;
-7. require `real_analytic: false` if a machine-conclusion-shaped diagnostic object
-   is retained; omission, `true`, and extra fields are rejected;
-8. return nonzero unless the stored result and receipt are byte-consistent.
+The verifier:
 
-Runner success alone is never sufficient for artifact upload.
+1. parses configuration, records, summaries, manifests, and receipts through the
+   audited canonical-byte routines;
+2. rejects duplicate keys, floats, BOM, CR, final JSONL LF, and noncanonical bytes;
+3. verifies the chain over canonical record-object bytes, excluding JSONL linefeeds;
+4. verifies candidate completeness and recomputes the deterministic first passing
+   recommendation;
+5. independently re-hashes the actual production F/F_r file bytes;
+6. rejects every `CERTIFIED_*` string and production verdict field;
+7. requires `machine_conclusion` to be exactly `{"real_analytic":false}`;
+8. verifies exact receipt, archive, manifest, workflow, config, source-head, and
+   kernel-byte consistency.
+
+Runner success alone cannot authorize upload.
 
 ## 6. In-run receipt byte closure
 
-The delivery payload is assembled before upload in a new empty directory. It must
-contain the canonical configuration, calibration records, summary, checker report,
-source/dependency manifest, and exact source files needed for replay.
+Delivery is built in a new empty directory.
 
-The workflow then performs this closed loop:
+1. Copy canonical config, records, summary, checker report, source manifest, exact
+   replay sources, pinned production kernel, requirement lock, design, and workflow.
+2. Hash every payload file in sorted relative-path order.
+3. Write canonical `PAYLOAD_SHA256SUMS.json` without a trailing newline.
+4. Re-read every file and verify every recorded digest.
+5. Build a deterministic ZIP with sorted paths, fixed timestamps and modes.
+6. Hash the actual ZIP bytes.
+7. Write canonical `DELIVERY_RECEIPT.json` containing archive, payload-manifest,
+   workflow, config, kernel, source-head, and terminal-state identities.
+8. Re-read and independently reconstruct the receipt bytes.
+9. Re-check all referenced digests and upload only the verified archive and receipt.
 
-1. hash the actual bytes of every payload file in sorted path order;
-2. write canonical `PAYLOAD_SHA256SUMS.json` with no trailing newline;
-3. re-read every payload file and verify the recorded hashes;
-4. build one deterministic local archive from the verified payload;
-5. hash the actual archive bytes;
-6. write canonical `DELIVERY_RECEIPT.json` containing the archive hash, payload
-   manifest hash, source head, workflow source hash, configuration hash, kernel
-   file-byte hash, and terminal calibration state;
-7. re-read the receipt bytes and independently reconstruct the expected canonical
-   receipt bytes;
-8. require exact byte equality and re-check every referenced digest;
-9. upload only the already verified archive and receipt.
+The platform outer artifact ZIP is transport only. No observer may repair or
+complete the receipt later.
 
-The platform-generated outer artifact ZIP is transport only and is not a proof
-node. No later observer is allowed to repair or complete the receipt.
+## 7. Authorization, security, and lifecycle
 
-## 7. Workflow security and lifecycle
+The temporary workflow is not placed on the default branch for dispatch. It has
+only this trigger:
 
-The eventual workflow must use least privilege:
+```yaml
+on:
+  push:
+    tags:
+      - "btube-v2-1-calibration-approved-*"
+```
+
+No tag is created by the implementation commit, so implementation publication does
+not start a run. After implementation audit and separate run approval, authorization
+consists of creating the exact tag
+
+`btube-v2-1-calibration-approved-<40-character audited implementation SHA>`
+
+pointing to that same commit. Before checkout the job requires the tag suffix to
+equal `github.sha`; after checkout it independently requires `git rev-parse HEAD`
+to equal `github.sha`. Thus the run head is exactly the audited implementation SHA.
+This closes carryover G2.
+
+The workflow has only:
 
 ```yaml
 permissions:
   contents: read
 ```
 
-Checkout must use `persist-credentials: false`. No secrets, GitHub API writes,
-issue/PR comments, branch writes, release writes, or observer writes are permitted.
-Dependency versions and accepted wheel hashes must be locked in committed input.
+Checkout uses `persist-credentials: false`. There is no dispatch, secret, GitHub API
+write, issue/PR comment, branch write, release write, observer write, or normative
+environment override. Actions are commit-pinned. Python-FLINT is version- and
+wheel-SHA-pinned and installed with `--require-hashes --only-binary=:all:`.
 
-No executable workflow file is included in this design commit. After design audit,
-the implementation workflow is temporary and calibration-only. It must be removed
-before any result-bearing branch is merged to main, so the probe/calibration entry
-does not remain in the Actions UI. The accepted result commit retains the workflow
-source bytes and SHA-256 inside the delivery payload for replay.
+The workflow must be deleted before a result-bearing branch is merged to main.
+The accepted payload retains the exact workflow bytes and SHA for replay. A removal
+gate rejects any result merge diff that still contains the temporary workflow.
 
 ## 8. Required controls
 
-The implementation must add at least these fail-closed controls:
+The implementation contains fail-closed controls for:
 
-1. production kernel file-byte SHA mismatch;
-2. imported module path escape or symlink substitution;
-3. C-G artifact, source-head, config, reference-kernel, or lemma mismatch;
-4. `lambda_start` changed by calibration;
-5. terminal endpoint not exactly `118/25`;
-6. `checker_dps < dps`;
-7. unordered or duplicate candidate list;
-8. float or noncanonical numeric field;
-9. midpoint/correlation-destroying affine fallback detected;
-10. missing attempted-cell record;
-11. candidate recommendation not equal to deterministic first passing candidate;
-12. any `CERTIFIED_*` output;
-13. payload file changed after manifest creation;
-14. archive byte changed after receipt creation;
-15. receipt canonical-byte mismatch;
-16. attempted GitHub write or credential persistence;
-17. stale resume/cache input present;
-18. executable workflow surviving in the merge diff.
+1. production F/F_r file-byte mismatch;
+2. path escape or symlink substitution;
+3. alternate-module F_r supply;
+4. any C-G tuple mismatch;
+5. changed `lambda_start`;
+6. terminal endpoint not exactly `118/25`;
+7. `checker_dps < dps`;
+8. duplicate or unordered candidates;
+9. floating or noncanonical JSON;
+10. forbidden affine/midpoint path;
+11. missing attempted candidate/cell record;
+12. non-deterministic recommendation;
+13. any `CERTIFIED_*` output or production verdict field;
+14. payload mutation after manifest creation;
+15. archive mutation after receipt creation;
+16. noncanonical or inconsistent receipt;
+17. stale resume/cache/output input;
+18. write-capable or credential-persisting workflow;
+19. run tag/head mismatch;
+20. executable workflow surviving the result merge.
 
-Positive controls must include the precision equality boundary and an incomplete
-calibration that uploads a valid diagnostic artifact with state
-`CALIBRATION_INCOMPLETE` but no recommendation.
+Positive controls include precision equality and a valid
+`CALIBRATION_INCOMPLETE` artifact with no recommendation.
 
-## 9. Static-audit gate
+## 9. Whole-source self-scan and static-audit gate
 
-The next implementation stage may begin only after this design is audited for:
+Every Python file recursively under `b_tube_v2_1/` is self-scanned. The scanner
+tokenizes source so comments and string literals do not create false positives, and
+constructs its forbidden spellings by adjacent string fragments so the scanner does
+not detect its own guard vocabulary. This restores the full `.py` self-scan and
+closes carryover G3.
 
-- exact scope separation between calibration and certification;
-- actual production-kernel file-byte pinning;
-- complete in-run receipt byte closure;
-- deterministic configuration and recommendation rules;
-- no persistent workflow/UI residue;
-- preservation of all audited v2.1 canonical and JOIN semantics.
-
-Design acceptance authorizes implementation only. It does not authorize a
-calibration run or production B-TUBE run.
+This implementation commit authorizes static audit only. It does not authorize
+creation of the approval tag, a calibration run, a production configuration, or a
+production B-TUBE run.
