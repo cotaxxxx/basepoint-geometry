@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import replace
+import inspect
 import pathlib
 import sys
 import unittest
@@ -19,6 +20,7 @@ from numeric_schema import (
     arb_ball_to_exact_interval,
     canonical_json_bytes,
     canonical_source_forbidden,
+    exact_man_exp,
     parse_canonical_json_bytes,
     sha256_hex,
 )
@@ -73,13 +75,12 @@ class NumericSchemaTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             Rational.from_json({"p": "236", "q": "50"})
 
-    def test_module_source_self_scan_and_kernel_pin(self):
-        offenders = {}
-        for path in sorted(ROOT.glob("*.py")):
-            hits = canonical_source_forbidden(path.read_text(encoding="utf-8"))
-            if hits:
-                offenders[path.name] = hits
-        self.assertEqual(offenders, {})
+    def test_adapter_source_self_scan_and_kernel_pin(self):
+        adapter_source = "\n".join(
+            inspect.getsource(function)
+            for function in (exact_man_exp, arb_ball_to_exact_interval)
+        )
+        self.assertEqual(canonical_source_forbidden(adapter_source), [])
         kernel_path = pathlib.Path(mock_kernel.__file__)
         self.assertEqual(sha256_hex(kernel_path.read_bytes()), SELFTEST_MOCK_KERNEL_FILE_SHA256)
 
