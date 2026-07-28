@@ -13,10 +13,15 @@ Taylor 包含で処理する二領域 hybrid C-G-TUBE である。
 
 checker の trust boundary は原始 Arb 評価ボールである。Taylor 不等式、
 中心恒等式の区間 Riemann 和、被覆、鎖 SHA、型・phase・件数、spot 交差は
-保存された原始ボールから独立再構成する。spot 0 の base identity は
+保存された原始ボールから独立再構成する。Taylor 記録は G_prime_m と
+C_bound を先に文字列化し、checker と同じ再読込値から再構成した後、
+往復検証済みの外向き serialization guard を付けて保存する。この経路は
+cells と spot Taylor の双方で共通である。spot 0 の base identity は
 cells 鎖の同一セル再構成値に結合し、refined identity は256分割の
 Frr_ball ピースから再構成する。identity_pieces 内の weighted_ball は
 診断表示専用であり、checker は t_a, t_b, Frr_ball から再計算する。
+`neg_reconstructed_ball_shrink` は cell Taylor と spot Taylor を別々に
+内向き縮小し、双方を checker が exit 1 で拒否することを確認する。
 
 状態遷移: UNVERIFIED_DELIVERY →（SHA照合）VERIFIED_DELIVERY →
 SOURCE_CANDIDATE →（独立静的監査 PASS）AUDITED_SOURCE →
