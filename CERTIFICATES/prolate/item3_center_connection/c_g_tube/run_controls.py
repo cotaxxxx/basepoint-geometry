@@ -154,7 +154,9 @@ def synth(tmp: Path, *, flip_cell: bool = False, drop_cell: int | None = None,
           flip_spot_leaf: bool = False,
           center_spot_balls_tamper: bool = False,
           center_spot_piece_missing: bool = False,
-          center_spot_piece_sign_flip: bool = False) -> None:
+          center_spot_piece_sign_flip: bool = False,
+          shrink_cell_taylor_ball: bool = False,
+          shrink_spot_taylor_ball: bool = False) -> None:
     shutil.copy(HERE / "config.json", tmp / "config.json")
     shutil.copy(HERE / "c_g_tube_checker.py", tmp / "c_g_tube_checker.py")
     config_sha = hashlib.sha256((tmp / "config.json").read_bytes()).hexdigest()
@@ -193,6 +195,10 @@ def synth(tmp: Path, *, flip_cell: bool = False, drop_cell: int | None = None,
             "a": str(a), "b": str(b), "sub": sub,
             "certified": certified,
         })
+    if shrink_cell_taylor_ball:
+        target = next(rec for rec in cells
+                      if rec["cell_index"] == center_count)["sub"][0]
+        target["reconstructed_ball"][1] = target["G_prime_m"][1]
     write_chain(tmp / "cells_chain.jsonl", cells, config_sha, "cells")
 
     spots = []
@@ -247,6 +253,11 @@ def synth(tmp: Path, *, flip_cell: bool = False, drop_cell: int | None = None,
                 "cross_negative": leaf["negative"],
             })
         spots.append(base)
+    if shrink_spot_taylor_ball:
+        target_spot = next(rec for rec in spots
+                           if rec["cell_index"] in adaptive)
+        target_leaf = target_spot["cross_leaves"][0]
+        target_leaf["reconstructed_ball"][1] = target_leaf["G_prime_m"][1]
     write_chain(tmp / "spots_chain.jsonl", spots, config_sha, "spots")
 
     fake_controls = {
@@ -307,6 +318,25 @@ def main() -> int:
             }
             all_ok = all_ok and observed == expected
 
+    guard_name = "neg_reconstructed_ball_shrink"
+    expected = 1
+    subcases = {}
+    for target, kwargs in (
+            ("cell_taylor", {"shrink_cell_taylor_ball": True}),
+            ("spot_taylor", {"shrink_spot_taylor_ball": True})):
+        with tempfile.TemporaryDirectory() as directory:
+            tmp = Path(directory)
+            synth(tmp, **kwargs)
+            subcases[target] = run_checker(tmp)
+    control_ok = all(observed == expected for observed in subcases.values())
+    guard_result = {
+        "expected_exit": expected,
+        "observed_exit": expected if control_ok else -1,
+        "subcases": subcases,
+        "ok": control_ok,
+    }
+    all_ok = all_ok and control_ok
+
     (HERE / "CONTROLS.json").write_bytes(json.dumps({
         "label": "item3_C-G-TUBE_pilot_controls",
         "role": "checker fail-closed validation on synthetic v5 hybrid chains",
@@ -315,9 +345,11 @@ def main() -> int:
         "config_sha256": hashlib.sha256(
             (HERE / "config.json").read_bytes()).hexdigest(),
         "controls": results,
+        guard_name: guard_result,
         "verdict": "PASS" if all_ok else "FAIL",
     }, separators=(",", ":")).encode())
-    print("controls:", "PASS" if all_ok else "FAIL", results)
+    print("controls:", "PASS" if all_ok else "FAIL", results,
+          guard_name, guard_result)
     return 0 if all_ok else 1
 
 
