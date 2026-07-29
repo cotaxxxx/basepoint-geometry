@@ -1,0 +1,16 @@
+COMMAND=python test_production_source.py
+test_config_sha_file_requires_final_lf (__main__.ProductionSourceTests.test_config_sha_file_requires_final_lf) ... ok
+test_exact_dyadic_negative_exponent (__main__.ProductionSourceTests.test_exact_dyadic_negative_exponent) ... ok
+test_exact_dyadic_positive_exponent (__main__.ProductionSourceTests.test_exact_dyadic_positive_exponent) ... ok
+test_internal_manifest_parser (__main__.ProductionSourceTests.test_internal_manifest_parser) ... ok
+test_internal_manifest_rejects_duplicate (__main__.ProductionSourceTests.test_internal_manifest_rejects_duplicate) ... ok
+test_internal_manifest_rejects_no_final_lf (__main__.ProductionSourceTests.test_internal_manifest_rejects_no_final_lf) ... ok
+test_target_policy_direction (__main__.ProductionSourceTests.test_target_policy_direction) ... ok
+test_zip_member_path_rejects_escape (__main__.ProductionSourceTests.test_zip_member_path_rejects_escape) ... ok
+
+----------------------------------------------------------------------
+Ran 8 tests in 0.001s
+
+OK
+{"errors":0,"failures":0,"kernel_evaluations":0,"mathematical_calculations":0,"schema":"ITEM3_SWEEP_PRODUCTION_SOURCE_TEST_REPORT_V1","tests_run":8,"verdict":"PASS"}
+EXIT_CODE=0

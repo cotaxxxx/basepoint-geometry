@@ -1,34 +1,37 @@
-# Item 3 Lambda Sweep — Phase 4 Workflow Candidate
+# Item 3 lambda sweep — Phase 4 workflow candidate v2
 
-This directory contains the Phase 4 workflow, provenance, and observer-separation audit assets.
+Status: `PHASE4_REAUDIT_REQUIRED`.
 
-Normative design blob: `cafbf7b661911995008dda49bfb3ecabcecb1f12`
+The workflow previously certified at head `21756fbba0aa974df4ebddfd7d40a7816250dcdc` remains valid historical evidence for those exact bytes. It does not certify the current workflow candidate because the runtime and pilot-artifact gates have changed.
 
-Audited source commit: `70af0de152fe93256dd243770181addb250ca7c2`
+## Differential changes
 
-Reference tag↔SHA pattern: `e86c130d18f69e9d9944a2f35a5af2f37f399881`
+The production workflow now adds:
 
-## Separation
+- `actions: read` permission for fixed artifact download;
+- pinned `actions/setup-python` and Python 3.12;
+- `python-flint==0.9.0` installed from the Linux x86-64 stable-ABI wheel with `--require-hashes`, `--no-deps`, and `--only-binary=:all:`;
+- canonical pilot artifact ID and ZIP SHA-256 binding;
+- extraction and independent verification of every artifact-internal manifest entry;
+- direct rederivation of `c_g_tube_pilot.py` SHA-256;
+- production source static audit and no-math tests;
+- approved config SHA-256 sidecar requirement;
+- production entrypoint arguments binding the verified pilot artifact.
 
-- Production workflow: `.github/workflows/prolate-item3-lambda-sweep.yml`
-  - trigger: `item3-sweep-run-*` tags only
-  - permissions: `contents: read`
-  - validates tag suffix before checkout and checked-out HEAD after checkout
-  - performs Phase 3 gates before requiring the separately audited production config
-  - uploads output using a commit-SHA-pinned action
-- Observer workflow: `.github/workflows/prolate-item3-lambda-sweep-observer.yml`
-  - trigger: successful completion of the production workflow
-  - permissions: `actions: read`, `contents: write`
-  - atomically writes immutable run receipt plus `latest.json` to the pre-existing receipt branch
-  - enforces strictly increasing workflow run IDs and `EXCLUDED_HEAD_SHA`
+## Audit status
 
-## Fail-closed prerequisites
+`PHASE4_STATIC_AUDIT.json` and `STATIC_AUDIT_LOG.txt` in this directory are retained as the prior-byte audit output. They are not a PASS for workflow v2.
 
-Before a tag is authorized, all of the following remain required:
+`PHASE4_REAUDIT_REQUEST.json` defines the required differential audit. A new chat-side Phase 4 PASS must be issued before any tag or run authorization.
 
-1. Chat-side Phase 4 byte and static audit PASS.
-2. Separate production config and entrypoint audit.
-3. Creation and audit of the dedicated receipt branch named in `OBSERVER_POLICY.json`.
-4. Explicit user authorization for exactly one tag whose suffix is the full 40-character source commit SHA.
+## Candidate static self-test
 
-No tag, workflow run, production calculation, or main update is performed by this Phase 4 candidate.
+`PHASE4_STATIC_AUDIT_V2.json` and `STATIC_AUDIT_V2_LOG.txt` record a no-computation candidate self-test with all 29 checks passing. This is implementation evidence only; `chat_differential_audit_status` remains `PENDING`.
+
+## Non-authorization
+
+```text
+run_authorized = false
+tag_created = false
+workflow_executed = false
+```

@@ -1,55 +1,71 @@
-# Item 3 lambda sweep — production config draft
+# Item 3 lambda sweep — production implementation candidate
 
-This package drafts the closed-schema production configuration without authorizing a tag or run.
+Status: `STATIC_AUDIT_CANDIDATE`; no production run, tag, PR, or certification claim is authorized.
 
-## Candidate decision requiring user approval
+## Candidate configuration requiring user approval
 
-`lambda_target = 483303/102400 = 118/25 - 2^-12`.
+The first pipeline-validation range remains
 
-The proposed first range is deliberately short. It does not assert numerical sufficiency or any relation to `a_c`.
+```text
+lambda_target = 483303/102400 = 118/25 - 2^-12
+interval      = [483303/102400, 118/25]
+```
 
-Other candidate values are fixed in `CONFIG_DECISIONS.candidate.json`:
+The budget, precision, and target values are candidates only. The complete canonical config SHA-256 is intentionally not materialized in this commit.
 
-- `w0 = [1/64, 11/256]`
-- `min_lambda_width_exp = 20`
-- `delta_overlap_min = 2^-12`
-- `window_grid_exp = 16`
-- `window_min_width_exp = 12`
-- `global_eval_limit = 500000`
-- `per_box_eval_limit = 20000`
-- `max_lambda_depth = 20`
-- `max_r_cells_per_box = 4096`
-- `dps = 50`
-- `checker_dps = 70`
+## R-1 production source
 
-The budget and precision values are candidates only. No Arb or mathematical calculation was performed.
+The production layer now contains:
 
-## Identity assets
+- `arb_adapter.py` — pinned clean-room kernel adapter for `G=F/r` and `G_r=F_r/r-F/r^2`, with exact dyadic endpoint extraction;
+- `run_item3_sweep.py` — preflight, runner, fresh checker, chain serialization, evidence, and manifest entrypoint;
+- `verify_pilot_artifact.py` — independent pilot artifact verifier;
+- `materialize_config.py` — closed-schema candidate config materializer.
 
-The pilot identity receipt and logical dependency snapshot are canonical JSON candidates derived from canonical pilot run `30334858060`. Their mutual hashes and five logical dependency hashes are checked by `audit_config_draft.py`.
+These files are candidates for chat-side `AUDITED_SOURCE` review. Their presence does not inherit the Phase 3 source audit.
 
-## Materialization
+## Independent pilot source rederivation
 
-From a clean checkout at this branch:
+`pilot_source_sha256 = 9da05b2c44119c9937c19a2184ea9722de7876442235896f1f0e0dbc076f2ecc` is accepted only after all of the following match:
+
+1. canonical artifact ZIP SHA-256 `c0f624a955657f906c09c45b016a92f7bcdfa70d26c2508efeb3f06dd7d27381`;
+2. exact 15-member ZIP set with no duplicate or unsafe path;
+3. every hash in the artifact-internal `SHA256SUMS.txt`;
+4. direct SHA-256 of `c_g_tube_pilot.py` member bytes;
+5. byte equality between the ZIP members and the extracted directory;
+6. receipt, dependency snapshot, decisions, and materialized config relation.
+
+A receipt-supplied value alone cannot pass this gate.
+
+## R-2 deterministic runtime candidate
+
+`requirements-python-flint.txt` fixes the single Linux x86-64 stable-ABI wheel with `--require-hashes`. The production workflow uses pinned `actions/setup-python`, installs with `--no-deps --only-binary=:all: --require-hashes`, downloads the fixed pilot artifact by ID, and verifies its ZIP digest before execution.
+
+Because the workflow bytes changed after the prior Phase 4 PASS, the new workflow is `PHASE4_REAUDIT_REQUIRED`. The prior Phase 4 report is historical evidence for the old bytes only.
+
+## Target range policy
+
+`TARGET_RANGE_POLICY.json` and `.md` distinguish:
+
+- the short downward pipeline-validation interval permitted by v8.1;
+- the unresolved final mathematical coverage objective;
+- the historical upward phrase `lambda_match -> a_c`;
+- the certified `a_c` bracket strictly above the anchor.
+
+Any upward or bidirectional sweep requires a design-contract revision and a new Phase 1 freeze. Endpoint order may not be silently reinterpreted.
+
+## Candidate materialization
+
+From a clean checkout, after obtaining the canonical pilot artifact:
 
 ```bash
 cd CERTIFICATES/prolate/item3_center_connection/lambda_sweep/production
-python3 audit_config_draft.py
-python3 materialize_config.py --write
+python3 audit_production_source.py
+python3 test_production_source.py
+python3 materialize_config.py \
+  --pilot-artifact-zip /path/item3-cgtube-pilot-certified-30334858060.zip \
+  --pilot-artifact-dir /path/extracted \
+  --write
 ```
 
-The materializer computes the actual design SHA-256 and all source SHA-256 values from checkout bytes, runs the Phase 3 closed-schema validator, and runs the Phase 3 preflight identity gates. It writes a candidate config and its complete SHA-256.
-
-## Mandatory hold
-
-The materialized candidate intentionally binds the Phase 3 audited adapter *protocol* file only. It is not an executable Arb adapter. The Phase 4 workflow also has no pinned Python-Flint installation step, and the required production entrypoint is absent.
-
-Therefore:
-
-```text
-run_authorized = false
-tag_created = false
-workflow_executed = false
-```
-
-A production adapter/entrypoint and deterministic Arb runtime pin require a separate audited revision before the candidate config can become a run-authorized final config.
+Materialization still produces candidate filenames. Promotion to `config.item3-sweep-run.json`, approval of its complete SHA-256, and tag creation remain separate user decisions.

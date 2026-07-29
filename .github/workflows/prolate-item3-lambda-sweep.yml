@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: item3-sweep-${{ github.sha }}
@@ -46,6 +47,31 @@ jobs:
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
 
+      - name: Set up pinned Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.12"
+
+      - name: Install hash-pinned Python-FLINT wheel
+        working-directory: source
+        shell: bash
+        run: |
+          set -euo pipefail
+          REQ="CERTIFICATES/prolate/item3_center_connection/lambda_sweep/production/requirements-python-flint.txt"
+          test -f "$REQ"
+          python3 -m pip install \
+            --disable-pip-version-check \
+            --no-deps \
+            --only-binary=:all: \
+            --require-hashes \
+            -r "$REQ"
+          python3 - <<'PY'
+          import importlib.metadata
+          import flint
+          assert importlib.metadata.version("python-flint") == "0.9.0"
+          assert hasattr(flint, "arb") and hasattr(flint, "acb")
+          PY
+
       - name: Independent design and audited-source gate
         working-directory: source
         shell: bash
@@ -53,6 +79,7 @@ jobs:
           set -euo pipefail
           DESIGN="CERTIFICATES/prolate/item3_center_connection/lambda_sweep/design_contract_v8_1.md"
           PHASE3="CERTIFICATES/prolate/item3_center_connection/lambda_sweep/phase3_impl"
+          PROD="CERTIFICATES/prolate/item3_center_connection/lambda_sweep/production"
           test "$(git hash-object "$DESIGN")" = "cafbf7b661911995008dda49bfb3ecabcecb1f12"
           test -f "$PHASE3/SOURCE_MANIFEST.json"
           (
@@ -61,16 +88,50 @@ jobs:
             python3 static_audit.py
             python3 run_phase3_fixture_bridge.py --phase2-dir ../phase2_selftest
           )
+          python3 "$PROD/audit_config_draft.py"
+          python3 "$PROD/audit_production_source.py"
+          python3 "$PROD/test_production_source.py"
 
-      - name: Require audited production inputs
+      - name: Download and rederive canonical pilot artifact
+        working-directory: source
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          ARTIFACT_ID="8680673043"
+          ARTIFACT_SHA256="c0f624a955657f906c09c45b016a92f7bcdfa70d26c2508efeb3f06dd7d27381"
+          API="$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/artifacts/$ARTIFACT_ID/zip"
+          rm -rf pilot-artifact pilot-artifact.zip pilot-artifact-verification.json
+          curl --fail --silent --show-error --location \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "$API" -o pilot-artifact.zip
+          printf '%s  %s\n' "$ARTIFACT_SHA256" pilot-artifact.zip | sha256sum -c -
+          mkdir pilot-artifact
+          unzip -q pilot-artifact.zip -d pilot-artifact
+          python3 CERTIFICATES/prolate/item3_center_connection/lambda_sweep/production/verify_pilot_artifact.py \
+            --artifact-zip pilot-artifact.zip \
+            --artifact-dir pilot-artifact \
+            --write-report pilot-artifact-verification.json
+
+      - name: Require approved production inputs
         working-directory: source
         shell: bash
         run: |
           set -euo pipefail
-          CONFIG="CERTIFICATES/prolate/item3_center_connection/lambda_sweep/production/config.item3-sweep-run.json"
-          ENTRY="CERTIFICATES/prolate/item3_center_connection/lambda_sweep/production/run_item3_sweep.py"
+          PROD="CERTIFICATES/prolate/item3_center_connection/lambda_sweep/production"
+          CONFIG="$PROD/config.item3-sweep-run.json"
+          CONFIG_SHA="$PROD/config.item3-sweep-run.sha256"
+          ENTRY="$PROD/run_item3_sweep.py"
           test -f "$CONFIG"
+          test -f "$CONFIG_SHA"
           test -f "$ENTRY"
+          test -f "$PROD/arb_adapter.py"
+          test -f "$PROD/verify_pilot_artifact.py"
+          test -f "$PROD/TARGET_RANGE_POLICY.json"
+          test "$(sha256sum "$CONFIG" | cut -d' ' -f1)" = "$(tr -d '\n' < "$CONFIG_SHA")"
 
       - name: Execute production sweep
         working-directory: source
@@ -82,12 +143,19 @@ jobs:
           ITEM3_SWEEP_GITHUB_REF: ${{ github.ref }}
         run: |
           set -euo pipefail
+          PROD="CERTIFICATES/prolate/item3_center_connection/lambda_sweep/production"
           rm -rf item3-sweep-output
-          python3 CERTIFICATES/prolate/item3_center_connection/lambda_sweep/production/run_item3_sweep.py \
-            --config CERTIFICATES/prolate/item3_center_connection/lambda_sweep/production/config.item3-sweep-run.json \
+          python3 "$PROD/run_item3_sweep.py" \
+            --config "$PROD/config.item3-sweep-run.json" \
+            --config-sha256 "$PROD/config.item3-sweep-run.sha256" \
+            --pilot-artifact-zip pilot-artifact.zip \
+            --pilot-artifact-dir pilot-artifact \
             --output item3-sweep-output
           test -f item3-sweep-output/SWEEP_RUN_MANIFEST.json
           test -f item3-sweep-output/SWEEP_RECORDS.jsonl
+          test -f item3-sweep-output/SWEEP_EVIDENCE.json
+          test -f item3-sweep-output/SWEEP_CHECKER_REPORT.json
+          test -f item3-sweep-output/PILOT_ARTIFACT_REDERIVATION.json
 
       - name: Upload immutable run artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
