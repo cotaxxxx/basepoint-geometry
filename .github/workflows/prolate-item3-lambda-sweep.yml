@@ -1,0 +1,100 @@
+name: Prolate Item 3 Lambda Sweep
+
+on:
+  push:
+    tags:
+      - "item3-sweep-run-*"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: item3-sweep-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - name: Verify tag suffix equals commit SHA (pre-checkout)
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_EVENT_NAME" = "push"
+          case "$GITHUB_REF" in
+            refs/tags/item3-sweep-run-*) ;;
+            *) exit 64 ;;
+          esac
+          TAG_SUFFIX="${GITHUB_REF#refs/tags/item3-sweep-run-}"
+          printf '%s' "$TAG_SUFFIX" | grep -Eq '^[0-9a-f]{40}$'
+          test "$TAG_SUFFIX" = "$GITHUB_SHA"
+
+      - name: Checkout immutable source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+          clean: true
+          path: source
+
+      - name: Verify checked-out HEAD equals commit SHA (post-checkout)
+        working-directory: source
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+
+      - name: Independent design and audited-source gate
+        working-directory: source
+        shell: bash
+        run: |
+          set -euo pipefail
+          DESIGN="CERTIFICATES/prolate/item3_center_connection/lambda_sweep/design_contract_v8_1.md"
+          PHASE3="CERTIFICATES/prolate/item3_center_connection/lambda_sweep/phase3_impl"
+          test "$(git hash-object "$DESIGN")" = "cafbf7b661911995008dda49bfb3ecabcecb1f12"
+          test -f "$PHASE3/SOURCE_MANIFEST.json"
+          (
+            cd "$PHASE3"
+            PYTHONPATH=. python3 run_phase3_tests.py
+            python3 static_audit.py
+            python3 run_phase3_fixture_bridge.py --phase2-dir ../phase2_selftest
+          )
+
+      - name: Require audited production inputs
+        working-directory: source
+        shell: bash
+        run: |
+          set -euo pipefail
+          CONFIG="CERTIFICATES/prolate/item3_center_connection/lambda_sweep/production/config.item3-sweep-run.json"
+          ENTRY="CERTIFICATES/prolate/item3_center_connection/lambda_sweep/production/run_item3_sweep.py"
+          test -f "$CONFIG"
+          test -f "$ENTRY"
+
+      - name: Execute production sweep
+        working-directory: source
+        shell: bash
+        env:
+          ITEM3_SWEEP_GITHUB_RUN_ID: ${{ github.run_id }}
+          ITEM3_SWEEP_GITHUB_RUN_ATTEMPT: ${{ github.run_attempt }}
+          ITEM3_SWEEP_GITHUB_SHA: ${{ github.sha }}
+          ITEM3_SWEEP_GITHUB_REF: ${{ github.ref }}
+        run: |
+          set -euo pipefail
+          rm -rf item3-sweep-output
+          python3 CERTIFICATES/prolate/item3_center_connection/lambda_sweep/production/run_item3_sweep.py \
+            --config CERTIFICATES/prolate/item3_center_connection/lambda_sweep/production/config.item3-sweep-run.json \
+            --output item3-sweep-output
+          test -f item3-sweep-output/SWEEP_RUN_MANIFEST.json
+          test -f item3-sweep-output/SWEEP_RECORDS.jsonl
+
+      - name: Upload immutable run artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: item3-sweep-${{ github.run_id }}-${{ github.sha }}
+          path: source/item3-sweep-output
+          if-no-files-found: error
+          retention-days: 90
+          compression-level: 0
+          include-hidden-files: false
