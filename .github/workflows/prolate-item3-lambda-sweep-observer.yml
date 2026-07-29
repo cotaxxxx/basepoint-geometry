@@ -1,0 +1,179 @@
+name: Prolate Item 3 Lambda Sweep Observer
+
+on:
+  workflow_run:
+    workflows:
+      - "Prolate Item 3 Lambda Sweep"
+    types:
+      - completed
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  observe:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout observer policy
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+          clean: true
+          path: observer-source
+
+      - name: Atomically persist monotone run receipt
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPOSITORY: ${{ github.repository }}
+          WORKFLOW_RUN_EVENT: ${{ toJson(github.event.workflow_run) }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import base64
+          import hashlib
+          import json
+          import os
+          import re
+          import urllib.error
+          import urllib.request
+          from pathlib import Path
+
+          POLICY_PATH = Path("observer-source/CERTIFICATES/prolate/item3_center_connection/lambda_sweep/phase4_workflow/OBSERVER_POLICY.json")
+          raw_policy = POLICY_PATH.read_bytes()
+          policy = json.loads(raw_policy)
+          canonical_policy = json.dumps(policy, ensure_ascii=True, sort_keys=True, separators=(",", ":")).encode()
+          if canonical_policy != raw_policy:
+              raise SystemExit("observer policy is not canonical JSON")
+          policy_sha256 = hashlib.sha256(raw_policy).hexdigest()
+
+          event = json.loads(os.environ["WORKFLOW_RUN_EVENT"])
+          repository = os.environ["GH_REPOSITORY"]
+          token = os.environ["GH_TOKEN"]
+
+          if repository != policy["source_repository"]:
+              raise SystemExit("repository mismatch")
+          if event.get("name") != policy["production_workflow_name"]:
+              raise SystemExit("workflow name mismatch")
+          if event.get("event") != policy["required_event"]:
+              raise SystemExit("workflow event mismatch")
+          if event.get("conclusion") != policy["required_conclusion"]:
+              raise SystemExit("workflow conclusion mismatch")
+
+          run_id = event.get("id")
+          run_attempt = event.get("run_attempt")
+          head_sha = event.get("head_sha")
+          if not isinstance(run_id, int) or run_id <= 0:
+              raise SystemExit("invalid run id")
+          if not isinstance(run_attempt, int) or run_attempt <= 0:
+              raise SystemExit("invalid run attempt")
+          if not isinstance(head_sha, str) or re.fullmatch(r"[0-9a-f]{40}", head_sha) is None:
+              raise SystemExit("invalid head sha")
+
+          excluded = policy["excluded_head_sha"]
+          if re.fullmatch(r"[0-9a-f]{40}", excluded) is None:
+              raise SystemExit("invalid excluded head sha")
+          if excluded != "0" * 40 and head_sha == excluded:
+              raise SystemExit("excluded head sha")
+
+          api = "https://api.github.com"
+          headers = {
+              "Accept": "application/vnd.github+json",
+              "Authorization": f"Bearer {token}",
+              "X-GitHub-Api-Version": "2022-11-28",
+              "User-Agent": "item3-sweep-observer",
+          }
+
+          def request(method, path, payload=None):
+              data = None if payload is None else json.dumps(payload, separators=(",", ":")).encode()
+              req = urllib.request.Request(api + path, data=data, headers=headers, method=method)
+              try:
+                  with urllib.request.urlopen(req) as response:
+                      body = response.read()
+                      return response.status, json.loads(body) if body else None
+              except urllib.error.HTTPError as exc:
+                  body = exc.read()
+                  detail = body.decode(errors="replace")
+                  raise SystemExit(f"GitHub API {method} {path} failed: {exc.code}: {detail}") from exc
+
+          branch = policy["receipt_branch"]
+          root = policy["receipt_root"]
+          _, ref = request("GET", f"/repos/{repository}/git/ref/heads/{branch}")
+          old_commit_sha = ref["object"]["sha"]
+          _, old_commit = request("GET", f"/repos/{repository}/git/commits/{old_commit_sha}")
+          old_tree_sha = old_commit["tree"]["sha"]
+
+          latest_path = f"{root}/latest.json"
+          try:
+              _, latest_content = request("GET", f"/repos/{repository}/contents/{latest_path}?ref={branch}")
+          except SystemExit as exc:
+              if "404" not in str(exc):
+                  raise
+              latest_content = None
+
+          previous_run_id = 0
+          if latest_content is not None:
+              latest_raw = base64.b64decode(latest_content["content"])
+              latest = json.loads(latest_raw)
+              if json.dumps(latest, ensure_ascii=True, sort_keys=True, separators=(",", ":")).encode() != latest_raw:
+                  raise SystemExit("latest receipt is not canonical JSON")
+              previous_run_id = latest["workflow_run_id"]
+              if not isinstance(previous_run_id, int) or previous_run_id <= 0:
+                  raise SystemExit("invalid previous run id")
+
+          if run_id <= previous_run_id:
+              raise SystemExit("workflow run id is not strictly monotone")
+
+          receipt = {
+              "schema": "ITEM3_SWEEP_WORKFLOW_RECEIPT_V1",
+              "workflow_name": event["name"],
+              "workflow_run_id": run_id,
+              "workflow_run_attempt": run_attempt,
+              "workflow_run_number": event.get("run_number"),
+              "workflow_run_url": event.get("html_url"),
+              "artifacts_url": event.get("artifacts_url"),
+              "event": event["event"],
+              "conclusion": event["conclusion"],
+              "head_sha": head_sha,
+              "head_repository": event.get("head_repository", {}).get("full_name"),
+              "repository": repository,
+              "observer_policy_sha256": policy_sha256,
+              "previous_workflow_run_id": previous_run_id,
+              "updated_at": event.get("updated_at"),
+          }
+          receipt_raw = json.dumps(receipt, ensure_ascii=True, sort_keys=True, separators=(",", ":")).encode()
+          latest_raw = receipt_raw
+          run_path = f"{root}/runs/{run_id}.json"
+
+          def create_blob(raw):
+              _, obj = request("POST", f"/repos/{repository}/git/blobs", {
+                  "content": base64.b64encode(raw).decode(),
+                  "encoding": "base64",
+              })
+              return obj["sha"]
+
+          run_blob = create_blob(receipt_raw)
+          latest_blob = create_blob(latest_raw)
+          _, tree = request("POST", f"/repos/{repository}/git/trees", {
+              "base_tree": old_tree_sha,
+              "tree": [
+                  {"path": run_path, "mode": "100644", "type": "blob", "sha": run_blob},
+                  {"path": latest_path, "mode": "100644", "type": "blob", "sha": latest_blob},
+              ],
+          })
+          _, commit = request("POST", f"/repos/{repository}/git/commits", {
+              "message": f"Record item3 sweep workflow run {run_id}",
+              "tree": tree["sha"],
+              "parents": [old_commit_sha],
+          })
+          request("PATCH", f"/repos/{repository}/git/refs/heads/{branch}", {
+              "sha": commit["sha"],
+              "force": False,
+          })
+          print(receipt_raw.decode())
+          PY
