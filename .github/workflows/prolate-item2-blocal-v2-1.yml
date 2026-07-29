@@ -18,6 +18,19 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 360
     steps:
+      - name: Verify tag suffix equals commit SHA (pre-checkout)
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_EVENT_NAME" = "push"
+          case "$GITHUB_REF" in
+            refs/tags/blocal-v2.1-run-*) ;;
+            *) exit 64 ;;
+          esac
+          TAG_SUFFIX="${GITHUB_REF#refs/tags/blocal-v2.1-run-}"
+          printf '%s' "$TAG_SUFFIX" | grep -Eq '^[0-9a-f]{40}$'
+          test "$TAG_SUFFIX" = "$GITHUB_SHA"
+
       - name: Checkout immutable source
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
@@ -26,6 +39,13 @@ jobs:
           persist-credentials: false
           clean: true
           path: source
+
+      - name: Verify checked-out HEAD equals commit SHA (post-checkout)
+        working-directory: source
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
 
       - name: Independent byte and structure gate
         working-directory: source
