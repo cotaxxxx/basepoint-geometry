@@ -18,6 +18,20 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 360
     steps:
+      - name: Bind tag suffix to event head
+        shell: bash
+        run: |
+          set -euo pipefail
+          prefix="refs/tags/blocal-v2.1-run-"
+          case "$GITHUB_REF" in
+            "$prefix"*) ;;
+            *) exit 64 ;;
+          esac
+          suffix="${GITHUB_REF#"$prefix"}"
+          [[ "$suffix" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$GITHUB_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$suffix" = "$GITHUB_SHA"
+
       - name: Checkout immutable source
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
@@ -37,6 +51,7 @@ jobs:
             refs/tags/blocal-v2.1-run-*) ;;
             *) exit 64 ;;
           esac
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
           cat > "$RUNNER_TEMP/blocal-phase4-sha256.txt" <<'EOF'
           a2b7d70b0cd88489e7363aee48f2a5eaccc5f6d64cd560347c7501c686cee027  CERTIFICATES/prolate/item2_circle/b_tube_v2_1/blocal_phase4_runner.py
           39c831fcc18b496abdc8f226f76dd7564fba4b7d529cffcccefcc305af1d35a6  CERTIFICATES/prolate/item2_circle/b_tube_v2_1/blocal_phase4_model.py
