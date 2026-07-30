@@ -73,3 +73,22 @@ def adaptive_r_bisection(
         stack.append(lower)
     accepted.sort(key=lambda cell: cell.lo)
     return RTileResult(tuple(accepted), split_count)
+
+
+def rederive_r_partition(
+    root: RCell,
+    oracle: DerivativeOracle,
+    expected: RTileResult,
+    *,
+    max_r_cells_per_box: int,
+) -> bool:
+    """Reconstruct the deterministic r-partition and require exact equality."""
+    try:
+        actual = adaptive_r_bisection(
+            root,
+            oracle,
+            max_r_cells_per_box=max_r_cells_per_box,
+        )
+    except RTileFailure:
+        return False
+    return actual == expected

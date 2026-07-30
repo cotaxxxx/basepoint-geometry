@@ -14,7 +14,7 @@ from item3_sweep.frontier import FrontierMachine,LambdaBox
 from item3_sweep.phase2_bridge import execute_fixture
 from item3_sweep.provenance import PinnedSourceLoader,SourcePin
 from item3_sweep.records import Record,RecordGrammarValidator
-from item3_sweep.r_tile import RCell,RTileFailure,adaptive_r_bisection
+from item3_sweep.r_tile import RCell,RTileFailure,adaptive_r_bisection,rederive_r_partition
 from item3_sweep.runner import AttemptOutcome,SweepRunner
 from item3_sweep.schema import ConfigValidator,normalize_external_aliases
 from item3_sweep.transitions import TRANSITIONS,may_regenerate
@@ -35,6 +35,11 @@ class A:
  def __init__(s):s.n=0
  def evaluate_g(s,**k):s.n+=1;return CanonicalInterval(F(1),F(2)) if s.n==1 else CanonicalInterval(F(-2),F(-1))
  def evaluate_gr(s,**k):return CanonicalInterval(F(-2),F(-1))
+class NF:
+ adapter_id="A"
+ def __init__(s):s.g=0;s.gr=[]
+ def evaluate_g(s,**k):s.g+=1;return CanonicalInterval(F(1),F(2)) if s.g==1 else CanonicalInterval(F(-2),F(-1))
+ def evaluate_gr(s,*,r,**k):s.gr.append(r);return CanonicalInterval(F(0),F(0),False) if len(s.gr)==1 else CanonicalInterval(F(-2),F(-1))
 def runner(*outs):
  f=FrontierMachine(lambda_anchor=F(118,25),lambda_target=F(471,100),minimum_width=F(1,1<<20),max_depth=0)
  return SweepRunner(frontier=f,budget=EvaluationBudget(10,10),evaluator=E(*outs),grid=F(1,65536),minimum_window_width=F(1,4096),delta_overlap_min=F(1,4096),anchor_seed_window=(F(1,64),F(11,256)),predictor_points=[PredictorPoint(F(118,25),F(1,32),'b')])
@@ -80,6 +85,27 @@ class Core(unittest.TestCase):
    c=cfg();m(c);self.assertRaises(ContractReject,ConfigValidator().validate,c)
  def test_26(self):self.assertEqual(len({x.value for x in CheckerFailureReason}),15);self.assertEqual(len({x.value for x in RunnerFailureReason}),22)
  def test_27(self):self.assertEqual(CONTROL_BINDINGS['NEG_PREDICTOR_PRIMARY_REGENERATION'].test_case,'test_control_neg_predictor_primary_regeneration')
+ def test_28(self):
+  w=(F(1,64),F(11,256))
+  a=NF()
+  e=CertifiedAttemptEvaluator(adapter=a,dps=80,max_r_cells_per_box=2,context_provider=lambda b:AttemptStructuralContext(w,F(1,4096),True,True))
+  out=e.evaluate(box=LambdaBox(F(1),F(2),0,"b"),window=w,stage=AttemptStage.PRIMARY,budget=EvaluationBudget(10,10))
+  self.assertTrue(out.passed)
+  ev=e.evidence[("b",AttemptStage.PRIMARY)]
+  m=(w[0]+w[1])/2
+  self.assertEqual(ev.r_tile.accepted_leaves,(RCell(w[0],m),RCell(m,w[1])))
+  self.assertEqual(a.gr,[w,(w[0],m),(m,w[1])])
+ def test_29(self):
+  w=(F(1,64),F(11,256))
+  class O:
+   def __init__(s):s.n=0
+   def strict_negative(s,c):s.n+=1;return s.n>1
+  expected=adaptive_r_bisection(RCell(w[0],w[1]),O(),max_r_cells_per_box=2)
+  class FreshPartition:
+   def verify_box(s,b):
+    return rederive_r_partition(RCell(w[0],w[1]),O(),expected,max_r_cells_per_box=2)
+  checked=SweepChecker(FreshPartition()).verify_runner_result(runner(AttemptOutcome.pass_()).run())
+  self.assertEqual(checked.terminal_class,CheckerTerminalClass.VERIFY_PASS)
 class Controls(unittest.TestCase):pass
 def mk(i):
  def t(s):b=CONTROL_BINDINGS[i];s.assertEqual(b.control_id,i);s.assertTrue(b.implementation_component)

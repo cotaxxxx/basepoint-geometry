@@ -28,6 +28,7 @@ from item3_sweep.enums import CheckerTerminalClass, RunnerTerminalClass
 from item3_sweep.frontier import FrontierMachine, LambdaBox
 from item3_sweep.preflight import PreflightVerifier
 from item3_sweep.provenance import PinnedSourceLoader, SourcePin
+from item3_sweep.r_tile import RCell, rederive_r_partition
 from item3_sweep.runner import RunnerResult, SweepRunner
 from item3_sweep.verifier import ArtifactVerifier
 from item3_sweep.windows import PredictorPoint
@@ -97,10 +98,12 @@ class FreshEvidenceEvaluator:
         original: CertifiedAttemptEvaluator,
         adapter: Any,
         checker_dps: int,
+        max_r_cells_per_box: int,
     ) -> None:
         self.original = original
         self.adapter = adapter
         self.checker_dps = checker_dps
+        self.max_r_cells_per_box = max_r_cells_per_box
 
     def _evidence_for(self, box: LambdaBox):
         candidates = [
@@ -128,13 +131,19 @@ class FreshEvidenceEvaluator:
             dps=self.checker_dps,
         ).strictly_negative():
             return False
-        return all(
-            self.adapter.evaluate_gr(
-                r=(cell.lo, cell.hi),
-                lambda_box=lambda_box,
-                dps=self.checker_dps,
-            ).strictly_negative()
-            for cell in evidence.r_tile.accepted_leaves
+        class Oracle:
+            def strict_negative(_, cell: RCell) -> bool:
+                return self.adapter.evaluate_gr(
+                    r=(cell.lo, cell.hi),
+                    lambda_box=lambda_box,
+                    dps=self.checker_dps,
+                ).strictly_negative()
+
+        return rederive_r_partition(
+            RCell(evidence.window[0], evidence.window[1]),
+            Oracle(),
+            evidence.r_tile,
+            max_r_cells_per_box=self.max_r_cells_per_box,
         )
 
 
@@ -248,6 +257,7 @@ def main() -> int:
         original=evaluator,
         adapter=checker_adapter,
         checker_dps=cfg.raw["checker_dps"],
+        max_r_cells_per_box=cfg.raw["max_r_cells_per_box"],
     )
     verifier = ArtifactVerifier(SweepChecker(fresh))
     verification = verifier.verify(

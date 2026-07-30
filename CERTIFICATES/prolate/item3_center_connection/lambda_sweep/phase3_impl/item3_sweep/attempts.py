@@ -87,8 +87,6 @@ class CertifiedAttemptEvaluator:
         finally:
             budget.count_executed_call()
         interval.round_trip_bytes()
-        if not interval.finite:
-            raise _AttemptFailure(RunnerFailureReason.NONFINITE_ENCLOSURE)
         return interval
 
     def evaluate(
