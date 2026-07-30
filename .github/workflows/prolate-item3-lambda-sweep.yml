@@ -142,27 +142,54 @@ jobs:
           ITEM3_SWEEP_GITHUB_SHA: ${{ github.sha }}
           ITEM3_SWEEP_GITHUB_REF: ${{ github.ref }}
         run: |
-          set -euo pipefail
+          set -uo pipefail
           PROD="CERTIFICATES/prolate/item3_center_connection/lambda_sweep/production"
           rm -rf item3-sweep-output
+          mkdir -p item3-sweep-output
+
+          set +e
           python3 "$PROD/run_item3_sweep.py" \
             --config "$PROD/config.item3-sweep-run.json" \
             --config-sha256 "$PROD/config.item3-sweep-run.sha256" \
             --pilot-artifact-zip pilot-artifact.zip \
             --pilot-artifact-dir pilot-artifact \
             --output item3-sweep-output
-          test -f item3-sweep-output/SWEEP_RUN_MANIFEST.json
-          test -f item3-sweep-output/SWEEP_RECORDS.jsonl
-          test -f item3-sweep-output/SWEEP_EVIDENCE.json
-          test -f item3-sweep-output/SWEEP_CHECKER_REPORT.json
-          test -f item3-sweep-output/PILOT_ARTIFACT_REDERIVATION.json
+          runner_rc=$?
+          set -e
+
+          printf '%s\n' "$runner_rc" \
+            > item3-sweep-output/RUNNER_EXIT_CODE.txt
+
+          missing_file=0
+          : > item3-sweep-output/MISSING_EXPECTED_FILES.txt
+          for required in \
+            item3-sweep-output/SWEEP_RUN_MANIFEST.json \
+            item3-sweep-output/SWEEP_RECORDS.jsonl \
+            item3-sweep-output/SWEEP_EVIDENCE.json \
+            item3-sweep-output/SWEEP_CHECKER_REPORT.json \
+            item3-sweep-output/PILOT_ARTIFACT_REDERIVATION.json
+          do
+            if [[ ! -f "$required" ]]; then
+              printf '%s\n' "$required" \
+                >> item3-sweep-output/MISSING_EXPECTED_FILES.txt
+              missing_file=1
+            fi
+          done
+
+          if (( runner_rc != 0 )); then
+            exit "$runner_rc"
+          fi
+          if (( missing_file != 0 )); then
+            exit 86
+          fi
 
       - name: Upload immutable run artifact
+        if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: item3-sweep-${{ github.run_id }}-${{ github.sha }}
           path: source/item3-sweep-output
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 90
           compression-level: 0
           include-hidden-files: false
