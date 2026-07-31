@@ -19,8 +19,23 @@ test_v9_derivative_kernel.py           c64926a0b0248dcd427308dc7286c38ce4187cf39
 test_mean_value_core_v9.py             96ffaff10d6474322aa9976ccedbfea7e75865a265d275b6027993b02fa8757e
 ```
 
-These hashes describe the locally audited candidate bytes. Git blob and post-publication
-SHA checks must be performed after the files are committed.
+These hashes describe the locally audited candidate bytes.
+
+## Post-publication byte identity
+
+The Git blob SHA-1 values fetched from the implementation branch match locally computed
+Git blob identities for every Python candidate:
+
+```text
+prolate_F_derivatives_cleanroom_v9.py  57a7725c6ff0c4135723536b313e63d609eac4f6
+mean_value_core_v9.py                  aef91706635713ece16cfb15392e3583c6b5b411
+symbolic_audit_v9_derivatives.py       5cd9294b3402e95d72ae44b21af1968c9866710d
+test_v9_derivative_kernel.py           e2ac57371486856a974d4fe8a941009b03753be6
+test_mean_value_core_v9.py             6c1722bf3400b03ac42ba77dba7b828686e09346
+```
+
+The published candidate bytes are therefore identical to the locally syntax-checked and
+diagnostically tested bytes.
 
 ## Checks executed
 
