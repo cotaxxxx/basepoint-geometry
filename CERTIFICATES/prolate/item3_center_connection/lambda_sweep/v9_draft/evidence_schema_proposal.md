@@ -16,6 +16,8 @@ implementation.
    independently reusable evidence unit.
 7. A hosted cancellation may truncate the computation but must not convert a partial
    file into a complete certificate.
+8. Partition-control data are rederived at dps 50; accepted-cell sign verification is
+   independently repeated at dps 70.
 
 ## 2. Proposed files
 
@@ -70,26 +72,49 @@ Every top-level v9 JSON object that can survive independently shall include:
 Unknown keys fail closed in final schemas. During draft development, schema migrations
 must use new schema identifiers rather than silently broadening an existing one.
 
-## 4. Canonical interval and coordinate objects
+## 4. Canonical coordinate, center, interval, and score objects
 
-The proposal reuses canonical exact coordinate objects and a frozen interval enclosure
-object:
+The r endpoints and `r0` use the frozen canonical dyadic encoding. The λ endpoints and
+`lambda0` use the frozen canonical reduced-rational encoding. The unique centers are
 
-```json
-{
-  "lo": {"m": "-123", "e": 17},
-  "hi": {"m": "-121", "e": 17}
-}
+```text
+r0      = (r_lo + r_hi) / 2
+lambda0 = (lambda_lo + lambda_hi) / 2
 ```
 
-The actual field names must match the existing canonical interval contract or be
-explicitly versioned. Decimal strings are not permitted as substitutes for exact
-coordinates. Arb display strings may be recorded only as diagnostics beside the
-normative endpoints.
+computed exactly from the parent endpoints. Evidence must carry the canonical result,
+but runner and checker must independently rederive it. A mismatched center is rejected
+even if it denotes the same approximate real number.
+
+A rigorous interval object contains canonical exact endpoints. Decimal display strings
+may be included only in a nonnormative diagnostic field.
+
+A split score has one of exactly two provisional forms:
+
+```json
+{"class":"FINITE","value":{}}
+```
+
+or
+
+```json
+{"class":"NONFINITE"}
+```
+
+For a finite score, `value` is the exact canonical nonnegative result of
+
+```text
+S_r = radius(I) * absmax(G_rr(I, Lambda))
+S_lambda = radius(Lambda) * absmax(G_rlambda(I, Lambda)).
+```
+
+No float, decimal approximation, Arb display string, or runner-supplied ordering flag may
+serve as the normative score.
 
 ## 5. Mean-value attempt evidence
 
-Each attempted `(λ-box, r-cell)` shall have a deterministic evidence object similar to:
+Each attempted `(lambda-box, r-cell)` shall have a deterministic evidence object similar
+to:
 
 ```json
 {
@@ -100,20 +125,25 @@ Each attempted `(λ-box, r-cell)` shall have a deterministic evidence object sim
   "r_cell": {"lo": {}, "hi": {}},
   "canonical_center": {
     "lambda0": {},
-    "r0": {}
+    "r0": {},
+    "derivation_rule_id": "EXACT_ENDPOINT_MIDPOINT_V1"
   },
   "offsets": {
     "lambda_minus_lambda0": {"lo": {}, "hi": {}},
     "r_minus_r0": {"lo": {}, "hi": {}}
   },
-  "fresh_kernel_enclosures": {
+  "precision": {
+    "partition_control_dps": 50,
+    "accepted_cell_verification_dps": 70
+  },
+  "fresh_kernel_enclosures_dps50": {
     "F_center": {"lo": {}, "hi": {}},
     "F_r_center": {"lo": {}, "hi": {}},
     "F_lambda_box": {"lo": {}, "hi": {}},
     "F_rr_box": {"lo": {}, "hi": {}},
     "F_rlambda_box": {"lo": {}, "hi": {}}
   },
-  "derived_enclosures": {
+  "derived_enclosures_dps50": {
     "G_r_center": {"lo": {}, "hi": {}},
     "G_rr_box": {"lo": {}, "hi": {}},
     "G_rlambda_box": {"lo": {}, "hi": {}},
@@ -121,7 +151,7 @@ Each attempted `(λ-box, r-cell)` shall have a deterministic evidence object sim
     "lambda_correction": {"lo": {}, "hi": {}},
     "mean_value_sum": {"lo": {}, "hi": {}}
   },
-  "decision": {
+  "decision_dps50": {
     "finite": true,
     "strict_negative": true,
     "terminal_class": "NEG",
@@ -138,6 +168,10 @@ Each attempted `(λ-box, r-cell)` shall have a deterministic evidence object sim
 }
 ```
 
+For an accepted cell, checker evidence shall additionally contain a separately generated
+dps-70 mean-value reconstruction and strict-sign decision. The dps-70 evidence may
+reject the cell but may not select another partition.
+
 The example is structural only; `{}` placeholders are not legal final values.
 
 ### 5.1 Point versus box evaluations
@@ -151,26 +185,39 @@ The evidence shall record a frozen `expression_id` for each quotient and correct
 expression. The checker rejects an unknown expression ID even if the final interval
 happens to contain the runner value.
 
-## 6. Refinement evidence
+## 6. Refinement evidence and exact axis selection
 
-Every non-NEG attempt shall record the refinement inputs:
+Every non-NEG attempt shall record:
 
 ```json
 {
-  "r_contribution_upper": {},
-  "lambda_contribution_upper": {},
-  "selected_axis": "r or lambda",
-  "selection_reason": "LARGER_CONTRIBUTION | NONFINITE_R | NONFINITE_LAMBDA | NORMALIZED_WIDTH | FALLBACK_OTHER_AXIS",
-  "tie_break_applied": false,
+  "r_score": {"class":"FINITE","value":{}},
+  "lambda_score": {"class":"FINITE","value":{}},
+  "r_splittable": true,
+  "lambda_splittable": true,
+  "selected_axis": "r",
+  "selection_reason": "ONLY_SPLITTABLE_AXIS | NONFINITE_OUTRANKS_FINITE | LARGER_EXACT_SCORE | EXACT_TIE_R",
   "parent_id": "...",
   "lower_child_id": "...",
   "upper_child_id": "...",
+  "split_point": {},
+  "split_point_rule_id": "EXACT_ENDPOINT_MIDPOINT_V1",
   "depth_before": {"r": 0, "lambda": 0},
   "budget_snapshot": {}
 }
 ```
 
-Runner and checker must independently derive the selected axis and child intervals.
+The normative ordering is:
+
+1. only splittable axes are candidates;
+2. no candidate produces the normative unsplittable-enclosure terminal reason;
+3. `NONFINITE` outranks finite;
+4. finite scores are compared exactly;
+5. equal candidate scores, including two `NONFINITE` scores, select `r`.
+
+Runner and checker independently derive score classes, exact values, candidate status,
+selected axis, split point, and children from fresh dps-50 calls. The checker must not
+copy these fields into its conclusion.
 
 ## 7. `SWEEP_PROGRESS.json`
 
@@ -277,17 +324,22 @@ must send completed evidence to that owner in deterministic sequence order.
 The final checker report shall separately state:
 
 ```text
+partition_control_dps = 50
+accepted_cell_verification_dps = 70
 runner_attempt_count
-checker_attempt_count
+checker_control_attempt_count
+checker_verification_attempt_count
 runner kernel counts by derivative
-checker kernel counts by derivative
+checker control kernel counts by derivative
+checker verification kernel counts by derivative
 runner accepted cell IDs
 checker rederived cell IDs
 runner mean-value expression ID
 checker mean-value expression ID
 partition match
 record-chain match
-strict-sign match
+strict-sign match at dps 50
+strict-sign match at dps 70
 ```
 
 A checker may report diagnostic width comparisons, but `VERIFY_PASS` depends only on
@@ -309,11 +361,16 @@ Hosted cancellation can terminate Python without allowing shell post-processing.
 
 At minimum, controls shall reject:
 
-- omitted λ correction;
-- swapped `F_λ` and `F_rλ`;
-- stale center with current cell;
+- omitted lambda correction;
+- swapped `F_lambda` and `F_rlambda`;
+- stale or approximate center;
+- a center not byte-identical to the exact canonical midpoint;
 - reassociated expression under the wrong expression ID;
 - runner values copied into checker fields;
+- dps-70 values used to choose a different partition;
+- float-derived score or approximate score comparison;
+- `lambda` selected on an exact score tie;
+- an unsplittable axis selected over a splittable axis;
 - unknown derivative count keys;
 - nonmonotone checkpoint sequence;
 - broken checkpoint hash chain;
@@ -326,13 +383,15 @@ At minimum, controls shall reject:
 ## 14. Open schema decisions
 
 1. final schema identifiers;
-2. exact interval endpoint encoding;
+2. exact interval endpoint field names;
 3. JSONL cancellation-tail rule;
 4. directory `fsync` requirement;
 5. checkpoint cadence;
 6. whether completed attempts are embedded or content-addressed;
 7. maximum checkpoint size and compaction policy;
 8. whether final evidence references the last checkpoint chain tip;
-9. compatibility or deliberate incompatibility with v8.1 record types.
+9. compatibility or deliberate incompatibility with v8.1 record types;
+10. final child ordering and identifier assignment.
 
-No implementation is authorized until these decisions are frozen.
+The canonical-center encoding and split-score ordering are no longer open. No
+implementation is authorized until the remaining decisions are frozen.
