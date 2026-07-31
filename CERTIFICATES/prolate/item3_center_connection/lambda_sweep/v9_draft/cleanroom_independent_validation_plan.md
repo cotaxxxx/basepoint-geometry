@@ -42,7 +42,7 @@ The validation package shall separate:
 A shared low-level interval library is allowed. Shared handwritten derivative
 expressions are not independent validation.
 
-## 3. Derivation review
+## 3. Derivation and deterministic-control review
 
 Before code testing, an independent derivation shall verify:
 
@@ -53,10 +53,18 @@ Before code testing, an independent derivation shall verify:
 - denominator positivity;
 - domination/interchange theorem;
 - quotient identities for `G_rr` and `G_rλ`;
-- valid parameter domain.
+- valid parameter domain;
+- exact midpoint closure: dyadic r endpoints produce canonical dyadic `r0`, and rational
+  λ endpoints produce canonical reduced-rational `λ0`;
+- exact score definitions
+  `S_r = radius(I) absmax(G_rr(I,Λ))` and
+  `S_λ = radius(Λ) absmax(G_rλ(I,Λ))`;
+- the total axis order: splittable-only candidates, nonfinite over finite, larger exact
+  finite score, and exact tie to `r`;
+- separation of dps-50 partition control from dps-70 accepted-cell verification.
 
-The review output shall identify each mathematical term by a stable ID and map it to
-source only after the derivation is frozen.
+The review output shall identify each mathematical term and deterministic rule by a
+stable ID and map it to source only after the derivation is frozen.
 
 ## 4. Positive controls
 
@@ -71,9 +79,14 @@ Positive controls shall include at least:
 5. finite `G_rr` and `G_rλ` boxes producing a strict `NEG` mean-value result;
 6. a case where raw `G_r(I,Λ)` is too wide but the v9 mean-value result is `NEG`;
 7. a case where λ correction is materially nonzero;
-8. runner/checker partition agreement;
-9. cancellation-safe checkpoint recovery through the last complete attempt;
-10. deterministic repetition producing identical canonical evidence bytes.
+8. exact canonical midpoint rederivation from differently scaled but equivalent endpoint
+   construction paths;
+9. each split-selection branch: only-r splittable, only-λ splittable, nonfinite-r,
+   nonfinite-λ, larger-r, larger-λ, finite tie to r, and double-nonfinite tie to r;
+10. runner/checker partition agreement from independent dps-50 calls;
+11. dps-70 accepted-cell verification without partition mutation;
+12. cancellation-safe checkpoint recovery through the last complete attempt;
+13. deterministic repetition producing identical canonical evidence bytes.
 
 ## 5. Negative and mutation controls
 
@@ -89,18 +102,30 @@ The control corpus shall reject at least the following attacks.
 - evaluate a derivative on a point when the contract requires a box;
 - use a derivative enclosure that does not cover the entire rectangle.
 
-### Mean-value attacks
+### Mean-value and center attacks
 
 - omit the λ correction;
 - omit the r correction;
-- use a noncanonical center;
-- use stale offsets after subdivision;
+- use an arbitrary interior center;
+- use a floating-point or printed-decimal midpoint;
+- retain an unreduced rational center;
+- use a stale center or stale offsets after subdivision;
+- accept an evidence center not byte-identical to the checker-rederived center;
 - accept `sup(MV)=0` as negative;
 - accept a nonfinite interval;
-- calculate a split score from midpoint floats;
-- change the fixed tie-break;
-- reorder children;
 - reuse a parent enclosure for a child without a valid containment rule.
+
+### Split-tree attacks
+
+- calculate a split score from midpoint floats or display strings;
+- compare finite scores approximately;
+- rank finite over nonfinite;
+- include an unsplittable axis as a candidate;
+- select λ on an exact finite tie;
+- select λ when both scores are nonfinite and both axes are splittable;
+- use dps-70 checker values to select or alter the split tree;
+- trust runner-recorded scores, candidate flags, axis, or split point;
+- reorder children after the final child-order policy is frozen.
 
 ### Independence attacks
 
@@ -174,6 +199,9 @@ The static audit shall establish:
 - no network, subprocess, dynamic package installation, or unpinned source load;
 - every published derivative function is present and source-pinned;
 - runner and checker instantiate separate adapters;
+- partition-control code uses exactly dps 50 in runner and checker;
+- dps-70 verification code cannot mutate the partition;
+- center and score comparisons contain no float conversion;
 - checkpoint code cannot set a mathematical verdict;
 - expression IDs and operation order are frozen;
 - all production Python parses;
@@ -225,7 +253,7 @@ The kernel and adapter remain `AUDITED_SOURCE_PENDING` unless all of the followi
 5. direct fine-box enclosures are contained in the v9 mean-value enclosure;
 6. source and import static audit passes;
 7. runner/checker independence is demonstrated;
-8. canonical evidence is deterministic;
+8. canonical evidence and split trees are deterministic;
 9. diagnostic discrepancies are explained;
 10. performance measurement is complete.
 
@@ -242,6 +270,8 @@ tag, workflow run, or certified λ range.
 - co-evaluation versus separate-evaluation interface;
 - acceptable diagnostic discrepancy criteria;
 - post-import source identity mechanism;
-- checkpoint crash-injection method.
+- checkpoint crash-injection method;
+- final child-order and stack-order attack corpus.
 
-These decisions remain outside the present approval.
+The canonical-center rule, split-score formula, axis ordering, and dps separation are
+frozen inputs to validation rather than open validation choices.
