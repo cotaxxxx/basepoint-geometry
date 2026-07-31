@@ -145,7 +145,6 @@ jobs:
           set -uo pipefail
           PROD="CERTIFICATES/prolate/item3_center_connection/lambda_sweep/production"
           rm -rf item3-sweep-output
-          mkdir -p item3-sweep-output
 
           set +e
           python3 "$PROD/run_item3_sweep.py" \
@@ -157,6 +156,7 @@ jobs:
           runner_rc=$?
           set -e
 
+          mkdir -p item3-sweep-output
           printf '%s\n' "$runner_rc" \
             > item3-sweep-output/RUNNER_EXIT_CODE.txt
 
