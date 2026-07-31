@@ -47,18 +47,27 @@ checker dps = 70
 so that any performance change is attributable to the enclosure form and new derivative
 kernel rather than to a simultaneous precision change.
 
-## 3. Domain and notation
+## 3. Domain, canonical centers, and notation
 
 Let `I = [r_-, r_+]` be a closed canonical r-cell with `0 < r_- <= r_+`, and let
-`Λ = [λ_-, λ_+]` be a closed canonical λ-box. Let
+`Λ = [λ_-, λ_+]` be a closed canonical λ-box.
+
+The center is not a free choice. It is uniquely defined from the canonical endpoints by
 
 ```text
 r0 = (r_- + r_+) / 2,
 λ0 = (λ_- + λ_+) / 2.
 ```
 
-The centers are computed exactly in the contract's rational/dyadic encoding. No
-floating-point midpoint may affect subdivision, evidence identity, or checker replay.
+The following rules are normative:
+
+1. `r0` is reduced to the unique canonical dyadic representation.
+2. `λ0` is reduced to the unique canonical reduced-rational representation.
+3. runner and checker independently rederive both centers from the parent endpoints.
+4. an evidence-supplied center must be byte-identical to the independently rederived
+   canonical center.
+5. an arbitrary interior point, floating-point midpoint, printed-decimal midpoint, or
+   approximate midpoint is prohibited.
 
 Let
 
@@ -72,6 +81,15 @@ All intervals in this contract are outward-rounded rigorous enclosures. For an i
 ```text
 absmax(X) = max(|inf(X)|, |sup(X)|).
 ```
+
+For a finite exact interval `J=[a,b]`, define
+
+```text
+radius(J) = (b-a)/2.
+```
+
+The radius and every split score are compared in exact canonical arithmetic, never by a
+host floating-point comparison.
 
 ## 4. Required clean-room kernel interface
 
@@ -168,41 +186,61 @@ rectangle `I × Λ`. Pointwise or sampled derivative bounds are insufficient.
 A nonfinite or non-NEG result does not by itself produce a mathematical failure. It
 enters deterministic refinement subject to hard budgets.
 
-### 7.1 Proposed finite-term split score
+### 7.1 Frozen split scores
 
-When both derivative enclosures are finite, define
-
-```text
-C_r = absmax(G_rr(I, Λ))  * radius(I)
-C_λ = absmax(G_rλ(I, Λ)) * radius(Λ).
-```
-
-The draft proposes splitting the coordinate with the larger contribution. Exact equality
-uses the fixed tie-break `λ before r`, because λ-width inflation cannot be removed by
-continued r subdivision.
-
-### 7.2 Proposed nonfinite fallback
-
-If one contribution is nonfinite, split its coordinate. If both are nonfinite, compare
-the exact normalized widths
+At the common partition-control precision `dps = 50`, define
 
 ```text
-width(I) / minimum_r_width
-width(Λ) / minimum_λ_width
+S_r = radius(I) * absmax(G_rr(I, Λ)),
+S_λ = radius(Λ) * absmax(G_rλ(I, Λ)).
 ```
 
-and split the larger value, with the same `λ before r` tie-break. If the selected
-coordinate is unsplittable, try the other coordinate. If neither is splittable, terminate
-with a normative unsplittable-enclosure reason.
+A finite score is a canonical exact nonnegative number derived from the canonical
+interval endpoints. A score is classified `NONFINITE` if the required derivative
+enclosure or exact score operation is nonfinite. Runner-supplied scores are evidence only.
+
+The checker shall use a fresh adapter instance and the same control precision `dps = 50`
+to rederive both scores and the complete split tree. The checker precision
+`checker_dps = 70` is reserved for an additional fresh verification of accepted-cell
+mean-value signs; it must not choose or alter the partition.
+
+### 7.2 Frozen axis selection
+
+Only splittable axes are candidates. Selection is unique under the following ordered
+rules:
+
+1. if no axis is splittable, terminate with the normative unsplittable-enclosure reason;
+2. if exactly one axis is splittable, select that axis;
+3. `NONFINITE` outranks every finite score;
+4. if both candidate scores are finite, select the larger score by exact comparison;
+5. if the candidate scores have the same class and compare equal, select the `r` axis.
+
+Thus, if both scores are nonfinite and both axes are splittable, the `r` axis is selected.
+An unsplittable axis is never selected merely because its score is larger or nonfinite.
+
+No elapsed time, host load, thread ordering, approximate magnitude, or checker-only
+70-digit value may influence axis selection.
 
 ### 7.3 Canonical children
 
-Every split is an exact midpoint split. Child ordering, stack insertion, box identifiers,
-and record ordering must be specified so runner and checker reproduce identical bytes.
-No adaptive heuristic may depend on elapsed time, thread scheduling, host load, or
-noncanonical floating-point comparisons.
+Every split is an exact midpoint split. The split point is the canonical `r0` or `λ0`
+from Section 3, rederived from the selected parent interval. The child intervals must
+share the exact midpoint bytes. Final child ordering, stack insertion, box identifiers,
+and record ordering remain to be frozen, but once frozen they must make runner and
+checker reproduce identical bytes.
 
-### 7.4 Budgets and terminal reasons
+### 7.4 Two-level checker obligation
+
+For every accepted cell the checker must establish both:
+
+1. the dps-50 control evaluation reproduces the runner's deterministic partition; and
+2. a fresh dps-70 evaluation reconstructs the mean-value enclosure and satisfies the
+   same strict predicate `sup(MV) < 0`.
+
+Failure of either level is fail-closed. A dps-70 result may reject an accepted cell but
+may not retroactively define a different split tree.
+
+### 7.5 Budgets and terminal reasons
 
 v9 shall separately count, at minimum:
 
@@ -213,7 +251,8 @@ F_λ evaluations
 F_rr evaluations
 F_rλ evaluations
 runner total kernel calls
-checker total kernel calls
+checker control kernel calls at dps 50
+checker verification kernel calls at dps 70
 r-cell creations
 λ-box creations
 r-depth
@@ -240,8 +279,9 @@ validity domains, and rigorous enclosure semantics.
 
 ### `L-MEAN-VALUE-ENCL`
 
-Covers the two-variable mean-value inclusion, canonical centers, interval operations,
-strict sign predicate, and fail-closed refinement transition.
+Covers the two-variable mean-value inclusion, canonical centers, exact split scores,
+axis-selection order, interval operations, strict sign predicate, and fail-closed
+refinement transition.
 
 Each dependency entry shall be a canonical object with a 64-lowercase-hex
 `dependency_entry_sha256`, an exact lemma identifier, and an explicit statement that it
@@ -253,16 +293,16 @@ Runner and checker shall use separate adapter instances and separate kernel-call
 counters. The checker shall:
 
 1. rederive canonical centers and offsets;
-2. call the pinned kernel afresh;
-3. reconstruct `G_r`, `G_rr`, and `G_rλ`;
-4. reconstruct both correction terms and `MV`;
-5. verify finiteness and the strict sign predicate;
-6. rederive the accepted partition and deterministic refinement history;
-7. reject any evidence whose canonical bytes, source pins, context, or record chain do
-   not match.
+2. perform fresh dps-50 control calls and rederive scores, selected axes, and partition;
+3. perform fresh dps-70 verification calls on accepted cells;
+4. reconstruct `G_r`, `G_rr`, and `G_rλ` at each required precision;
+5. reconstruct both correction terms and `MV`;
+6. verify finiteness and the strict sign predicate;
+7. reject any evidence whose canonical bytes, source pins, context, partition, or record
+   chain do not match.
 
-Reuse of runner interval objects, memoized runner values, or runner final enclosures by
-the checker is prohibited.
+Reuse of runner interval objects, memoized runner values, runner scores, selected axes,
+or runner final enclosures by the checker is prohibited.
 
 ## 10. Checkpoint and cancellation contract
 
@@ -294,8 +334,8 @@ amends it. Duplicate keys, CRLF, trailing whitespace, noncanonical numbers, unkn
 fields, path escape, and missing required source hashes fail closed.
 
 The proposed schemas are defined in `evidence_schema_proposal.md`. The final contract
-must bind schema identifiers, required fields, record ordering, and hash-chain rules
-before source implementation begins.
+must bind schema identifiers, required fields, score encodings, record ordering, and
+hash-chain rules before source implementation begins.
 
 ## 12. Performance qualification
 
@@ -323,7 +363,8 @@ No production source may be approved until the independent plan in
 `cleanroom_independent_validation_plan.md` passes. The validation strength must be at
 least comparable to the existing 224-leaf independent validation and must include
 adversarial controls for derivative identity substitution, omitted λ terms, stale source
-pins, nonfinite enclosures, checker reuse, and false strict-sign acceptance.
+pins, noncanonical centers, approximate split scores, altered tie-breaks, checker reuse,
+nonfinite enclosures, and false strict-sign acceptance.
 
 ## 14. Nonclaims and exclusions
 
@@ -335,7 +376,7 @@ This draft does not:
 - create, move, or approve a production tag;
 - run or rerun a workflow;
 - declare `CERTIFIED_LAMBDA_RANGE`;
-- certify that the proposed split policy is optimal;
+- certify that the frozen split policy is performance-optimal;
 - treat diagnostic timing or sampled derivatives as proofs.
 
 ## 15. Open decisions before v9 freeze
@@ -346,18 +387,17 @@ The following remain `SPEC_PENDING`:
    `F_λ`, `F_rr`, and `F_rλ`;
 2. proof conditions for differentiation under the integral sign at every endpoint and
    branch boundary;
-3. whether the finite-term split score uses interval `absmax`, a sharper certified
-   Lipschitz bound, or another exact upper contribution;
-4. final tie-break and child ordering after adversarial testing;
-5. separate minimum widths and maximum depths for r and λ;
-6. whether checkpoint atomic replacement requires directory `fsync` on the hosted
+3. final child ordering, stack insertion, identifier assignment, and record ordering;
+4. separate minimum widths and maximum depths for r and λ;
+5. whether checkpoint atomic replacement requires directory `fsync` on the hosted
    platform;
-7. checkpoint cadence and maximum permitted checkpoint overhead;
-8. exact schema IDs and whether partial evidence is one canonical object or a chained
+6. checkpoint cadence and maximum permitted checkpoint overhead;
+7. exact schema IDs and whether partial evidence is one canonical object or a chained
    JSONL stream;
-9. required performance margin and repetition count for the three-hour gate;
-10. the exact definition of “224-leaf-equivalent or stronger” for the new five-output
-    kernel.
+8. required performance margin and repetition count for the three-hour gate;
+9. the exact definition of “224-leaf-equivalent or stronger” for the new five-output
+   kernel.
 
-Resolution of these decisions requires a later explicit approval. Until then the status
-remains `SPEC_PENDING`.
+The canonical-center rule and the split-score/axis-selection rule are no longer open.
+Resolution of the remaining decisions requires a later explicit approval. Until then the
+status remains `SPEC_PENDING`.
