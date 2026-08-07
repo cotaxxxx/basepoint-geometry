@@ -1,25 +1,64 @@
 # Item 3 lambda sweep — target range policy
 
-Status: `DIRECTION_CONFLICT_DOCUMENTED`
+Status: `V9_REHEARSAL_RANGE_RESOLVED / FINAL_GLOBAL_DIRECTION_UNRESOLVED`
 
-## Current frozen contract
+## 1. Exact v9 rehearsal range
 
-The frozen v8.1 contract implements only a downward sweep:
-
-```text
-lambda_target < lambda_anchor = 118/25
-covered interval = [lambda_target, lambda_anchor]
-```
-
-The first production-pipeline validation candidate is
+The current approved v8.1 production config records
 
 ```text
-lambda_target = 483303/102400 = 118/25 - 2^-12
+lambda_anchor = 118/25
+lambda_target = 123731943/26214400
 ```
 
-This short interval is only an end-to-end pipeline validation target. It is not the final mathematical coverage objective and it is not yet approved.
+and these satisfy the exact identity
 
-## Historical ledger phrase
+```text
+118/25 - 123731943/26214400 = 1/1048576 = 2^-20.
+```
+
+Therefore the minimal connected range for the first v9 end-to-end production rehearsal is
+frozen for planning as
+
+```text
+R_rehearsal = [123731943/26214400, 118/25].
+```
+
+This is a downward connected interval of exact width `2^-20`. It is the immediate
+single-range rehearsal target only. It is not a claim of final mathematical coverage and
+it does not authorize a workflow run, production tag, certification, or config change.
+
+The earlier `2^-12` candidate mentioned in historical planning is superseded for the v9
+rehearsal by the exact range encoded in the current production config.
+
+## 2. No silent widening or orientation change
+
+The rehearsal may not silently:
+
+- move either endpoint;
+- widen beyond `R_rehearsal`;
+- reverse the sweep orientation;
+- reinterpret the lower endpoint as an upward target;
+- substitute a decimal approximation for either rational endpoint.
+
+Any changed range requires a new explicit config identity and the corresponding audit and
+approval path.
+
+## 3. Multi-run partitioning
+
+A multi-run rehearsal may partition `R_rehearsal` into exact canonical rational shards,
+provided that the final aggregate verifier establishes all of the following:
+
+1. every shard lies inside `R_rehearsal`;
+2. adjacent shard endpoints are byte-identical canonical rationals;
+3. the shard interiors are pairwise disjoint;
+4. the exact union is all of `R_rehearsal` with no gap;
+5. every selected shard attempt passes its own fresh checker;
+6. the aggregate evidence satisfies the v9 multi-run chain contract.
+
+Partitioning changes execution packaging, not the mathematical target interval.
+
+## 4. Historical upward objective
 
 The earlier ledger phrase `lambda_match -> a_c` points upward. The certified bracket
 
@@ -27,18 +66,22 @@ The earlier ledger phrase `lambda_match -> a_c` points upward. The certified bra
 a_c in [236219/50000, 472439/100000]
 ```
 
-lies strictly above `lambda_anchor = 118/25`.
+lies strictly above
 
-Therefore the frozen downward-only contract cannot implement coverage from the anchor toward `a_c`. No reinterpretation of `lambda_target`, endpoint order, or interval orientation is permitted.
+```text
+lambda_anchor = 118/25.
+```
 
-## Required decision
+The frozen v8.1 downward-only contract cannot implement coverage from the anchor toward
+`a_c`. The v9 rehearsal deliberately does not resolve that global direction question.
 
-The final coverage objective remains unresolved. If the mathematics requires upward extension from `118/25` toward `a_c`, that work requires:
+If the later mathematical objective requires upward extension from `118/25` toward
+`a_c`, that work requires an explicit upward or bidirectional contract and a fresh audit
+cycle. It cannot inherit authorization from the `2^-20` downward rehearsal.
 
-1. a revised design contract with an upward or bidirectional frontier;
-2. a new Phase 1 content audit and byte freeze;
-3. new Phase 2 controls;
-4. a new Phase 3 implementation audit;
-5. a new Phase 4 workflow audit.
+## 5. Failure rule
 
-This document authorizes no run, tag, certification claim, or contract revision.
+Failure or incompletion anywhere inside `R_rehearsal` leaves the aggregate status
+`NOT_CERTIFIED` or `INCOMPLETE`, as appropriate. A failed rehearsal may motivate a
+contract revision, but it may not be converted into a certified range by dropping a
+failed shard, shrinking the target after execution, or reclassifying partial evidence.
