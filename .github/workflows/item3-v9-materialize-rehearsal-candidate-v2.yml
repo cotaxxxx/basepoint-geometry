@@ -1,0 +1,114 @@
+name: Item 3 v9 materialize rehearsal candidate v2
+
+on:
+  push:
+    branches:
+      - agent/item3-v9-analytic-proof
+    paths:
+      - ".github/workflows/item3-v9-materialize-rehearsal-candidate-v2.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  materialize:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: agent/item3-v9-analytic-proof
+          fetch-depth: 1
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.13.14"
+      - name: Install pinned validated arithmetic
+        run: python -m pip install python-flint==0.9.0
+
+      - name: Recheck successor source gates
+        working-directory: CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m py_compile \
+            build_dependency_snapshot_v9.py build_rehearsal_plan_config_v9.py \
+            aggregate_verifier_v9_candidate_v2.py rehearsal_driver_v9_candidate_v3.py \
+            test_dependency_snapshot_builder.py test_rehearsal_plan_config_builder.py \
+            test_aggregate_verifier_v9_candidate_v2.py test_rehearsal_driver_v3_binding.py
+          python -m unittest -v \
+            test_dependency_snapshot_builder.py test_rehearsal_plan_config_builder.py \
+            test_aggregate_verifier_v9_candidate_v2.py test_rehearsal_driver_v3_binding.py
+
+      - name: Materialize successor bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE="CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate"
+          OUT="$BASE/rehearsal_bundle_candidate_v2"
+          DEPS="$OUT/dependencies"
+          PLAN="$OUT/plan_config"
+          if [ -e "$OUT" ]; then
+            echo "successor bundle already exists: $OUT" >&2
+            exit 1
+          fi
+          python "$BASE/build_dependency_snapshot_v9.py" --repo-root . --output-dir "$DEPS"
+          python "$BASE/build_rehearsal_plan_config_v9.py" \
+            --repo-root . \
+            --dependency-snapshot "$DEPS/dependency_snapshot_v9_candidate.json" \
+            --output-dir "$PLAN"
+
+      - name: Verify exact successor identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import hashlib, importlib.util, json, sys
+          from pathlib import Path
+          root=Path.cwd()
+          base=root/'CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate'
+          out=base/'rehearsal_bundle_candidate_v2'; deps=out/'dependencies'; pdir=out/'plan_config'
+          def sha(p): return hashlib.sha256(p.read_bytes()).hexdigest()
+          def canonical(p):
+              raw=p.read_bytes(); obj=json.loads(raw.decode('utf-8'))
+              expected=(json.dumps(obj,sort_keys=True,separators=(',',':'),ensure_ascii=False)+'\n').encode()
+              if raw!=expected: raise SystemExit(f'noncanonical: {p}')
+          for p in list(deps.glob('*.json'))+list(pdir.glob('*.json')): canonical(p)
+          snapshot=deps/'dependency_snapshot_v9_candidate.json'
+          plan=pdir/'rehearsal_plan_v2.json'; config=pdir/'rehearsal_shard_config_v1.json'
+          for data,side in [(snapshot,deps/'dependency_snapshot_v9_candidate.json.sha256'),(plan,pdir/'rehearsal_plan_v2.json.sha256'),(config,pdir/'rehearsal_shard_config_v1.json.sha256')]:
+              if sha(data)!=side.read_text().strip(): raise SystemExit(f'sidecar mismatch: {data.name}')
+          def load(name,p):
+              spec=importlib.util.spec_from_file_location(name,p); mod=importlib.util.module_from_spec(spec); sys.modules[name]=mod; spec.loader.exec_module(mod); return mod
+          agg=load('v9_mat2_agg',base/'aggregate_verifier_v9_candidate_v2.py')
+          drv=load('v9_mat2_drv',base/'rehearsal_driver_v9_candidate_v3.py')
+          parsed=agg.parse_plan(plan)
+          if len(parsed.ordered_shards)!=1: raise SystemExit('not one shard')
+          cfg,_=agg.parse_config_for_plan(config,parsed,parsed.ordered_shards[0])
+          dcfg=drv.parse_config(config)
+          if dcfg.aggregate_plan_sha256!=sha(plan) or dcfg.dependency_snapshot_sha256!=sha(snapshot): raise SystemExit('driver identity mismatch')
+          if cfg['source_sha256']['driver']!=sha(base/'rehearsal_driver_v9_candidate_v3.py'): raise SystemExit('driver source map stale')
+          if cfg['source_sha256']['aggregate_verifier']!=sha(base/'aggregate_verifier_v9_candidate_v2.py'): raise SystemExit('aggregate source map stale')
+          old=base/'rehearsal_bundle_candidate_v1'
+          if old.exists() and sha(old/'plan_config/rehearsal_shard_config_v1.json')==sha(config): raise SystemExit('successor config unexpectedly identical to old identity')
+          report={
+            'schema':'ITEM3_SWEEP_V9_REHEARSAL_BUNDLE_MATERIALIZATION_V2',
+            'status':'MATERIALIZED_SUCCESSOR_CANDIDATE','authorization':'MATERIALIZATION_ONLY',
+            'dependency_snapshot_sha256':sha(snapshot),'plan_sha256':sha(plan),'config_sha256':sha(config),
+            'freeze_authorized':False,'production_rehearsal_authorized':False,'tag_created':False,'certified_lambda_range':False,
+          }
+          (out/'MATERIALIZATION_REPORT.json').write_text(json.dumps(report,sort_keys=True,separators=(',',':'))+'\n',encoding='utf-8')
+          print(json.dumps(report,sort_keys=True))
+          PY
+
+      - name: Commit successor bundle atomically
+        shell: bash
+        run: |
+          set -euo pipefail
+          OUT="CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/rehearsal_bundle_candidate_v2"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- "$OUT"
+          git diff --cached --check
+          git commit -m "Materialize item3 v9 successor rehearsal bundle"
+          git push origin HEAD:agent/item3-v9-analytic-proof
