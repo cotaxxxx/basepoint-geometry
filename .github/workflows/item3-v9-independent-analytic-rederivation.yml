@@ -1,5 +1,7 @@
 name: Item 3 v9 independent analytic rederivation
 
+# Revision 2026-08-08: trigger the independent rederivation after the analytic proof update.
+
 on:
   push:
     branches:
