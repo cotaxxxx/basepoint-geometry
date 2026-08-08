@@ -148,7 +148,7 @@ def encode_value(value: Any) -> Any:
 
 
 def canonical_json_bytes(obj: Any) -> bytes:
-    return (json.dumps(obj, sort_keys=True, separators=(",", ":"), ensure_ascii=False) + "\n").encode("utf-8")
+    return (json.dumps(encode_value(obj), sort_keys=True, separators=(",", ":"), ensure_ascii=False) + "\n").encode("utf-8")
 
 
 def execute_rehearsal(
