@@ -2,9 +2,11 @@
 """Independent real-arithmetic reference path for Item 3 sweep v9 validation.
 
 This module intentionally imports no candidate/prototype kernel, adapter, runner, checker,
-or checkpoint source.  It evaluates the real F integral by a fixed midpoint cubature using
+or checkpoint source. It evaluates the real F integral by a fixed midpoint cubature using
 Python's math module and obtains r derivatives by symmetric finite differences of that
-independently integrated F.  It is validation support only, not a rigorous enclosure.
+independently integrated F. Pointwise derivative references are likewise finite differences
+of the independently coded real F integrand. It is validation support only, not a rigorous
+enclosure.
 """
 from __future__ import annotations
 
@@ -12,7 +14,6 @@ import math
 
 
 def _h_h1(gamma: float) -> tuple[float, float]:
-    # Physical-domain removable limit h'(1)=-2.
     if gamma >= 1.0 - 1.0e-13:
         return 0.0, -2.0
     if gamma <= -1.0:
@@ -22,7 +23,7 @@ def _h_h1(gamma: float) -> tuple[float, float]:
     return a * a, -2.0 * a / s
 
 
-def _phi_f(theta: float, phi: float, r: float, lam: float) -> float:
+def phi_f_reference(theta: float, phi: float, r: float, lam: float) -> float:
     s = math.sin(theta)
     c = math.cos(theta)
     c2 = c * c
@@ -35,13 +36,26 @@ def _phi_f(theta: float, phi: float, r: float, lam: float) -> float:
     W = 1.0 - r * u
     B = lam / w
     gamma = B * W / sqrt_q
-    # Numerical roundoff may move a physical gamma infinitesimally above one.
     gamma = min(1.0, max(-1.0, gamma))
-    d = r - u
     N = u * (1.0 - ell) + r * (u * u - 1.0)
     gamma_r = B * N / (q * sqrt_q)
     h, h1 = _h_h1(gamma)
     return s * (-u * h + W * h1 * gamma_r)
+
+
+def phi_f_r_reference(theta: float, phi: float, r: float, lam: float, *, h: float = 2.0e-5) -> float:
+    return (
+        phi_f_reference(theta, phi, r + h, lam)
+        - phi_f_reference(theta, phi, r - h, lam)
+    ) / (2.0 * h)
+
+
+def phi_f_rr_reference(theta: float, phi: float, r: float, lam: float, *, h: float = 5.0e-5) -> float:
+    return (
+        phi_f_reference(theta, phi, r + h, lam)
+        - 2.0 * phi_f_reference(theta, phi, r, lam)
+        + phi_f_reference(theta, phi, r - h, lam)
+    ) / (h * h)
 
 
 def F_reference(r: float, lam: float, *, n_theta: int = 80, n_phi: int = 120) -> float:
@@ -57,7 +71,7 @@ def F_reference(r: float, lam: float, *, n_theta: int = 80, n_phi: int = 120) ->
         row = 0.0
         for j in range(n_phi):
             phi = (j + 0.5) * dphi
-            row += _phi_f(theta, phi, r, lam)
+            row += phi_f_reference(theta, phi, r, lam)
         total += row
     return total * dtheta * dphi / math.pi
 
@@ -86,3 +100,5 @@ REFERENCE_POINTS = (
     (0.0360, 4.71999975),
     (0.0420, 4.71999995),
 )
+
+POINTWISE_REFERENCE_POINT = (0.61, 1.07, 0.031, 4.7199996)
