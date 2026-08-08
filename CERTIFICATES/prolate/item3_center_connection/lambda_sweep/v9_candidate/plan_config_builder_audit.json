@@ -1,1 +1,1 @@
-{"builder_source_sha256":"31517a267a1d36ad80893e25f43587819d70aa771841d621dbfad78b210e7356","exit_code":1,"schema":"ITEM3_SWEEP_V9_PLAN_CONFIG_BUILDER_AUDIT_V1","status":"FAILED","test_source_sha256":"97ef494936d118ece64b7509b9ce839dd8f895b1e892d6726af1f5b3a25f5aab"}
+{"builder_source_sha256":"31517a267a1d36ad80893e25f43587819d70aa771841d621dbfad78b210e7356","exit_code":0,"schema":"ITEM3_SWEEP_V9_PLAN_CONFIG_BUILDER_AUDIT_V1","status":"PASSED","test_source_sha256":"97ef494936d118ece64b7509b9ce839dd8f895b1e892d6726af1f5b3a25f5aab"}
