@@ -1,4 +1,5 @@
 name: Item 3 v9 driver v3 binding audit
+# rerun after common source-map repair 2026-08-08
 
 on:
   push:
