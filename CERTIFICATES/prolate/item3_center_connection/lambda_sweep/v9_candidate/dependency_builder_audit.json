@@ -1,1 +1,1 @@
-{"builder_source_sha256":"daaf06dde9ec0e155f25bf85ec0858d34d328f0c9c86b8aade6606cae7375b22","exit_code":1,"schema":"ITEM3_SWEEP_V9_DEPENDENCY_BUILDER_AUDIT_V1","status":"FAILED","test_source_sha256":"1ff88855d7995de330adc4ba238d706da42bcce1b1476199753836232706ab71"}
+{"builder_source_sha256":"ab34923ebd906188ed0994e7edb7f796151416e53040ce1e0f6f98b880c2069f","exit_code":0,"schema":"ITEM3_SWEEP_V9_DEPENDENCY_BUILDER_AUDIT_V1","status":"PASSED","test_source_sha256":"1ff88855d7995de330adc4ba238d706da42bcce1b1476199753836232706ab71"}
