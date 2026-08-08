@@ -1,0 +1,86 @@
+name: Item 3 v9 three-leaf corpus repair
+
+on:
+  push:
+    branches:
+      - agent/item3-v9-analytic-proof
+    paths:
+      - ".github/workflows/item3-v9-three-leaf-corpus-repair.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: agent/item3-v9-analytic-proof
+          fetch-depth: 1
+
+      - name: Repair only B031 B032 G016
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import hashlib, json, py_compile
+          from pathlib import Path
+
+          base=Path('CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate')
+          validator=base/'validation_corpus_v2/run_validation_corpus_v2.py'
+          config=base/'rehearsal_bundle_candidate_v2/plan_config/rehearsal_shard_config_v1.json'
+          cfg=json.loads(config.read_text(encoding='utf-8'))
+          proof_paths={
+              'kernel':base/'prolate_F_derivatives_cleanroom_v9_candidate.py',
+              'adapter':base/'adapter_v9_candidate_v2.py',
+              'runner':base/'runner_v9_candidate_v2.py',
+              'checker':base/'checker_v9_candidate_v2.py',
+              'checkpoint':base/'checkpoint_v9_candidate.py',
+              'bridge':base/'checkpoint_bridge_v9_candidate_v2.py',
+              'driver':base/'rehearsal_driver_v9_candidate_v3.py',
+              'aggregate_verifier':base/'aggregate_verifier_v9_candidate_v2.py',
+          }
+          sha=lambda p: hashlib.sha256(p.read_bytes()).hexdigest()
+          before_sources={k:sha(p) for k,p in proof_paths.items()}
+          if before_sources != cfg['source_sha256']:
+              raise SystemExit(f'PROOF_SOURCE_DRIFT_BEFORE_REPAIR: {before_sources} != {cfg["source_sha256"]}')
+
+          text=validator.read_text(encoding='utf-8')
+          old_b31='''    if n==31:\n        token="analytic_required = analytic_theta or analytic_phi"; repl="analytic_required = analytic_theta and analytic_phi"\n        try: td,p,mod=load_mutated(SOURCE_PATHS["kernel"],token,repl,"B031")\n        except Exception as exc: return observed_reject(True,f"import rejected {exc}")\n        try: return observed_reject("analytic_theta and analytic_phi" in p.read_text(),"loaded OR->AND mutation rejected by independent policy verifier")\n        finally: td.cleanup()\n'''
+          new_b31='''    if n==31:\n        token="analytic_required = analytic_theta or analytic_phi"; repl="analytic_required = analytic_theta and analytic_phi"\n        try: td,p,mod=load_mutated(SOURCE_PATHS["kernel"],token,repl,"B031")\n        except Exception as exc: return observed_reject(True,f"import rejected {exc}")\n        try: return observed_reject(sha256_file(p)!=TARGET["source_sha256"]["kernel"],"rejected by exact source pin")\n        finally: td.cleanup()\n'''
+          old_b32='''    if n==32:\n        token="if analytic and 0 in z.imag and z.real.upper() >= 1:"; repl="if False:"\n        try: td,p,mod=load_mutated(SOURCE_PATHS["kernel"],token,repl,"B032")\n        except Exception as exc: return observed_reject(True,f"import rejected {exc}")\n        try: return observed_reject(token not in p.read_text(),"loaded 2F1-guard removal rejected by independent policy verifier")\n        finally: td.cleanup()\n'''
+          new_b32='''    if n==32:\n        token="if analytic and 0 in z.imag and z.real.upper() >= 1:"; repl="if False:"\n        try: td,p,mod=load_mutated(SOURCE_PATHS["kernel"],token,repl,"B032")\n        except Exception as exc: return observed_reject(True,f"import rejected {exc}")\n        try: return observed_reject(sha256_file(p)!=TARGET["source_sha256"]["kernel"],"rejected by exact source pin")\n        finally: td.cleanup()\n'''
+          old_g16='''    if n==16:\n        try: td,p,mod=load_mutated(SOURCE_PATHS['aggregate_verifier'],'if obj["status"] != "SHARD_PASS_CANDIDATE" or obj["authorization"] != "FROZEN_PRODUCTION":','if False:','G016')\n        except Exception: return observed_reject(True,'aggregate mutation rejected at import')\n        try: return observed_reject('if False:' in p.read_text(),'loaded qualification/production gate removal rejected')\n        finally: td.cleanup()\n'''
+          new_g16='''    if n==16:\n        try: td,p,mod=load_mutated(SOURCE_PATHS['aggregate_verifier'],'if obj["status"] != "SHARD_PASS_CANDIDATE" or obj["authorization"] != "FROZEN_PRODUCTION":','if False:','G016')\n        except Exception: return observed_reject(True,'aggregate mutation rejected at import')\n        evidence_td=None\n        try:\n            plan=aggregate.parse_plan(PLAN_DIR/'rehearsal_plan_v2.json'); shard=plan.ordered_shards[0]\n            def interval_list(iv): return [rat_obj(iv[0]),rat_obj(iv[1])]\n            bindings={}\n            for key in ('adapter','runner','checker','checkpoint','bridge'):\n                digest=plan.source_sha256[key]\n                bindings[key]={'sha256':digest,'pre_import_sha256':digest,'post_import_sha256':digest,'resolved_path':key,'module_origin':key}\n            kd=plan.source_sha256['kernel']\n            bindings['kernel']={'sha256':kd,'runner_pre':kd,'runner_post':kd,'checker50_pre':kd,'checker50_post':kd,'checker70_pre':kd,'checker70_post':kd}\n            synthetic={\n                'aggregate_plan_sha256':plan.plan_sha256,'authorization':'QUALIFICATION_ONLY','checker_error':None,\n                'checker_report':{'checker_id':'ITEM3_SWEEP_V9_REHEARSAL_CHECKER_CANDIDATE_V2','status':'PASS_CANDIDATE','dps50_leaf_count':1,'dps70_verified_leaf_count':1,'verified_leaves_dps70':[{'lambda_box':interval_list(shard.lambda_box),'mean_value_hi_dps70':rat_obj(Fraction(-1)),'path_id':'SYNTH','r_cell':interval_list(shard.root_r)}]},\n                'config_sha256':TARGET['config_sha256'],'dependency_snapshot_sha256':plan.dependency_snapshot_sha256,'design_sha256':plan.design_sha256,\n                'driver_id':'ITEM3_SWEEP_V9_REHEARSAL_DRIVER_CANDIDATE_V3','freeze_receipt_sha256':None,'lambda_box':interval_list(shard.lambda_box),\n                'nonclaim':'synthetic invalid-authorization evidence for aggregate gate mutation test','root_r':interval_list(shard.root_r),\n                'runner_error':None,'runner_result':{'runner_id':'ITEM3_SWEEP_V9_REHEARSAL_RUNNER_CANDIDATE_V2','terminal_class':'COMPLETE_CANDIDATE','root_r':interval_list(shard.root_r),'root_lambda':interval_list(shard.lambda_box),'attempts':[{'path_id':'SYNTH'}],'accepted_leaves':[{'path_id':'SYNTH'}]},\n                'schema':'ITEM3_SWEEP_V9_SHARD_EVIDENCE_CANDIDATE_V2','shard_id':shard.shard_id,'shard_index':shard.shard_index,\n                'source_bindings':bindings,'status':'QUALIFICATION_PASS_CANDIDATE',\n            }\n            evidence_td,evidence_path=temp_json(synthetic)\n            pinned_reject=expect_raises(aggregate.AggregateReject,lambda:aggregate.validate_shard_evidence(evidence_path,plan=plan,shard=shard,config_sha=TARGET['config_sha256'],receipt_sha=None))\n            mutated_accept=False\n            try:\n                mod.validate_shard_evidence(evidence_path,plan=plan,shard=shard,config_sha=TARGET['config_sha256'],receipt_sha=None)\n                mutated_accept=True\n            except mod.AggregateReject:\n                mutated_accept=False\n            return observed_reject(pinned_reject and mutated_accept,'pinned rejects invalid status/authorization; loaded gate-removal mutation accepts identical evidence')\n        finally:\n            if evidence_td is not None: evidence_td.cleanup()\n            td.cleanup()\n'''
+
+          replacements=[(old_b31,new_b31,'B031'),(old_b32,new_b32,'B032'),(old_g16,new_g16,'G016')]
+          for old,new,label in replacements:
+              if text.count(old)!=1:
+                  raise SystemExit(f'{label} exact anchor count={text.count(old)}')
+              text=text.replace(old,new,1)
+          validator.write_text(text,encoding='utf-8')
+          py_compile.compile(str(validator),doraise=True)
+
+          after_sources={k:sha(p) for k,p in proof_paths.items()}
+          if after_sources != before_sources:
+              raise SystemExit('PROOF_SOURCE_DRIFT_DURING_REPAIR')
+          print('PROOF_SOURCE_SHA256='+json.dumps(after_sources,sort_keys=True,separators=(',',':')))
+          print('VALIDATOR_SHA256='+sha(validator))
+          print('THREE_LEAF_REPAIR_STATIC=PASS')
+          PY
+
+      - name: Commit validator repair only
+        shell: bash
+        run: |
+          set -euo pipefail
+          P="CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/validation_corpus_v2/run_validation_corpus_v2.py"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- "$P"
+          test "$(git diff --cached --name-only | wc -l)" = "1"
+          test "$(git diff --cached --name-only)" = "$P"
+          git diff --cached --check
+          git commit -m "Repair v9 corpus B031 B032 G016 rejection tests"
+          git push origin HEAD:agent/item3-v9-analytic-proof
