@@ -43,16 +43,20 @@ jobs:
           dep.write_text(text.replace(old, new, 1), encoding="utf-8")
 
           agg = base / "v9_candidate/aggregate_verifier_v9_candidate_v2.py"
-          text = agg.read_text(encoding="utf-8")
-          old = '''    if obj["status"] != "SHARD_PASS_CANDIDATE" or obj["authorization"] != "FROZEN_PRODUCTION":
-              raise AggregateReject("shard evidence is not frozen production PASS candidate")
-          '''
-          new = old + '''    if obj["driver_id"] != "ITEM3_SWEEP_V9_REHEARSAL_DRIVER_CANDIDATE_V3":
-              raise AggregateReject("shard evidence driver ID mismatch")
-          '''
-          if text.count(old) != 1:
-              raise SystemExit(f"aggregate gate marker count = {text.count(old)}")
-          agg.write_text(text.replace(old, new, 1), encoding="utf-8")
+          lines = agg.read_text(encoding="utf-8").splitlines(keepends=True)
+          needle = 'raise AggregateReject("shard evidence is not frozen production PASS candidate")'
+          matches = [i for i, line in enumerate(lines) if needle in line]
+          if len(matches) != 1:
+              raise SystemExit(f"aggregate gate anchor count = {len(matches)}")
+          i = matches[0]
+          raise_indent = lines[i][:len(lines[i]) - len(lines[i].lstrip())]
+          if_indent = raise_indent[:-4]
+          gate = if_indent + 'if obj["driver_id"] != "ITEM3_SWEEP_V9_REHEARSAL_DRIVER_CANDIDATE_V3":\n'
+          reject = raise_indent + 'raise AggregateReject("shard evidence driver ID mismatch")\n'
+          if i + 1 < len(lines) and 'shard evidence driver ID mismatch' in lines[i + 1]:
+              raise SystemExit("driver-id gate already present in unexpected layout")
+          lines[i + 1:i + 1] = [gate, reject]
+          agg.write_text(''.join(lines), encoding="utf-8")
           PY
 
       - name: Run focused regression controls
