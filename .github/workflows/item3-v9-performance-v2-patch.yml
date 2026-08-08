@@ -1,0 +1,103 @@
+name: Item 3 v9 performance v2 patch
+
+on:
+  push:
+    branches:
+      - agent/item3-v9-analytic-proof
+    paths:
+      - ".github/workflows/item3-v9-performance-v2-patch.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: agent/item3-v9-analytic-proof
+          fetch-depth: 1
+      - name: Patch qualification workflow to successor identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('.github/workflows/item3-v9-performance-qualification.yml')
+          t=p.read_text(encoding='utf-8')
+          for old,new in [
+            ('name: Item 3 v9 performance qualification','name: Item 3 v9 performance qualification v2'),
+            ('rehearsal_bundle_candidate_v1','rehearsal_bundle_candidate_v2'),
+            ('validation_corpus_v1','validation_corpus_v2'),
+            ('performance_qualification_v1','performance_qualification_v2'),
+            ('getattr(flint,"__flint_version__","UNKNOWN")','getattr(flint,"__FLINT_VERSION__","UNKNOWN")'),
+          ]:
+              if old not in t: raise SystemExit(f'missing patch anchor: {old}')
+              t=t.replace(old,new)
+
+          # Bind the validation report to its exact validator/reference/workflow bytes.
+          old='''          validation = load("CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/validation_corpus_v2/VALIDATION_REPORT.json")\n          if validation["status"] != "PASSED" or validation["failure_count"] != 0 or validation["leaf_count"] != 256:\n              raise SystemExit("256-leaf validation gate not PASSED")\n          if validation["failed_control_ids"] or validation["missing_control_ids"] or validation["extra_control_ids"]:\n              raise SystemExit("validation ID set is not exact")\n\n'''
+          new='''          validation_path = Path("CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/validation_corpus_v2/VALIDATION_REPORT.json")\n          validation = load(validation_path)\n          validation_env_path = Path("CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/validation_corpus_v2/VALIDATION_ENVIRONMENT.json")\n          validation_env = load(validation_env_path)\n          validator_path = Path("CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/validation_corpus_v2/run_validation_corpus_v2.py")\n          reference_path = Path("CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/validation_corpus_v2/independent_reference_v2.py")\n          validation_workflow_path = Path(".github/workflows/item3-v9-256-leaf-validation-v2.yml")\n          if validation["status"] != "PASSED" or validation["failure_count"] != 0 or validation["leaf_count"] != 256:\n              raise SystemExit("256-leaf validation gate not PASSED")\n          if validation["failed_control_ids"] or validation["missing_control_ids"] or validation["extra_control_ids"]:\n              raise SystemExit("validation ID set is not exact")\n          if sha(validator_path) != validation["validation_source_sha256"]:\n              raise SystemExit("validation source drift")\n          if sha(reference_path) != validation["independent_reference_sha256"]:\n              raise SystemExit("independent validation reference drift")\n          if sha(validation_workflow_path) != validation_env["workflow_sha256"]:\n              raise SystemExit("validation workflow drift")\n          if validation_env.get("flint_library") != "3.6.0":\n              raise SystemExit("validated FLINT library provenance is not 3.6.0")\n\n'''
+          if t.count(old)!=1: raise SystemExit(f'validation identity block count={t.count(old)}')
+          t=t.replace(old,new,1)
+
+          # Per-run environment must bind the full qualification identity and exact FLINT version.
+          old='''          report = {\n              "schema":"ITEM3_SWEEP_V9_PERFORMANCE_ENVIRONMENT_V1",\n'''
+          new='''          def sha(path): return hashlib.sha256(Path(path).read_bytes()).hexdigest()\n          config_path = Path("CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/rehearsal_bundle_candidate_v2/plan_config/rehearsal_shard_config_v1.json")\n          plan_path = Path("CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/rehearsal_bundle_candidate_v2/plan_config/rehearsal_plan_v2.json")\n          deps_path = Path("CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/rehearsal_bundle_candidate_v2/dependencies/dependency_snapshot_v9_candidate.json")\n          validation_path = Path("CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/validation_corpus_v2/VALIDATION_REPORT.json")\n          config = json.loads(config_path.read_text(encoding="utf-8"))\n          report = {\n              "schema":"ITEM3_SWEEP_V9_PERFORMANCE_ENVIRONMENT_V2",\n'''
+          if t.count(old)!=1: raise SystemExit(f'environment report block count={t.count(old)}')
+          t=t.replace(old,new,1)
+          old='''              "workflow_sha256":hashlib.sha256(workflow.read_bytes()).hexdigest(),\n          }\n          (root / "PERFORMANCE_ENVIRONMENT.json").write_text'''
+          new='''              "workflow_sha256":hashlib.sha256(workflow.read_bytes()).hexdigest(),\n              "config_sha256":sha(config_path),\n              "aggregate_plan_sha256":sha(plan_path),\n              "dependency_snapshot_sha256":sha(deps_path),\n              "design_sha256":config["design_sha256"],\n              "source_sha256":config["source_sha256"],\n              "validation_report_sha256":sha(validation_path),\n          }\n          if report["flint_library"] != "3.6.0":\n              raise SystemExit(f"unexpected FLINT library version: {report['flint_library']}")\n          (root / "PERFORMANCE_ENVIRONMENT.json").write_text'''
+          if t.count(old)!=1: raise SystemExit(f'environment identity insertion count={t.count(old)}')
+          t=t.replace(old,new,1)
+
+          # Read checkpoint provenance from the separate object, never from mathematical evidence.
+          old='''          checkpoint_source = Path("CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/checkpoint_v9_candidate.py")\n          spec = importlib.util.spec_from_file_location(f"perf_checkpoint_{rep}", checkpoint_source)\n          mod = importlib.util.module_from_spec(spec); sys.modules[spec.name]=mod; spec.loader.exec_module(mod)\n          chain_ok = False\n          recovered_count = 0\n          last_sha = None\n          try:\n              records = mod.recover_committed(out / "checkpoint")\n              recovered_count = len(records)\n              last_sha = records[-1].checkpoint_sha256 if records else None\n              chain_ok = bool(records) and recovered_count == evidence.get("checkpoint_commit_count") and last_sha == evidence.get("checkpoint_last_sha256")\n          except Exception:\n              chain_ok = False\n\n'''
+          new='''          checkpoint_source = Path("CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/checkpoint_v9_candidate.py")\n          spec = importlib.util.spec_from_file_location(f"perf_checkpoint_{rep}", checkpoint_source)\n          mod = importlib.util.module_from_spec(spec); sys.modules[spec.name]=mod; spec.loader.exec_module(mod)\n          provenance_path = out / "SHARD_PROVENANCE.json"\n          provenance = json.loads(provenance_path.read_text()) if provenance_path.exists() else {}\n          chain_ok = False\n          recovered_count = 0\n          last_sha = None\n          try:\n              records = mod.recover_committed(out / "checkpoint")\n              recovered_count = len(records)\n              last_sha = records[-1].checkpoint_sha256 if records else None\n              ledger_path = out / "checkpoint" / "SWEEP_PROGRESS.jsonl"\n              evidence_sha = hashlib.sha256(evidence_path.read_bytes()).hexdigest() if evidence_path.exists() else None\n              ledger_sha = hashlib.sha256(ledger_path.read_bytes()).hexdigest() if ledger_path.exists() else None\n              chain_ok = bool(\n                  records\n                  and provenance.get("schema") == "ITEM3_SWEEP_V9_SHARD_PROVENANCE_V1"\n                  and provenance.get("proof_status") == "PROVENANCE_ONLY"\n                  and provenance.get("authorization") == "QUALIFICATION_ONLY"\n                  and provenance.get("shard_evidence_sha256") == evidence_sha\n                  and recovered_count == provenance.get("checkpoint_commit_count")\n                  and last_sha == provenance.get("checkpoint_last_sha256")\n                  and ledger_sha == provenance.get("checkpoint_ledger_sha256")\n              )\n          except Exception:\n              chain_ok = False\n\n'''
+          if t.count(old)!=1: raise SystemExit(f'checkpoint chain block count={t.count(old)}')
+          t=t.replace(old,new,1)
+
+          # Aggregate qualification identity includes FLINT and all proof-relevant source/data hashes.
+          old='''          workflow_hashes={e["workflow_sha256"] for e in envs}\n          python_versions={e["python"] for e in envs}\n          flint_versions={e["python_flint"] for e in envs}\n          wheel_hashes={e["python_flint_wheel_sha256"] for e in envs}\n          identity_stable=len(workflow_hashes)==len(python_versions)==len(flint_versions)==len(wheel_hashes)==1\n'''
+          new='''          workflow_hashes={e["workflow_sha256"] for e in envs}\n          python_versions={e["python"] for e in envs}\n          python_flint_versions={e["python_flint"] for e in envs}\n          flint_library_versions={e["flint_library"] for e in envs}\n          wheel_hashes={e["python_flint_wheel_sha256"] for e in envs}\n          config_hashes={e["config_sha256"] for e in envs}\n          plan_hashes={e["aggregate_plan_sha256"] for e in envs}\n          dependency_hashes={e["dependency_snapshot_sha256"] for e in envs}\n          design_hashes={e["design_sha256"] for e in envs}\n          source_maps={json.dumps(e["source_sha256"],sort_keys=True,separators=(",",":")) for e in envs}\n          validation_hashes={e["validation_report_sha256"] for e in envs}\n          identity_stable=all(len(s)==1 for s in (workflow_hashes,python_versions,python_flint_versions,flint_library_versions,wheel_hashes,config_hashes,plan_hashes,dependency_hashes,design_hashes,source_maps,validation_hashes)) and flint_library_versions=={"3.6.0"}\n'''
+          if t.count(old)!=1: raise SystemExit(f'identity stable block count={t.count(old)}')
+          t=t.replace(old,new,1)
+
+          old='''              "identity_stable":identity_stable,"validation_256_leaf_gate":validation_pass,"microbenchmark_summary":summaries,\n'''
+          new='''              "identity_stable":identity_stable,"flint_library_gate":flint_library_versions=={"3.6.0"},"validation_256_leaf_gate":validation_pass,"microbenchmark_summary":summaries,\n'''
+          if t.count(old)!=1: raise SystemExit(f'report flint gate insertion count={t.count(old)}')
+          t=t.replace(old,new,1)
+
+          old='''              "schema":"ITEM3_SWEEP_V9_PERFORMANCE_GATE_REPORT_V1","status":"PASSED" if passed else "PERFORMANCE_GATE_FAIL",\n'''
+          new='''              "schema":"ITEM3_SWEEP_V9_PERFORMANCE_GATE_REPORT_V2","status":"PASSED" if passed else "PERFORMANCE_GATE_FAIL",\n'''
+          if t.count(old)!=1: raise SystemExit(f'report schema anchor count={t.count(old)}')
+          t=t.replace(old,new,1)
+          p.write_text(t,encoding='utf-8')
+          PY
+      - name: Static contract audit of patched workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('.github/workflows/item3-v9-performance-qualification.yml'); t=p.read_text(encoding='utf-8')
+          required=['rehearsal_bundle_candidate_v2','validation_corpus_v2','performance_qualification_v2','__FLINT_VERSION__','SHARD_PROVENANCE.json','ITEM3_SWEEP_V9_PERFORMANCE_GATE_REPORT_V2','flint_library_gate']
+          for x in required:
+              if x not in t: raise SystemExit(f'missing patched requirement: {x}')
+          forbidden=['rehearsal_bundle_candidate_v1','validation_corpus_v1','performance_qualification_v1','__flint_version__','evidence.get("checkpoint_commit_count")','evidence.get("checkpoint_last_sha256")']
+          for x in forbidden:
+              if x in t: raise SystemExit(f'stale qualification token: {x}')
+          print('PERFORMANCE_V2_PATCH_AUDIT=PASS')
+          PY
+      - name: Commit patched qualification workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          P=".github/workflows/item3-v9-performance-qualification.yml"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- "$P"; git diff --cached --check
+          git commit -m "Bind v9 performance qualification to successor identity"
+          git push origin HEAD:agent/item3-v9-analytic-proof
