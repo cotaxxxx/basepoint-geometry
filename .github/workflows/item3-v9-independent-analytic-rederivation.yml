@@ -1,0 +1,61 @@
+name: Item 3 v9 independent analytic rederivation
+
+on:
+  push:
+    branches:
+      - agent/item3-v9-analytic-proof
+    paths:
+      - "CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_draft/ANALYTIC_DOMAIN_INTERCHANGE_PROOF.md"
+      - "CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_draft/independent_analytic_rederivation_v9.py"
+      - ".github/workflows/item3-v9-independent-analytic-rederivation.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: item3-v9-independent-analytic-rederivation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  rederive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install pinned symbolic environment
+        run: python -m pip install sympy==1.14.0
+      - name: Verify independent source boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          p=CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_draft/independent_analytic_rederivation_v9.py
+          if grep -Eq '(^|[[:space:]])(from|import)[[:space:]].*(prolate_F_derivatives_cleanroom_v9|mean_value_core_v9|item3_sweep)' "$p"; then
+            echo "independent rederivation imports prohibited prototype/production source" >&2
+            exit 1
+          fi
+      - name: Run independent formal rederivation
+        working-directory: CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_draft
+        shell: bash
+        run: |
+          set -euo pipefail
+          python independent_analytic_rederivation_v9.py > independent_analytic_rederivation_v9.json
+          cat independent_analytic_rederivation_v9.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p = Path("independent_analytic_rederivation_v9.json")
+          data = json.loads(p.read_text(encoding="utf-8"))
+          assert data["status"] == "PASSED"
+          assert data["imports_prototype_kernel"] is False
+          assert data["imports_adapter_runner_checker"] is False
+          PY
+      - name: Upload rederivation record
+        uses: actions/upload-artifact@v4
+        with:
+          name: item3-v9-independent-analytic-rederivation
+          path: CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_draft/independent_analytic_rederivation_v9.json
+          if-no-files-found: error
