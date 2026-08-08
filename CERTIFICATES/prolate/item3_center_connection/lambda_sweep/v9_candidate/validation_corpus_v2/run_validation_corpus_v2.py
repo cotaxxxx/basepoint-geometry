@@ -147,7 +147,7 @@ A_MUTATIONS=[
     ("h1 = -2 / S","h1 = -3 / S","F"),
     ("(acb(2) / 3) * T / S**3","(acb(3) / 3) * T / S**3","F_r"),
     ("(acb(2) / 15) * U / S**4","(acb(3) / 15) * U / S**4","F_rr"),
-    ('gamma_r = B * N / q32','gamma_r = -B * N / q32',"F"),
+    ('gamma_r = B * N / (q * sqrt_q)','gamma_r = -B * N / q32',"F"),
     ('M = N_r * q - 3 * N * d','M = N_r * q - 2 * N * d',"F_r"),
     ('M_r = -N_r * d - 3 * N','M_r = -N_r * d - 2 * N',"F_rr"),
     ('-g["u"] * h + g["W"] * h1 * g["gamma_r"]','g["u"] * h + g["W"] * h1 * g["gamma_r"]',"F"),
@@ -445,7 +445,7 @@ def test_F(n:int)->tuple[str,str]:
             h=store.publish_orphan_for_test(kind='progress',value={'x':1}); p=root/'checkpoint_payloads'/'progress'/f'{h}.json'; p.write_bytes(checkpoint.canonical_json_file_bytes({'x':2})); return observed_reject(expect_raises(checkpoint.CheckpointError,lambda:store.publish_orphan_for_test(kind='progress',value={'x':1})),"same-hash overwrite mismatch rejected")
         finally: td.cleanup()
     # Loaded checkpoint-source mutations are rejected by an independent durability AST policy.
-    muts=[('os.fsync(fd)','None'),('os.replace(temp, final)','temp.rename(final)'),('MAX_PAYLOAD_BYTES = 32 * 1024 * 1024','MAX_PAYLOAD_BYTES = 64 * 1024 * 1024'),('CHECKPOINT_LINE_SCHEMA = "ITEM3_SWEEP_V9_PROGRESS_LINE_V1"','CHECKPOINT_LINE_SCHEMA = "BAD"'),('if not raw.endswith(b"\\n"):', 'if False:'),('previous_checkpoint_sha256', 'previous_checkpoint_sha256_MUT')]
+    muts=[('os.fsync(fd)','None'),('os.replace(temp, path)','temp.rename(path)'),('MAX_PAYLOAD_BYTES = 33_554_432','MAX_PAYLOAD_BYTES = 67_108_864'),('CHECKPOINT_LINE_SCHEMA = "ITEM3_SWEEP_V9_PROGRESS_LINE_V1"','CHECKPOINT_LINE_SCHEMA = "BAD"'),('if not line.endswith(b"\\n"):', 'if False:'),('previous_checkpoint_sha256', 'previous_checkpoint_sha256_MUT')]
     token,repl=muts[n-19]
     try: td,p,mod=load_mutated(SOURCE_PATHS['checkpoint'],token,repl,f'F{n:03d}')
     except Exception: return observed_reject(True,'checkpoint mutation rejected at import')
@@ -493,9 +493,6 @@ def test_G(n:int)->tuple[str,str]:
     if n==11: obj['ordered_shards'][1]['shard_index']=7; return observed_reject(not parses_plan(obj),'wrong index rejected')
     if n==12:
         correct=aggregate.selected_chain_tip(TARGET['plan_sha256'],['11'*32,'22'*32]); wrong=hashlib.sha256(b'ITEM3_SWEEP_V9_SELECTED_SHARD_CHAIN_V2\0'+TARGET['plan_sha256'].encode()+b'0'+('11'*32).encode()).hexdigest(); return observed_reject(wrong!=correct,'hash-text chain mutation rejected')
-    if n==13:
-        correct=independent_chain(TARGET['plan_sha256'],['11'*32,'22'*32]); little=None; prev=None
-        for i,h in enumerate(['11'*32,'22'*32): pass
     if n==13:
         domain=b'ITEM3_SWEEP_V9_SELECTED_SHARD_CHAIN_V2\0'; pr=bytes.fromhex(TARGET['plan_sha256']); prev=None
         for i,h in enumerate(['11'*32,'22'*32]): prev=hashlib.sha256(domain+pr+struct.pack('<Q',i)+(b'' if prev is None else prev)+bytes.fromhex(h)).digest()
