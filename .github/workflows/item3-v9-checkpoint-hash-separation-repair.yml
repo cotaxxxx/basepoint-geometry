@@ -26,7 +26,23 @@ jobs:
           python-version: "3.13.14"
 
       - name: Apply repair
-        run: python .github/scripts/item3_v9_checkpoint_hash_separation_repair.py
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('.github/scripts/item3_v9_checkpoint_hash_separation_repair.py')
+          t=p.read_text(encoding='utf-8')
+          old='old = "schema = ITEM3_SWEEP_V9_SHARD_EVIDENCE_CANDIDATE_V1."'
+          new='old = "ITEM3_SWEEP_V9_SHARD_EVIDENCE_CANDIDATE_V1."'
+          if t.count(old)!=1: raise SystemExit(f'old contract anchor source count={t.count(old)}')
+          t=t.replace(old,new,1)
+          old='text = text.replace(old, "schema = ITEM3_SWEEP_V9_SHARD_EVIDENCE_CANDIDATE_V2.", 1)'
+          new='text = text.replace(old, "ITEM3_SWEEP_V9_SHARD_EVIDENCE_CANDIDATE_V2.", 1)'
+          if t.count(old)!=1: raise SystemExit(f'new contract anchor source count={t.count(old)}')
+          p.write_text(t.replace(old,new,1),encoding='utf-8')
+          PY
+          python .github/scripts/item3_v9_checkpoint_hash_separation_repair.py
 
       - name: Run focused structural controls
         working-directory: CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate
