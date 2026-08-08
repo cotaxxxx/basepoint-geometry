@@ -1,0 +1,108 @@
+name: Item 3 v9 three-leaf cycle rematerialization
+
+on:
+  push:
+    branches:
+      - agent/item3-v9-analytic-proof
+    paths:
+      - ".github/workflows/item3-v9-three-leaf-rematerialize.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  rematerialize:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: agent/item3-v9-analytic-proof
+          fetch-depth: 50
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.13.14"
+
+      - name: Re-materialize dependency then plan then config and require byte identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE="CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate"
+          TMP="$BASE/.three_leaf_cycle_rematerialize"
+          rm -rf "$TMP"
+          mkdir -p "$TMP/dependencies" "$TMP/plan_config"
+          python "$BASE/build_dependency_snapshot_v9.py" --repo-root . --output-dir "$TMP/dependencies"
+          python "$BASE/build_rehearsal_plan_config_v9.py" --repo-root . --dependency-snapshot "$TMP/dependencies/dependency_snapshot_v9_candidate.json" --output-dir "$TMP/plan_config"
+          python - <<'PY'
+          import hashlib,json,subprocess
+          from pathlib import Path
+          base=Path('CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate')
+          tmp=base/'.three_leaf_cycle_rematerialize'; bundle=base/'rehearsal_bundle_candidate_v2'
+          corpus=base/'validation_corpus_v2'
+          sha=lambda p: hashlib.sha256(p.read_bytes()).hexdigest()
+          generated={
+              'dependency_snapshot_sha256':sha(tmp/'dependencies/dependency_snapshot_v9_candidate.json'),
+              'plan_sha256':sha(tmp/'plan_config/rehearsal_plan_v2.json'),
+              'config_sha256':sha(tmp/'plan_config/rehearsal_shard_config_v1.json'),
+          }
+          expected={
+              'dependency_snapshot_sha256':'ee033ab46b844168887a6e2e1f5a2b97cc460d1b43bbafd77be49897127950aa',
+              'plan_sha256':'e49d2405d5138fff6e908575bc2cb443fbc49f7eaa6b2f895f0c19f71c4cae11',
+              'config_sha256':'fc247bf09fba7202a11cefbc50948d9ce6834487c8de84e3b48087862c1783ea',
+          }
+          if generated!=expected:
+              raise SystemExit(f'REMATERIALIZED_BUNDLE_IDENTITY_DRIFT: {generated} != {expected}')
+          pairs=[
+              (tmp/'dependencies/dependency_snapshot_v9_candidate.json',bundle/'dependencies/dependency_snapshot_v9_candidate.json'),
+              (tmp/'plan_config/rehearsal_plan_v2.json',bundle/'plan_config/rehearsal_plan_v2.json'),
+              (tmp/'plan_config/rehearsal_shard_config_v1.json',bundle/'plan_config/rehearsal_shard_config_v1.json'),
+          ]
+          for a,b in pairs:
+              if a.read_bytes()!=b.read_bytes(): raise SystemExit(f'BYTE_IDENTITY_FAIL: {a.name}')
+          expect=json.loads((corpus/'CONTROL_EXPECT.json').read_text(encoding='utf-8'))
+          if expect['target_bundle']['dependency_snapshot_sha256']!=expected['dependency_snapshot_sha256'] or expect['target_bundle']['plan_sha256']!=expected['plan_sha256'] or expect['target_bundle']['config_sha256']!=expected['config_sha256']:
+              raise SystemExit('CONTROL_EXPECT target bundle drift')
+          config=json.loads((bundle/'plan_config/rehearsal_shard_config_v1.json').read_text(encoding='utf-8'))
+          source_paths={
+              'kernel':base/'prolate_F_derivatives_cleanroom_v9_candidate.py','adapter':base/'adapter_v9_candidate_v2.py','runner':base/'runner_v9_candidate_v2.py',
+              'checker':base/'checker_v9_candidate_v2.py','checkpoint':base/'checkpoint_v9_candidate.py','bridge':base/'checkpoint_bridge_v9_candidate_v2.py',
+              'driver':base/'rehearsal_driver_v9_candidate_v3.py','aggregate_verifier':base/'aggregate_verifier_v9_candidate_v2.py',
+          }
+          observed_sources={k:sha(v) for k,v in source_paths.items()}
+          if observed_sources!=config['source_sha256'] or observed_sources!=expect['target_bundle']['source_sha256']:
+              raise SystemExit('PROOF_SOURCE_SHA_DRIFT')
+          prior_validation=corpus/'VALIDATION_REPORT.json'
+          prior_performance=base/'performance_qualification_v2/PERFORMANCE_GATE_REPORT.json'
+          receipt={
+              'schema':'ITEM3_SWEEP_V9_THREE_LEAF_REMATERIALIZATION_RECEIPT_V1',
+              'status':'BYTE_IDENTICAL_REMATERIALIZATION_PASS','authorization':'VALIDATION_ONLY',
+              'builder_order':['dependency_snapshot','plan','config'],
+              'rematerialized_bundle':generated,'source_sha256':observed_sources,
+              'validator_sha256':sha(corpus/'run_validation_corpus_v2.py'),
+              'control_expect_sha256':sha(corpus/'CONTROL_EXPECT.json'),
+              'prior_identity':{
+                  'validation_report_sha256':sha(prior_validation),
+                  'performance_gate_report_sha256':sha(prior_performance),
+                  'status':'SUPERSEDED_BY_NEXT_VALIDATION_IDENTITY_AFTER_COUNTED_RUN',
+              },
+              'freeze_authorized':False,'production_rehearsal_authorized':False,'tag_created':False,'certified_lambda_range':False,
+          }
+          out=base/'THREE_LEAF_REPAIR_REMATERIALIZATION_RECEIPT_2026-08-08.json'
+          out.write_text(json.dumps(receipt,sort_keys=True,separators=(',',':'))+'\n',encoding='utf-8')
+          print(json.dumps(receipt,sort_keys=True))
+          PY
+          rm -rf "$TMP"
+
+      - name: Commit rematerialization receipt only
+        shell: bash
+        run: |
+          set -euo pipefail
+          P="CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/THREE_LEAF_REPAIR_REMATERIALIZATION_RECEIPT_2026-08-08.json"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- "$P"
+          test "$(git diff --cached --name-only | wc -l)" = "1"
+          test "$(git diff --cached --name-only)" = "$P"
+          git diff --cached --check
+          git commit -m "Record v9 three-leaf bundle rematerialization"
+          git push origin HEAD:agent/item3-v9-analytic-proof
