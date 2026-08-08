@@ -1,0 +1,146 @@
+name: Item 3 v9 256-leaf independent validation
+
+on:
+  push:
+    branches:
+      - agent/item3-v9-analytic-proof
+    paths:
+      - ".github/workflows/item3-v9-256-leaf-validation.yml"
+      - "CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/validation_corpus_v1/CONTROL_EXPECT.json"
+      - "CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/validation_corpus_v1/run_validation_corpus_v1.py"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: item3-v9-256-leaf-validation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/item3-v9-analytic-proof
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install pinned validated arithmetic
+        run: python -m pip install python-flint==0.9.0
+
+      - name: Verify prepublished expectation object
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import hashlib, json
+          from collections import Counter
+          from pathlib import Path
+          p = Path("CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/validation_corpus_v1/CONTROL_EXPECT.json")
+          raw = p.read_bytes()
+          obj = json.loads(raw)
+          canonical = (json.dumps(obj, sort_keys=True, separators=(",", ":"), ensure_ascii=False) + "\n").encode()
+          assert raw == canonical
+          assert obj["schema"] == "ITEM3_SWEEP_V9_CONTROL_EXPECT_V1"
+          assert obj["status"] == "PREPUBLISHED_EXPECTATIONS"
+          assert obj["leaf_count"] == len(obj["leaves"]) == 256
+          floors = {"A":32,"B":32,"C":80,"D":32,"E":32,"F":24,"G":16,"H":8}
+          assert Counter(x["category"] for x in obj["leaves"]) == Counter(floors)
+          ids = [x["control_id"] for x in obj["leaves"]]
+          assert len(ids) == len(set(ids)) == 256
+          keys = ("category","input_domain_or_source_mutation","source_or_derivation_identity","expected_terminal_class","expected_predicate_or_failure_reason")
+          tuples = [tuple(x[k] for k in keys) for x in obj["leaves"]]
+          assert len(set(tuples)) == 256
+          print("CONTROL_EXPECT_SHA256=" + hashlib.sha256(raw).hexdigest())
+          print("CONTROL_EXPECT_PREPUBLISHED=PASS")
+          PY
+
+      - name: Execute independent 256-leaf corpus
+        id: corpus
+        continue-on-error: true
+        working-directory: CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/validation_corpus_v1
+        run: |
+          python -m py_compile run_validation_corpus_v1.py
+          python run_validation_corpus_v1.py
+
+      - name: Record counted validation environment
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import hashlib, json, platform
+          from pathlib import Path
+          import flint
+          base = Path("CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/validation_corpus_v1")
+          workflow = Path(".github/workflows/item3-v9-256-leaf-validation.yml")
+          obj = {
+              "schema": "ITEM3_SWEEP_V9_256_LEAF_VALIDATION_ENVIRONMENT_V1",
+              "python": platform.python_version(),
+              "python_flint": getattr(flint, "__version__", "UNKNOWN"),
+              "control_expect_sha256": hashlib.sha256((base / "CONTROL_EXPECT.json").read_bytes()).hexdigest(),
+              "validation_source_sha256": hashlib.sha256((base / "run_validation_corpus_v1.py").read_bytes()).hexdigest(),
+              "workflow_sha256": hashlib.sha256(workflow.read_bytes()).hexdigest(),
+              "github_sha": "${{ github.sha }}",
+              "github_run_id": "${{ github.run_id }}",
+              "github_run_attempt": "${{ github.run_attempt }}",
+              "authorization": "VALIDATION_ONLY",
+              "tag_created": False,
+              "freeze_authorized": False,
+              "production_rehearsal_authorized": False,
+          }
+          (base / "VALIDATION_ENVIRONMENT.json").write_bytes(
+              (json.dumps(obj, sort_keys=True, separators=(",", ":")) + "\n").encode()
+          )
+          print(json.dumps(obj, indent=2, sort_keys=True))
+          PY
+
+      - name: Commit validation records
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE="CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/validation_corpus_v1"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for p in CONTROL_MATRIX.json VALIDATION_REPORT.json VALIDATION_ENVIRONMENT.json; do
+            if [ -f "$BASE/$p" ]; then git add -- "$BASE/$p"; fi
+          done
+          if git diff --cached --quiet; then
+            echo "no validation records changed"
+          else
+            git diff --cached --check
+            git commit -m "Record item3 v9 256-leaf validation outcome"
+            git push origin HEAD:agent/item3-v9-analytic-proof
+          fi
+
+      - name: Final 256-leaf validation gate
+        if: always()
+        shell: bash
+        env:
+          CORPUS_OUTCOME: ${{ steps.corpus.outcome }}
+        run: |
+          set -euo pipefail
+          test "$CORPUS_OUTCOME" = success
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p = Path("CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/validation_corpus_v1/VALIDATION_REPORT.json")
+          obj = json.loads(p.read_text())
+          assert obj["status"] == "PASSED"
+          assert obj["leaf_count"] == 256
+          assert obj["failure_count"] == 0
+          assert obj["semantic_tuple_unique"] is True
+          assert obj["control_ids_unique"] is True
+          assert obj["freeze_authorized"] is False
+          assert obj["production_rehearsal_authorized"] is False
+          assert obj["tag_created"] is False
+          assert obj["certified_lambda_range"] is False
+          print("ITEM3_V9_256_LEAF_VALIDATION=PASSED")
+          PY
