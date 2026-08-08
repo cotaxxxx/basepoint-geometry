@@ -25,6 +25,9 @@ jobs:
         with:
           python-version: "3.13.14"
 
+      - name: Install pinned validated arithmetic
+        run: python -m pip install python-flint==0.9.0
+
       - name: Apply repair
         shell: bash
         run: |
@@ -43,6 +46,21 @@ jobs:
           p.write_text(t.replace(old,new,1),encoding='utf-8')
           PY
           python .github/scripts/item3_v9_checkpoint_hash_separation_repair.py
+
+          # The legacy test mutates mathematical evidence and then reuses provenance
+          # bound to the old evidence hash. Rebind provenance to the deliberately
+          # mutated evidence so this test continues to isolate the selected-chain
+          # dependence on mathematical evidence bytes.
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/test_aggregate_verifier_v9_candidate_v2.py')
+          t=p.read_text(encoding='utf-8')
+          old='''            obj["nonclaim"] = "same proof fields, changed evidence bytes"\n            canonical_write(paths[3][0], obj)\n            second = a.verify_aggregate(\n'''
+          new='''            obj["nonclaim"] = "same proof fields, changed evidence bytes"\n            evidence_sha = canonical_write(paths[3][0], obj)\n            provenance_obj = json.loads(paths[4][0].read_text(encoding="utf-8"))\n            paths[4][0] = write_provenance_fixture(\n                root, plan=one_shard_plan(),\n                plan_sha=provenance_obj["aggregate_plan_sha256"], shard_index=0,\n                config_sha=provenance_obj["config_sha256"],\n                receipt_sha=provenance_obj["freeze_receipt_sha256"],\n                evidence_sha=evidence_sha,\n                record_count=provenance_obj["checkpoint_commit_count"],\n            )\n            second = a.verify_aggregate(\n'''
+          if t.count(old)!=1:
+              raise SystemExit(f'selected-chain test anchor count={t.count(old)}')
+          p.write_text(t.replace(old,new,1),encoding='utf-8')
+          PY
 
       - name: Run focused structural controls
         working-directory: CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate
