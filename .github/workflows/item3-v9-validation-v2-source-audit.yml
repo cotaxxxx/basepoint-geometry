@@ -1,0 +1,78 @@
+name: Item 3 v9 validation v2 source audit
+
+on:
+  push:
+    branches:
+      - agent/item3-v9-analytic-proof
+    paths:
+      - ".github/workflows/item3-v9-validation-v2-source-audit.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: agent/item3-v9-analytic-proof
+          fetch-depth: 1
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.13.14"
+      - name: Apply source corrections
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/validation_corpus_v2/run_validation_corpus_v2.py')
+          t=p.read_text(encoding='utf-8')
+          reps=[
+            ('gamma_r = B * N / q32','gamma_r = B * N / (q * sqrt_q)'),
+            ("('os.replace(temp, final)','temp.rename(final)')","('os.replace(temp, path)','temp.rename(path)')"),
+            ("('MAX_PAYLOAD_BYTES = 32 * 1024 * 1024','MAX_PAYLOAD_BYTES = 64 * 1024 * 1024')","('MAX_PAYLOAD_BYTES = 33_554_432','MAX_PAYLOAD_BYTES = 67_108_864')"),
+            ("('if not raw.endswith(b\"\\\\n\"):', 'if False:')","('if not line.endswith(b\"\\\\n\"):', 'if False:')"),
+          ]
+          for old,new in reps:
+              if t.count(old)!=1: raise SystemExit(f'patch anchor count={t.count(old)}: {old}')
+              t=t.replace(old,new,1)
+          bad="""    if n==13:\n        correct=independent_chain(TARGET['plan_sha256'],['11'*32,'22'*32]); little=None; prev=None\n        for i,h in enumerate(['11'*32,'22'*32): pass\n"""
+          if t.count(bad)!=1: raise SystemExit(f'syntax-removal anchor count={t.count(bad)}')
+          p.write_text(t.replace(bad,'',1),encoding='utf-8')
+          PY
+      - name: Syntax and independence audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m py_compile \
+            CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/validation_corpus_v2/independent_reference_v2.py \
+            CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/validation_corpus_v2/run_validation_corpus_v2.py
+          python - <<'PY'
+          import ast
+          from pathlib import Path
+          base=Path('CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/validation_corpus_v2')
+          ref=(base/'independent_reference_v2.py').read_text(encoding='utf-8')
+          if any(x in ref for x in ('v9_candidate','import adapter','import runner','import checker','from flint')):
+              raise SystemExit('independent reference import boundary violated')
+          src=(base/'run_validation_corpus_v2.py').read_text(encoding='utf-8')
+          tree=ast.parse(src)
+          if 'ITEM3_SWEEP_V9_CONTROL_EXPECT_V2' not in src or 'rehearsal_bundle_candidate_v2' not in src:
+              raise SystemExit('v2 identity anchors missing')
+          if src.count('load_mutated(') < 7:
+              raise SystemExit('mutation module loading coverage unexpectedly weak')
+          print('VALIDATION_V2_SOURCE_AUDIT=PASS')
+          PY
+      - name: Commit corrected validator
+        shell: bash
+        run: |
+          set -euo pipefail
+          P="CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/validation_corpus_v2/run_validation_corpus_v2.py"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- "$P"
+          git diff --cached --check
+          git commit -m "Audit item3 v9 validation corpus v2 source"
+          git push origin HEAD:agent/item3-v9-analytic-proof
