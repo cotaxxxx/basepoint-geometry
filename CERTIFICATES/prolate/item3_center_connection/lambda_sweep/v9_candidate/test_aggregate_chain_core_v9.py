@@ -11,16 +11,17 @@ from aggregate_chain_core_v9 import (
     AggregateValidationError,
     CHAIN_DOMAIN,
     selected_chain_tip,
+    shard_plan_sha256,
     validate_shard_plan_structure,
     verify_aggregate_selection,
 )
 
 
-PLAN_HASH = "64879f7d6b960a01909762d911a32d4582c20010c5641ee90278b644a9e3b525"
+PLAN_HASH = "3efa83c7365355d1f16d574a12bf1912ab6b0d7f01cd27bce43532c1f4e60659"
 SHARD0_HASH = "da2ae8ba219c91797613747ed7554a2677ac797bb9cbe9557a884bfa0da6ad48"
 SHARD1_HASH = "5ac6747bd1c9737034e95923613f7204fa1f80fcf5f759b1263a5b7d71581939"
-EXPECTED_C0 = "b68882f78822f1b011f5d8511780803e276de38197108ca9c47887c99801e737"
-EXPECTED_C1 = "f2544bab829a7537d89b4942a98cf64d7d5258ad7c86284e1656e4c97e7a3fe5"
+EXPECTED_C0 = "d26034155cb915ac511826f5aca4a211f92d28aad5c5565dd3ebf1bc118b075a"
+EXPECTED_C1 = "83d5bd03c4410181e57dd375e79cefbbed484a07f7ef6e3a8ca8a659cb7e3ffe"
 CHECKER0 = sha256(b"checker0").hexdigest()
 CHECKER1 = sha256(b"checker1").hexdigest()
 
@@ -73,9 +74,11 @@ def selected() -> list[dict]:
 
 class AggregateCoreControls(unittest.TestCase):
     def test_exact_rehearsal_partition(self) -> None:
-        ranges = validate_shard_plan_structure(two_shard_plan())
+        plan = two_shard_plan()
+        ranges = validate_shard_plan_structure(plan)
         self.assertEqual(len(ranges), 2)
         self.assertEqual(ranges[0][0], ranges[1][1])
+        self.assertEqual(shard_plan_sha256(plan), PLAN_HASH)
 
     def test_frozen_chain_vector(self) -> None:
         self.assertEqual(selected_chain_tip(PLAN_HASH, [SHARD0_HASH]), EXPECTED_C0)
@@ -120,9 +123,21 @@ class AggregateCoreControls(unittest.TestCase):
         with self.assertRaises(AggregateValidationError):
             verify_aggregate_selection(two_shard_plan(), PLAN_HASH, selected()[:1], EXPECTED_C1)
 
+    def test_stale_plan_hash_rejected(self) -> None:
+        stale = sha256(b"stale-plan").hexdigest()
+        stale_tip = selected_chain_tip(stale, [SHARD0_HASH, SHARD1_HASH])
+        with self.assertRaises(AggregateValidationError):
+            verify_aggregate_selection(two_shard_plan(), stale, selected(), stale_tip)
+
     def test_stale_chain_tip_rejected(self) -> None:
         with self.assertRaises(AggregateValidationError):
             verify_aggregate_selection(two_shard_plan(), PLAN_HASH, selected(), EXPECTED_C0)
+
+    def test_boolean_index_rejected(self) -> None:
+        plan = two_shard_plan()
+        plan["ordered_shards"][0]["shard_index"] = False
+        with self.assertRaises(AggregateValidationError):
+            validate_shard_plan_structure(plan)
 
     def test_one_shard_rerun_changes_only_aggregate_selection(self) -> None:
         chosen = selected()
