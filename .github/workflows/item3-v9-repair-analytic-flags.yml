@@ -1,0 +1,134 @@
+name: Item 3 v9 repair analytic flags
+
+on:
+  push:
+    branches:
+      - agent/item3-v9-analytic-proof
+    paths:
+      - ".github/workflows/item3-v9-repair-analytic-flags.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/item3-v9-analytic-proof
+          fetch-depth: 1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Patch analytic propagation and 2F1 guard
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_prototype/prolate_F_derivatives_cleanroom_v9.py")
+          text = path.read_text(encoding="utf-8")
+
+          old_sig = "def angle_data_3(c: acb) -> tuple[acb, acb, acb, acb]:"
+          new_sig = "def angle_data_3(c: acb, analytic: bool = False) -> tuple[acb, acb, acb, acb]:"
+          if text.count(old_sig) != 1:
+              raise SystemExit(f"unexpected angle_data_3 signature count: {text.count(old_sig)}")
+          text = text.replace(old_sig, new_sig, 1)
+
+          old_z = '''    one = acb(1)
+              z = (one - c) / 2
+              H = z.hypgeom_2f1(one / 2, one / 2, acb(3) / 2)
+          '''
+          new_z = '''    one = acb(1)
+              z = (one - c) / 2
+              if analytic:
+                  nan = acb(arb.nan(), arb.nan())
+                  if not c.is_finite():
+                      return nan, nan, nan, nan
+                  # Principal 2F1 has its real branch cut from z=1 to +infinity.
+                  # If the rectangular z-ball can meet that cut, fail closed so
+                  # acb.integral can subdivide rather than silently accepting a
+                  # non-analytic callback value.
+                  if 0 in z.imag and z.real.upper() >= 1:
+                      return nan, nan, nan, nan
+              H = z.hypgeom_2f1(one / 2, one / 2, acb(3) / 2)
+          '''
+          import textwrap
+          old_z = textwrap.dedent(old_z)
+          new_z = textwrap.dedent(new_z)
+          if text.count(old_z) != 1:
+              raise SystemExit(f"unexpected angle-data body count: {text.count(old_z)}")
+          text = text.replace(old_z, new_z, 1)
+
+          old_call = 'angle_data_3(g["gamma"])'
+          call_count = text.count(old_call)
+          if call_count != 5:
+              raise SystemExit(f"expected five rigorous angle_data_3 calls, found {call_count}")
+          text = text.replace(old_call, 'angle_data_3(g["gamma"], analytic=analytic)')
+
+          old_nested = "analytic_theta and analytic_phi"
+          if text.count(old_nested) != 1:
+              raise SystemExit(f"unexpected nested analytic conjunction count: {text.count(old_nested)}")
+          text = text.replace(old_nested, "analytic_theta or analytic_phi", 1)
+
+          path.write_text(text, encoding="utf-8")
+          PY
+      - name: Install pinned validated arithmetic
+        run: python -m pip install python-flint==0.9.0
+      - name: Audit repaired source
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_prototype
+          python -m py_compile prolate_F_derivatives_cleanroom_v9.py
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from flint import acb
+          import prolate_F_derivatives_cleanroom_v9 as k
+
+          source = Path("prolate_F_derivatives_cleanroom_v9.py").read_text(encoding="utf-8")
+          checks = {}
+          checks["nested_analytic_uses_or"] = "analytic_theta or analytic_phi" in source
+          checks["nested_analytic_and_absent"] = "analytic_theta and analytic_phi" not in source
+          checks["five_rigorous_angle_calls_forward_analytic"] = (
+              source.count('angle_data_3(g["gamma"], analytic=analytic)') == 5
+          )
+
+          endpoint = k.angle_data_3(acb(1), analytic=True)
+          checks["gamma_one_finite"] = all(value.is_finite() for value in endpoint)
+
+          cut = k.angle_data_3(acb(-1), analytic=True)
+          checks["2f1_cut_rejected"] = all(not value.is_finite() for value in cut)
+
+          ordinary = k.angle_data_3(acb("0.5"), analytic=True)
+          checks["ordinary_physical_point_finite"] = all(value.is_finite() for value in ordinary)
+
+          result = {
+              "schema": "ITEM3_SWEEP_V9_ANALYTIC_FLAG_REPAIR_AUDIT_V1",
+              "python_flint": "0.9.0",
+              "status": "PASSED" if all(checks.values()) else "FAILED",
+              "checks": checks,
+              "nonclaim": "This source audit does not authorize production use or a certified lambda range.",
+          }
+          Path("analytic_flag_repair_audit.json").write_text(
+              json.dumps(result, sort_keys=True, separators=(",", ":")) + "\n",
+              encoding="utf-8",
+          )
+          print(json.dumps(result, indent=2, sort_keys=True))
+          raise SystemExit(0 if result["status"] == "PASSED" else 1)
+          PY
+      - name: Commit repaired candidate and audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_prototype/prolate_F_derivatives_cleanroom_v9.py
+          git add -- CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_prototype/analytic_flag_repair_audit.json
+          git diff --cached --check
+          git commit -m "Repair v9 analytic flag propagation"
+          git push origin HEAD:agent/item3-v9-analytic-proof
