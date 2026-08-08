@@ -1,0 +1,204 @@
+name: Item 3 v9 validation bundle v2
+
+on:
+  push:
+    branches:
+      - agent/item3-v9-analytic-proof
+    paths:
+      - "CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/prolate_F_derivatives_cleanroom_v9_candidate.py"
+      - "CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/static_audit_candidate_v2.py"
+      - "CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/runtime_audit_candidate_v2.py"
+      - "CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/aggregate_chain_core_v9.py"
+      - "CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/test_aggregate_chain_core_v9.py"
+      - "CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_draft/independent_analytic_rederivation_v9.py"
+      - ".github/workflows/item3-v9-validation-bundle-v2.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: item3-v9-validation-bundle-v2-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/item3-v9-analytic-proof
+          fetch-depth: 1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Run stdlib static candidate audit
+        id: static
+        continue-on-error: true
+        working-directory: CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate
+        run: python static_audit_candidate_v2.py
+
+      - name: Run stdlib aggregate exact-core controls
+        id: aggregate
+        continue-on-error: true
+        working-directory: CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate
+        shell: bash
+        run: |
+          set +e
+          python -m unittest -v test_aggregate_chain_core_v9.py > aggregate_core_test.log 2>&1
+          code=$?
+          cat aggregate_core_test.log
+          python - "$code" <<'PY'
+          import json
+          from pathlib import Path
+          import sys
+          code = int(sys.argv[1])
+          report = {
+              "schema": "ITEM3_SWEEP_V9_AGGREGATE_CORE_TEST_V1",
+              "status": "PASSED" if code == 0 else "FAILED",
+              "exit_code": code,
+              "plan_sha256": "3efa83c7365355d1f16d574a12bf1912ab6b0d7f01cd27bce43532c1f4e60659",
+              "selected_chain_tip": "83d5bd03c4410181e57dd375e79cefbbed484a07f7ef6e3a8ca8a659cb7e3ffe",
+          }
+          Path("aggregate_core_test_report.json").write_text(
+              json.dumps(report, sort_keys=True, separators=(",", ":")) + "\n",
+              encoding="utf-8",
+          )
+          PY
+          exit "$code"
+
+      - name: Install pinned symbolic environment
+        run: python -m pip install sympy==1.14.0
+
+      - name: Run independent analytic rederivation
+        id: rederive
+        continue-on-error: true
+        working-directory: CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_draft
+        shell: bash
+        run: |
+          set +e
+          python independent_analytic_rederivation_v9.py > independent_analytic_rederivation_v9.json
+          code=$?
+          cat independent_analytic_rederivation_v9.json || true
+          if [ "$code" -eq 0 ]; then
+            python - <<'PY'
+          import json
+          from pathlib import Path
+          data = json.loads(Path("independent_analytic_rederivation_v9.json").read_text(encoding="utf-8"))
+          assert data["status"] == "PASSED"
+          assert data["imports_prototype_kernel"] is False
+          assert data["imports_adapter_runner_checker"] is False
+          PY
+            code=$?
+          fi
+          exit "$code"
+
+      - name: Install pinned validated arithmetic
+        run: python -m pip install python-flint==0.9.0
+
+      - name: Run candidate v2 pinned runtime audit
+        id: runtime
+        continue-on-error: true
+        working-directory: CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate
+        run: python runtime_audit_candidate_v2.py
+
+      - name: Record validation environment
+        if: always()
+        shell: bash
+        run: |
+          python - <<'PY'
+          import hashlib
+          import json
+          import platform
+          from pathlib import Path
+          import flint
+          import sympy
+          paths = [
+              Path("CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/prolate_F_derivatives_cleanroom_v9_candidate.py"),
+              Path("CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/static_audit_candidate_v2.py"),
+              Path("CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/runtime_audit_candidate_v2.py"),
+              Path("CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/aggregate_chain_core_v9.py"),
+              Path("CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/test_aggregate_chain_core_v9.py"),
+              Path("CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_draft/independent_analytic_rederivation_v9.py"),
+          ]
+          report = {
+              "schema": "ITEM3_SWEEP_V9_VALIDATION_BUNDLE_ENV_V1",
+              "python": platform.python_version(),
+              "python_flint": getattr(flint, "__version__", "UNKNOWN"),
+              "sympy": sympy.__version__,
+              "sha256": {str(p): hashlib.sha256(p.read_bytes()).hexdigest() for p in paths},
+          }
+          out = Path("CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/validation_bundle_environment.json")
+          out.write_text(json.dumps(report, sort_keys=True, separators=(",", ":")) + "\n", encoding="utf-8")
+          PY
+
+      - name: Record bundle outcomes
+        if: always()
+        shell: bash
+        env:
+          STATIC_OUTCOME: ${{ steps.static.outcome }}
+          AGGREGATE_OUTCOME: ${{ steps.aggregate.outcome }}
+          REDERIVE_OUTCOME: ${{ steps.rederive.outcome }}
+          RUNTIME_OUTCOME: ${{ steps.runtime.outcome }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          outcomes = {
+              "static": os.environ["STATIC_OUTCOME"],
+              "aggregate": os.environ["AGGREGATE_OUTCOME"],
+              "rederive": os.environ["REDERIVE_OUTCOME"],
+              "runtime": os.environ["RUNTIME_OUTCOME"],
+          }
+          report = {
+              "schema": "ITEM3_SWEEP_V9_VALIDATION_BUNDLE_OUTCOME_V1",
+              "status": "PASSED" if all(v == "success" for v in outcomes.values()) else "FAILED",
+              "outcomes": outcomes,
+          }
+          path = Path("CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/validation_bundle_outcome.json")
+          path.write_text(json.dumps(report, sort_keys=True, separators=(",", ":")) + "\n", encoding="utf-8")
+          print(json.dumps(report, indent=2, sort_keys=True))
+          PY
+
+      - name: Commit validation records
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          candidates=(
+            CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/static_audit_candidate_v2.json
+            CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/runtime_audit_candidate_v2.json
+            CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/aggregate_core_test_report.json
+            CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/validation_bundle_environment.json
+            CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/validation_bundle_outcome.json
+            CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_draft/independent_analytic_rederivation_v9.json
+          )
+          for p in "${candidates[@]}"; do
+            if [ -f "$p" ]; then git add -- "$p"; fi
+          done
+          if git diff --cached --quiet; then
+            echo "no validation records changed"
+          else
+            git diff --cached --check
+            git commit -m "Record item3 v9 validation bundle outcome"
+            git push origin HEAD:agent/item3-v9-analytic-proof
+          fi
+
+      - name: Final validation gate
+        if: always()
+        shell: bash
+        env:
+          STATIC_OUTCOME: ${{ steps.static.outcome }}
+          AGGREGATE_OUTCOME: ${{ steps.aggregate.outcome }}
+          REDERIVE_OUTCOME: ${{ steps.rederive.outcome }}
+          RUNTIME_OUTCOME: ${{ steps.runtime.outcome }}
+        run: |
+          test "$STATIC_OUTCOME" = success
+          test "$AGGREGATE_OUTCOME" = success
+          test "$REDERIVE_OUTCOME" = success
+          test "$RUNTIME_OUTCOME" = success
