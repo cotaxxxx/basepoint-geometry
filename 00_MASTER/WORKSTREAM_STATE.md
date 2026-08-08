@@ -68,9 +68,10 @@ This preserves the rule that the minimum mathematical rerun unit is one shard.
 
 Branch: `agent/item3-v9-analytic-proof`
 
-This branch is based on the control branch and isolates the analytic dependency closure.
-It contains the real-analysis proof, source/formula map, independent formal rederivation
-source, domain-enforcement lemma, and analytic-flag validation delta.
+This branch is based on the control branch and isolates the analytic dependency/source
+closure.
+
+### Real-analysis state
 
 The real-analysis core is **RESOLVED** for the following statements:
 
@@ -91,46 +92,90 @@ The real-analysis core is **RESOLVED** for the following statements:
 Accordingly, the **analytic content** of `L-SECOND-DERIV` and `L-MIXED-DERIV`, and the
 analytic theorem inside `L-MEAN-VALUE-ENCL`, is no longer `SPEC_PENDING`.
 
-### Integration-callback source blocker
+### Old prototype callback audit
 
-A separate audit against the pinned `python-flint==0.9.0` `acb.integral` callback contract
-found two source-level defects in the current prototype blob
+Audit against the pinned `python-flint==0.9.0` `acb.integral` callback contract found two
+source-level defects in the old prototype blob
 `57a7725c6ff0c4135723536b313e63d609eac4f6`:
 
-1. nested integration forwards `analytic_theta and analytic_phi`; branch-sensitive
-   operations must receive the combined requirement `analytic_theta or analytic_phi`;
-2. the branch-sensitive Gauss `2F1` angle representation has no explicit analytic cut
-   guard even though `hypgeom_2f1` exposes no `analytic=` flag.
+1. nested integration used `analytic_theta and analytic_phi` instead of the combined OR
+   requirement;
+2. the Gauss `2F1` angle representation had no explicit analytic cut guard although
+   `hypgeom_2f1` exposes no `analytic=` callback flag.
 
-These are implementation defects, not failures of the real analytic derivative formulas.
-The source therefore remains **REPAIR REQUIRED / NOT APPROVED**.
+These are implementation defects, not failures of the real analytic formulas. The old
+prototype remains **NOT APPROVED** and is retained for provenance/comparison only.
 
-`ACB_INTEGRAL_ANALYTIC_FLAG_AUDIT.md` records the audit and
-`ANALYTIC_FLAG_VALIDATION_DELTA.md` freezes the required positive/mutation controls. A
-one-shot repair workflow has been prepared, but no repaired source bytes or passing
-repair artifact are recorded yet. The old source blob remains current and must not be
-promoted.
+### Guarded clean-room candidate v2
 
-The independent formal rederivation source does not import the prototype kernel, adapter,
-runner, or checker, but its pinned GitHub execution artifact is also still pending.
+A new standalone rigorous-only candidate now exists at
+
+```text
+CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/
+prolate_F_derivatives_cleanroom_v9_candidate.py
+```
+
+with candidate ID
+
+```text
+ITEM3_SWEEP_V9_FIVE_OUTPUT_CANDIDATE_V2.
+```
+
+It is derived directly from the analytic proof rather than patching the old prototype. It
+includes:
+
+- OR propagation of nested analytic requests;
+- `analytic=` forwarding to both square roots;
+- explicit fail-closed `2F1` cut rejection;
+- common `0<r<1`, `lambda>=1` input validation;
+- explicit rejection of non-finite validated integrals;
+- only the five rigorous F-level interfaces, with no float diagnostic path.
+
+`STATIC_SOURCE_BOUNDARY_V2.md` defines the source boundary and
+`static_audit_candidate_v2.py` is present to compute the exact candidate SHA-256 and check
+that boundary without importing python-flint.
+
+Candidate v2 is **AUDIT CANDIDATE / NOT APPROVED** until the static auditor and pinned
+`python-flint==0.9.0` runtime controls are executed and archived.
+
+### Deterministic contract candidates added
+
+Two additional previously open design areas now have explicit freeze candidates:
+
+1. `ORDER_CHECKPOINT_FREEZE_CANDIDATE.md` inherits v8.1 ordering: r lower-first,
+   lambda upper-first, LIFO replay; it also fixes atomic replacement, file+directory
+   fsync, JSONL tail recovery, checkpoint cadence, and a five-percent overhead gate.
+2. `QUOTIENT_EXPRESSION_FREEZE_CANDIDATE.md` defines direct and common-denominator
+   interval associations for `G_r`, `G_rr`, `G_rlambda`; when both are finite their
+   rigorous intersection is used, when only one is finite that finite enclosure is used,
+   and disjoint finite results are fatal source inconsistency.
+
+These are freeze candidates, not yet normative final contract bytes.
+
+### Independent rederivation
+
+The independent formal rederivation source does not import the prototype kernel, candidate
+v2, adapter, runner, or checker. Its pinned GitHub execution artifact is still pending.
 
 ## Remaining v9 freeze blockers
 
-Overall v9 status remains **SPEC_PENDING / FREEZE NOT AUTHORIZED**. The remaining blockers
-are now primarily implementation/validation rather than real analysis:
+Overall v9 status remains **SPEC_PENDING / FREEZE NOT AUTHORIZED**. Remaining blockers are
+now:
 
-1. repair analytic-flag propagation and the `2F1` cut guard, then archive a pinned
-   `python-flint==0.9.0` source audit;
-2. execute and archive the independent analytic rederivation under a pinned environment;
-3. validate concrete `acb.integral` enclosure semantics on the repaired source;
-4. freeze the interval association and `expression_id` for `G_r`, `G_rr`, `G_rlambda`;
-5. complete the final static runner/checker domain-enforcement audit;
-6. freeze child/record ordering and checkpoint durability/schema policy;
-7. build canonical dependency-entry objects and hashes;
-8. complete the independent validation corpus and post-import source identity checks;
-9. freeze performance margin/repetition policy;
-10. freeze the final aggregate-chain byte grammar and implement the multi-run aggregate
-    verifier.
+1. execute/archive candidate-v2 static audit and pinned `python-flint==0.9.0` runtime
+   analytic-flag/integration controls;
+2. execute/archive the independent analytic rederivation under a pinned environment;
+3. incorporate and independently validate the quotient-expression and ordering/checkpoint
+   freeze candidates;
+4. complete the final source-level runner/checker domain-enforcement audit;
+5. freeze the remaining evidence schema IDs/byte grammars, including aggregate-chain byte
+   grammar;
+6. build canonical dependency-entry objects and hashes from the final proof/source bytes;
+7. complete the independent validation corpus and post-import source-identity checks;
+8. freeze performance margin/repetition policy and run qualification;
+9. implement/validate the multi-run aggregate verifier;
+10. perform the one-shot v9 contract freeze and only then run the `2^-20` production
+    rehearsal.
 
 ## Promotion rule
 
