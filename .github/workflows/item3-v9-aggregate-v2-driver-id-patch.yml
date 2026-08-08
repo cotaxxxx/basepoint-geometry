@@ -1,0 +1,55 @@
+name: Item 3 v9 aggregate v2 driver-id patch
+
+on:
+  push:
+    branches:
+      - agent/item3-v9-analytic-proof
+    paths:
+      - ".github/workflows/item3-v9-aggregate-v2-driver-id-patch.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/item3-v9-analytic-proof
+          fetch-depth: 1
+      - name: Add exact driver-id check
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          p=Path("CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/aggregate_verifier_v9_candidate_v2.py")
+          text=p.read_text(encoding="utf-8")
+          marker='''    if obj["status"] != "SHARD_PASS_CANDIDATE" or obj["authorization"] != "FROZEN_PRODUCTION":
+              raise AggregateReject("shard evidence is not frozen production PASS candidate")
+          '''
+          insert='''    if obj["status"] != "SHARD_PASS_CANDIDATE" or obj["authorization"] != "FROZEN_PRODUCTION":
+              raise AggregateReject("shard evidence is not frozen production PASS candidate")
+              if obj["driver_id"] != "ITEM3_SWEEP_V9_REHEARSAL_DRIVER_CANDIDATE_V3":
+              raise AggregateReject("shard evidence driver ID mismatch")
+          '''
+          import textwrap
+          marker=textwrap.dedent(marker)
+          insert=textwrap.dedent(insert)
+          marker=''.join(('    '+line if line.strip() else line) for line in marker.splitlines(True))
+          insert=''.join(('    '+line if line.strip() else line) for line in insert.splitlines(True))
+          if text.count(marker)!=1:
+              raise SystemExit(f"unexpected marker count {text.count(marker)}")
+          p.write_text(text.replace(marker,insert,1),encoding="utf-8")
+          PY
+          python -m py_compile CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/aggregate_verifier_v9_candidate_v2.py
+      - name: Commit patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/aggregate_verifier_v9_candidate_v2.py
+          git diff --cached --check
+          git commit -m "Require driver v3 identity in item3 v9 aggregate verifier"
+          git push origin HEAD:agent/item3-v9-analytic-proof
