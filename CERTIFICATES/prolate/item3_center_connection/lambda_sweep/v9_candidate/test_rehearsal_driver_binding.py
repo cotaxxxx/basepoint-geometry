@@ -13,7 +13,6 @@ import unittest
 
 import rehearsal_driver_v9_candidate as d
 
-
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[4]
 REPORT = HERE / "rehearsal_driver_binding_audit.json"
@@ -83,6 +82,8 @@ if __name__ == "__main__":
         "tests_run": result.testsRun,
         "failures": len(result.failures),
         "errors": len(result.errors),
+        "failure_details": [text for _case, text in result.failures],
+        "error_details": [text for _case, text in result.errors],
         "driver_source_sha256": hashlib.sha256(
             (HERE / "rehearsal_driver_v9_candidate.py").read_bytes()
         ).hexdigest(),
