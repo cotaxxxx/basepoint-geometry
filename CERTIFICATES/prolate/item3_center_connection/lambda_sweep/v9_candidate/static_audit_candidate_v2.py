@@ -134,9 +134,17 @@ def main() -> int:
     guard_fragment = "if analytic and 0 in z.imag and z.real.upper() >= 1:"
     checks["explicit_2f1_cut_guard_present"] = guard_fragment in text
     if len(hyp2f1_calls) == 1 and guard_fragment in text:
-        guard_offset = text.index(guard_fragment)
-        hyp_offset = text.index("hypgeom_2f1")
-        checks["2f1_cut_guard_precedes_call"] = guard_offset < hyp_offset
+        # Compare the actual AST call position with the guard source line.  Do not use
+        # text.index("hypgeom_2f1"), because the function docstring intentionally names
+        # hypgeom_2f1 before the executable guard and would create a false negative.
+        guard_line = next(
+            (line_no for line_no, line in enumerate(text.splitlines(), start=1) if guard_fragment in line),
+            None,
+        )
+        call_line = hyp2f1_calls[0].lineno
+        checks["2f1_cut_guard_precedes_call"] = guard_line is not None and guard_line < call_line
+        details["2f1_guard_line"] = guard_line
+        details["2f1_call_line"] = call_line
     else:
         checks["2f1_cut_guard_precedes_call"] = False
 
