@@ -219,13 +219,13 @@ def test_B(n:int)->tuple[str,str]:
         token="analytic_required = analytic_theta or analytic_phi"; repl="analytic_required = analytic_theta and analytic_phi"
         try: td,p,mod=load_mutated(SOURCE_PATHS["kernel"],token,repl,"B031")
         except Exception as exc: return observed_reject(True,f"import rejected {exc}")
-        try: return observed_reject("analytic_theta and analytic_phi" in p.read_text(),"loaded OR->AND mutation rejected by independent policy verifier")
+        try: return observed_reject(sha256_file(p)!=TARGET["source_sha256"]["kernel"],"rejected by exact source pin")
         finally: td.cleanup()
     if n==32:
         token="if analytic and 0 in z.imag and z.real.upper() >= 1:"; repl="if False:"
         try: td,p,mod=load_mutated(SOURCE_PATHS["kernel"],token,repl,"B032")
         except Exception as exc: return observed_reject(True,f"import rejected {exc}")
-        try: return observed_reject(token not in p.read_text(),"loaded 2F1-guard removal rejected by independent policy verifier")
+        try: return observed_reject(sha256_file(p)!=TARGET["source_sha256"]["kernel"],"rejected by exact source pin")
         finally: td.cleanup()
     return "FAIL","unknown B"
 
@@ -513,8 +513,38 @@ def test_G(n:int)->tuple[str,str]:
     if n==16:
         try: td,p,mod=load_mutated(SOURCE_PATHS['aggregate_verifier'],'if obj["status"] != "SHARD_PASS_CANDIDATE" or obj["authorization"] != "FROZEN_PRODUCTION":','if False:','G016')
         except Exception: return observed_reject(True,'aggregate mutation rejected at import')
-        try: return observed_reject('if False:' in p.read_text(),'loaded qualification/production gate removal rejected')
-        finally: td.cleanup()
+        evidence_td=None
+        try:
+            plan=aggregate.parse_plan(PLAN_DIR/'rehearsal_plan_v2.json'); shard=plan.ordered_shards[0]
+            def interval_list(iv): return [rat_obj(iv[0]),rat_obj(iv[1])]
+            bindings={}
+            for key in ('adapter','runner','checker','checkpoint','bridge'):
+                digest=plan.source_sha256[key]
+                bindings[key]={'sha256':digest,'pre_import_sha256':digest,'post_import_sha256':digest,'resolved_path':key,'module_origin':key}
+            kd=plan.source_sha256['kernel']
+            bindings['kernel']={'sha256':kd,'runner_pre':kd,'runner_post':kd,'checker50_pre':kd,'checker50_post':kd,'checker70_pre':kd,'checker70_post':kd}
+            synthetic={
+                'aggregate_plan_sha256':plan.plan_sha256,'authorization':'QUALIFICATION_ONLY','checker_error':None,
+                'checker_report':{'checker_id':'ITEM3_SWEEP_V9_REHEARSAL_CHECKER_CANDIDATE_V2','status':'PASS_CANDIDATE','dps50_leaf_count':1,'dps70_verified_leaf_count':1,'verified_leaves_dps70':[{'lambda_box':interval_list(shard.lambda_box),'mean_value_hi_dps70':rat_obj(Fraction(-1)),'path_id':'SYNTH','r_cell':interval_list(shard.root_r)}]},
+                'config_sha256':TARGET['config_sha256'],'dependency_snapshot_sha256':plan.dependency_snapshot_sha256,'design_sha256':plan.design_sha256,
+                'driver_id':'ITEM3_SWEEP_V9_REHEARSAL_DRIVER_CANDIDATE_V3','freeze_receipt_sha256':None,'lambda_box':interval_list(shard.lambda_box),
+                'nonclaim':'synthetic invalid-authorization evidence for aggregate gate mutation test','root_r':interval_list(shard.root_r),
+                'runner_error':None,'runner_result':{'runner_id':'ITEM3_SWEEP_V9_REHEARSAL_RUNNER_CANDIDATE_V2','terminal_class':'COMPLETE_CANDIDATE','root_r':interval_list(shard.root_r),'root_lambda':interval_list(shard.lambda_box),'attempts':[{'path_id':'SYNTH'}],'accepted_leaves':[{'path_id':'SYNTH'}]},
+                'schema':'ITEM3_SWEEP_V9_SHARD_EVIDENCE_CANDIDATE_V2','shard_id':shard.shard_id,'shard_index':shard.shard_index,
+                'source_bindings':bindings,'status':'QUALIFICATION_PASS_CANDIDATE',
+            }
+            evidence_td,evidence_path=temp_json(synthetic)
+            pinned_reject=expect_raises(aggregate.AggregateReject,lambda:aggregate.validate_shard_evidence(evidence_path,plan=plan,shard=shard,config_sha=TARGET['config_sha256'],receipt_sha=None))
+            mutated_accept=False
+            try:
+                mod.validate_shard_evidence(evidence_path,plan=plan,shard=shard,config_sha=TARGET['config_sha256'],receipt_sha=None)
+                mutated_accept=True
+            except mod.AggregateReject:
+                mutated_accept=False
+            return observed_reject(pinned_reject and mutated_accept,'pinned rejects invalid status/authorization; loaded gate-removal mutation accepts identical evidence')
+        finally:
+            if evidence_td is not None: evidence_td.cleanup()
+            td.cleanup()
     return 'FAIL','unknown G'
 
 # H: independence/source identity -------------------------------------------
