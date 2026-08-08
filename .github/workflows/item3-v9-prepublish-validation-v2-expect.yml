@@ -1,0 +1,101 @@
+name: Item 3 v9 prepublish validation v2 expectations
+
+on:
+  push:
+    branches:
+      - agent/item3-v9-analytic-proof
+    paths:
+      - ".github/workflows/item3-v9-prepublish-validation-v2-expect.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  prepublish:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: agent/item3-v9-analytic-proof
+          fetch-depth: 1
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.13.14"
+      - name: Generate immutable prepublished expectations
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import hashlib,json
+          from pathlib import Path
+          base=Path('CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate')
+          corpus=base/'validation_corpus_v2'; bundle=base/'rehearsal_bundle_candidate_v2'; deps=bundle/'dependencies'; pdir=bundle/'plan_config'
+          validator=corpus/'run_validation_corpus_v2.py'; reference=corpus/'independent_reference_v2.py'; config=pdir/'rehearsal_shard_config_v1.json'
+          def sha(p): return hashlib.sha256(p.read_bytes()).hexdigest()
+          cfg=json.loads(config.read_text(encoding='utf-8'))
+          source_paths={
+            'kernel':base/'prolate_F_derivatives_cleanroom_v9_candidate.py','adapter':base/'adapter_v9_candidate_v2.py','runner':base/'runner_v9_candidate_v2.py',
+            'checker':base/'checker_v9_candidate_v2.py','checkpoint':base/'checkpoint_v9_candidate.py','bridge':base/'checkpoint_bridge_v9_candidate_v2.py',
+            'driver':base/'rehearsal_driver_v9_candidate_v3.py','aggregate_verifier':base/'aggregate_verifier_v9_candidate_v2.py',
+          }
+          observed={k:sha(v) for k,v in source_paths.items()}
+          if observed!=cfg['source_sha256']: raise SystemExit(f'config source map drift: {observed} != {cfg["source_sha256"]}')
+          floors={'A':32,'B':32,'C':80,'D':32,'E':32,'F':24,'G':16,'H':8}
+          leaves=[]
+          def add(cat,n,expected,desc,identity):
+            leaves.append({'control_id':f'{cat}{n:03d}','category':cat,'input_domain_or_source_mutation':desc,'source_or_derivation_identity':identity,'expected_terminal_class':expected,'expected_predicate_or_failure_reason':('independent predicate holds' if expected=='PASS' else 'loaded mutation/adversarial object is rejected')})
+          ops=['F','F_r','F_rr']
+          for n in range(1,33):
+            if n<=18:
+              pi=(n-1)//3+1; op=ops[(n-1)%3]; add('A',n,'PASS',f'independent fixed rational-like point {pi}; operation={op}; calibrated cubature/finite-difference comparison',f'independent_reference_v2:{op}:point{pi}')
+            elif n<=30: add('A',n,'REJECT',f'kernel algebra mutation number {n-18} loaded as temporary module and checked at fixed point',f'loaded_kernel_mutation:A{n:03d}')
+            elif n==31: add('A',n,'REJECT','formula map kernel-path substitution','independent_formula_map_policy')
+            else: add('A',n,'REJECT','formula map mixed-function substitution','independent_formula_map_policy')
+          for n in range(1,33):
+            if n<=20: add('B',n,'PASS',f'domain/branch positive case {n}','kernel_domain_branch_contract')
+            else: add('B',n,'REJECT',f'domain/branch adversarial or loaded branch-policy mutation {n}','loaded_or_runtime_domain_rejection')
+          outputs=['F','F_r','F_lambda','F_rr','F_rlambda']
+          for n in range(1,81):
+            out=outputs[(n-1)//16]; slot=(n-1)%16+1; expected='PASS' if slot<=10 else 'REJECT'
+            add('C',n,expected,f'five-output kernel {out}; case slot {slot}',f'kernel_behavior:{out}:slot{slot}')
+          for n in range(1,33): add('D',n,'PASS' if n<=20 else 'REJECT',f'quotient/mean-value adapter case {n}',('exact_adapter_algebra' if n<=20 else f'loaded_adapter_mutation:D{n:03d}'))
+          for n in range(1,33): add('E',n,'PASS' if n<=20 else 'REJECT',f'deterministic refinement/order case {n}',('exact_runner_control' if n<=20 else f'loaded_runner_mutation:E{n:03d}'))
+          fdesc={1:'canonical JSON',2:'normal committed checkpoint',3:'cancel after first payload',4:'cancel after both payloads before ledger',5:'incomplete JSONL trailing suffix',6:'cancel after JSONL fsync before mirrors',7:'stale/corrupt mirror',8:'prior commit survives later orphan',9:'32MiB ceiling',10:'120s/32-attempt cadence',11:'fsync+replace durability source',12:'separate SHARD_PROVENANCE',13:'missing immutable payload',14:'payload hash/path mismatch',15:'malformed complete ledger line',16:'wrong previous-line hash',17:'oversize payload',18:'same-hash overwrite different bytes',19:'fsync removal mutation',20:'atomic replace mutation',21:'payload ceiling mutation',22:'line schema mutation',23:'LF validation mutation',24:'previous-hash field mutation'}
+          for n in range(1,25): add('F',n,'PASS' if n<=12 else 'REJECT',fdesc[n],('checkpoint_transaction_runtime' if n<=18 else f'loaded_checkpoint_mutation:F{n:03d}'))
+          for n in range(1,17): add('G',n,'PASS' if n<=6 else 'REJECT',f'multi-run aggregate case {n}',('independent_chain_or_plan_positive' if n<=6 else f'aggregate_adversarial_or_loaded_mutation:G{n:03d}'))
+          for n in range(1,9): add('H',n,'PASS' if n<=4 else 'REJECT',f'independence/source identity case {n}',('independence_boundary' if n<=4 else f'loaded_identity_mutation:H{n:03d}'))
+          if len(leaves)!=256: raise SystemExit(len(leaves))
+          if len({(x['category'],x['input_domain_or_source_mutation'],x['source_or_derivation_identity'],x['expected_terminal_class'],x['expected_predicate_or_failure_reason']) for x in leaves})!=256: raise SystemExit('semantic tuple duplicate')
+          obj={
+            'schema':'ITEM3_SWEEP_V9_CONTROL_EXPECT_V2','status':'PREPUBLISHED_EXPECTATIONS','leaf_count':256,'category_floors':floors,
+            'target_bundle':{'dependency_snapshot_sha256':sha(deps/'dependency_snapshot_v9_candidate.json'),'plan_sha256':sha(pdir/'rehearsal_plan_v2.json'),'config_sha256':sha(config),'source_sha256':observed},
+            'independent_reference_sha256':sha(reference),'validation_source_sha256':sha(validator),'leaves':leaves,
+            'nonclaims':['Prepublication fixes expected outcomes before the counted validation run.','This object does not authorize freeze, a tag, production rehearsal, or CERTIFIED_LAMBDA_RANGE.'],
+          }
+          out=corpus/'CONTROL_EXPECT.json'; out.write_text(json.dumps(obj,sort_keys=True,separators=(',',':'))+'\n',encoding='utf-8')
+          print('EXPECT_SHA256='+sha(out)); print('VALIDATOR_SHA256='+sha(validator)); print('REFERENCE_SHA256='+sha(reference))
+          PY
+      - name: Verify expectation object
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from collections import Counter
+          from pathlib import Path
+          p=Path('CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/validation_corpus_v2/CONTROL_EXPECT.json'); obj=json.loads(p.read_text())
+          assert obj['status']=='PREPUBLISHED_EXPECTATIONS' and obj['leaf_count']==256 and len(obj['leaves'])==256
+          assert dict(Counter(x['category'] for x in obj['leaves']))==obj['category_floors']=={'A':32,'B':32,'C':80,'D':32,'E':32,'F':24,'G':16,'H':8}
+          print('PREPUBLICATION_AUDIT=PASS')
+          PY
+      - name: Commit expectations before counted execution
+        shell: bash
+        run: |
+          set -euo pipefail
+          P="CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/validation_corpus_v2/CONTROL_EXPECT.json"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- "$P"; git diff --cached --check
+          git commit -m "Prepublish item3 v9 validation v2 expectations"
+          git push origin HEAD:agent/item3-v9-analytic-proof
