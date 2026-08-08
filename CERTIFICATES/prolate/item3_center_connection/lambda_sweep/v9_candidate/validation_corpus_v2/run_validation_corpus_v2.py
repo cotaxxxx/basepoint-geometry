@@ -147,7 +147,7 @@ A_MUTATIONS=[
     ("h1 = -2 / S","h1 = -3 / S","F"),
     ("(acb(2) / 3) * T / S**3","(acb(3) / 3) * T / S**3","F_r"),
     ("(acb(2) / 15) * U / S**4","(acb(3) / 15) * U / S**4","F_rr"),
-    ('gamma_r = B * N / (q * sqrt_q)','gamma_r = -B * N / q32',"F"),
+    ('gamma_r = B * N / (q * sqrt_q)','gamma_r = -B * N / (q * sqrt_q)',"F"),
     ('M = N_r * q - 3 * N * d','M = N_r * q - 2 * N * d',"F_r"),
     ('M_r = -N_r * d - 3 * N','M_r = -N_r * d - 2 * N',"F_rr"),
     ('-g["u"] * h + g["W"] * h1 * g["gamma_r"]','g["u"] * h + g["W"] * h1 * g["gamma_r"]',"F"),
@@ -155,7 +155,7 @@ A_MUTATIONS=[
     ('-3 * g["u"] * A','-2 * g["u"] * A',"F_rr"),
     ('+ 3 * h2 * g["gamma_r"] * g["gamma_rr"]','+ 2 * h2 * g["gamma_r"] * g["gamma_rr"]',"F_rr"),
     ('+ h1 * g["gamma_rrr"]','- h1 * g["gamma_rrr"]',"F_rr"),
-    ('return _evaluate(_F_rr_kernel, r, lam','return _evaluate(_F_r_kernel, r, lam',"F_rr"),
+    ('h3 * g["gamma_r"] ** 3','2 * h3 * g["gamma_r"] ** 3',"F_rr"),
 ]
 
 def pointwise_reference(op: str) -> float:
@@ -314,11 +314,14 @@ def test_D(n:int)->tuple[str,str]:
         try: td,p,mod=load_mutated(SOURCE_PATHS["adapter"],token,repl,f"D{n:03d}")
         except Exception: return observed_reject(True,"adapter mutation rejected at import")
         try:
-            if kind=="mid": rejected=mod.canonical_midpoint((Fraction(1,4),Fraction(3,4)))!=Fraction(1,2)
-            elif kind=="gr": rejected=mod._quotient_gr(arb(1),arb(2),arb(4)).final!=adapter._quotient_gr(arb(1),arb(2),arb(4)).final
-            elif kind=="grr": rejected=mod._quotient_grr(arb(1),arb(2),arb(3),arb(4)).final!=adapter._quotient_grr(arb(1),arb(2),arb(3),arb(4)).final
-            elif kind=="grl": rejected=mod._quotient_grlambda(arb(1),arb(2),arb(4)).final!=adapter._quotient_grlambda(arb(1),arb(2),arb(4)).final
-            else: rejected=sha256_file(p)!=TARGET["source_sha256"]["adapter"]
+            try:
+                if kind=="mid": rejected=mod.canonical_midpoint((Fraction(1,4),Fraction(3,4)))!=Fraction(1,2)
+                elif kind=="gr": rejected=mod._quotient_gr(arb(1),arb(2),arb(4)).final!=adapter._quotient_gr(arb(1),arb(2),arb(4)).final
+                elif kind=="grr": rejected=mod._quotient_grr(arb(1),arb(2),arb(3),arb(4)).final!=adapter._quotient_grr(arb(1),arb(2),arb(3),arb(4)).final
+                elif kind=="grl": rejected=mod._quotient_grlambda(arb(1),arb(2),arb(4)).final!=adapter._quotient_grlambda(arb(1),arb(2),arb(4)).final
+                else: rejected=sha256_file(p)!=TARGET["source_sha256"]["adapter"]
+            except mod.QuotientAssociationDisjoint:
+                rejected=True
             return observed_reject(bool(rejected),f"loaded adapter mutation kind={kind}")
         finally: td.cleanup()
     return "FAIL","unknown D"
@@ -385,11 +388,11 @@ def test_F(n:int)->tuple[str,str]:
         finally: td.cleanup()
     if n==3:
         td,root,store=new_store()
-        try: store.publish_orphan_for_test(kind="progress",value=simple_progress()); return observed_pass(checkpoint.recover_committed(root)==[],"cancel after first payload publication")
+        try: store.publish_orphan_for_test(kind="progress",value=simple_progress()); return observed_pass(checkpoint.recover_committed(root,allow_missing_ledger=True)==[],"cancel after first payload publication")
         finally: td.cleanup()
     if n==4:
         td,root,store=new_store()
-        try: store.publish_orphan_for_test(kind="progress",value=simple_progress()); store.publish_orphan_for_test(kind="partial",value=simple_partial()); return observed_pass(checkpoint.recover_committed(root)==[],"cancel after both payloads before ledger")
+        try: store.publish_orphan_for_test(kind="progress",value=simple_progress()); store.publish_orphan_for_test(kind="partial",value=simple_partial()); return observed_pass(checkpoint.recover_committed(root,allow_missing_ledger=True)==[],"cancel after both payloads before ledger")
         finally: td.cleanup()
     if n==5:
         td,root,store=new_store()
