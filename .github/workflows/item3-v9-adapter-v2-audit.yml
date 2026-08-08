@@ -1,0 +1,69 @@
+name: Item 3 v9 adapter v2 audit
+
+on:
+  push:
+    branches:
+      - agent/item3-v9-analytic-proof
+    paths:
+      - "CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/adapter_v9_candidate_v2.py"
+      - "CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/test_adapter_v9_candidate_v2.py"
+      - ".github/workflows/item3-v9-adapter-v2-audit.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: item3-v9-adapter-v2-audit-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/item3-v9-analytic-proof
+          fetch-depth: 1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install pinned validated arithmetic
+        run: python -m pip install python-flint==0.9.0
+      - name: Compile candidate sources
+        working-directory: CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate
+        run: >-
+          python -m py_compile
+          adapter_v9_candidate_v2.py
+          test_adapter_v9_candidate_v2.py
+          prolate_F_derivatives_cleanroom_v9_candidate.py
+      - name: Run adapter v2 controls
+        working-directory: CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate
+        run: python test_adapter_v9_candidate_v2.py
+      - name: Commit audit record
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          p=CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/adapter_v9_candidate_v2_runtime_report.json
+          if [ -f "$p" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add -- "$p"
+            if ! git diff --cached --quiet; then
+              git diff --cached --check
+              git commit -m "Record item3 v9 adapter v2 audit"
+              git push origin HEAD:agent/item3-v9-analytic-proof
+            fi
+          fi
+      - name: Require passing report
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path("CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/adapter_v9_candidate_v2_runtime_report.json")
+          data=json.loads(p.read_text(encoding="utf-8"))
+          assert data["status"] == "PASSED"
+          PY
