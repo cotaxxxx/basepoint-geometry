@@ -12,6 +12,8 @@ import runner_v9_candidate_v2 as r
 class SignInterval:
     def __init__(self, sign: str) -> None:
         self.sign = sign
+    def __eq__(self, other) -> bool:
+        return isinstance(other, SignInterval) and self.sign == other.sign
     def strictly_positive(self) -> bool:
         return self.sign == "POS"
     def strictly_negative(self) -> bool:
