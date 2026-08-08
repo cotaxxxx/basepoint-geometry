@@ -40,10 +40,11 @@ compare = 10 commits / 8 changed files
 ```
 
 The post-prototype control-repair sequence through
-`32a8a3f4b43f14111b1fd0a20ab488ae50d10d3b` adds only workstream/specification controls:
+`2b7831296b8c5796ebc05d06bd23b290e84497e6` adds only workstream/specification controls:
 
 - exact rehearsal range correction;
-- multi-run shard/chain/failure semantics;
+- multi-run shard/failure semantics;
+- aggregate-side selected-shard chain semantics compatible with one-shard reruns;
 - reproducible prototype-audit scope correction.
 
 The exact immediate rehearsal range is
@@ -59,11 +60,17 @@ The following deterministic controls are treated as resolved inputs to the final
 canonical exact centers, exact split scores, `NONFINITE` ordering, exact tie to `r`, dps-50
 partition replay, and fresh dps-70 accepted-cell verification without partition mutation.
 
+For multi-run packaging, immutable shard evidence no longer embeds predecessor-shard
+hashes. The aggregate manifest selects one passing attempt per shard, orders selected
+hashes by exact mathematical shard index, and independently recomputes the aggregate chain.
+This preserves the rule that the minimum mathematical rerun unit is one shard.
+
 Overall v9 status remains **SPEC_PENDING / FREEZE NOT AUTHORIZED**. Remaining blockers
 include the production-grade analytic derivative package, differentiation-under-integral
 proofs, endpoint/branch/domain proofs, frozen expression ordering, child/record ordering,
 checkpoint durability/schema policy, independent validation corpus, post-import source
-identity, performance margin policy, and integration of the multi-run aggregate verifier.
+identity, performance margin policy, final aggregate-chain byte grammar, and integration
+of the multi-run aggregate verifier.
 
 ## Promotion rule
 
