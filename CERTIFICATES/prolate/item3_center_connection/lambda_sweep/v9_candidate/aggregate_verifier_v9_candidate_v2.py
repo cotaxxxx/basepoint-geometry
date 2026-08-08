@@ -335,6 +335,8 @@ def validate_shard_evidence(
         raise AggregateReject("shard evidence schema/field set mismatch")
     if obj["status"] != "SHARD_PASS_CANDIDATE" or obj["authorization"] != "FROZEN_PRODUCTION":
         raise AggregateReject("shard evidence is not frozen production PASS candidate")
+    if obj["driver_id"] != "ITEM3_SWEEP_V9_REHEARSAL_DRIVER_CANDIDATE_V3":
+        raise AggregateReject("shard evidence driver ID mismatch")
     if obj["config_sha256"] != config_sha or obj["aggregate_plan_sha256"] != plan.plan_sha256:
         raise AggregateReject("shard evidence config/plan hash mismatch")
     if obj["design_sha256"] != plan.design_sha256 or obj["dependency_snapshot_sha256"] != plan.dependency_snapshot_sha256:

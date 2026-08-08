@@ -22,7 +22,7 @@ BASE = "CERTIFICATES/prolate/item3_center_connection/lambda_sweep/"
 DESIGN_PATH = BASE + "v9_draft/design_contract_v9_integrated_candidate_v2.md"
 LEMMA_PATH = BASE + "v9_draft/MACHINE_LEMMAS_V9.md"
 ANALYTIC_PATH = BASE + "v9_draft/ANALYTIC_DOMAIN_INTERCHANGE_PROOF.md"
-FORMULA_MAP_PATH = BASE + "v9_draft/SOURCE_FORMULA_MAP_CANDIDATE_V2.md"
+FORMULA_MAP_PATH = BASE + "v9_candidate/SOURCE_FORMULA_MAP_CANDIDATE_V2.md"
 
 SOURCE_PATHS = {
     "kernel": BASE + "v9_candidate/prolate_F_derivatives_cleanroom_v9_candidate.py",

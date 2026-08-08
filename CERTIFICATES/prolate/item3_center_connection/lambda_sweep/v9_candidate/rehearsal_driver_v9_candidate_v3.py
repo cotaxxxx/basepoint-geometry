@@ -43,6 +43,8 @@ CHECKPOINT_PATH = BASE + "checkpoint_v9_candidate.py"
 CHECKPOINT_SHA256 = "253ace8c28c9c5f2d4cb8a9c42b951f759c8f2be619da6845992dca0da10574c"
 BRIDGE_PATH = BASE + "checkpoint_bridge_v9_candidate_v2.py"
 BRIDGE_SHA256 = "59edc8bb73a9e263e8b0b102086ff92dff3898580f92bfe10d6c7216bdfbdebc"
+AGGREGATE_VERIFIER_PATH = BASE + "aggregate_verifier_v9_candidate_v2.py"
+AGGREGATE_VERIFIER_SHA256 = "bdb0eaa12f241108fbdd03e38cde34d1f1ffe085cff8fef89b413fe4dd255001"
 
 SHA_RE = re.compile(r"[0-9a-f]{64}\Z")
 INT_RE = re.compile(r"-?(0|[1-9][0-9]*)\Z")
@@ -240,7 +242,7 @@ def parse_config(path: Path) -> ShardConfig:
         raise DriverContractError("checkpoint policy mismatch")
 
     sources = obj["source_sha256"]
-    source_keys = {"kernel", "adapter", "runner", "checker", "checkpoint", "bridge", "driver"}
+    source_keys = {"kernel", "adapter", "runner", "checker", "checkpoint", "bridge", "driver", "aggregate_verifier"}
     if not isinstance(sources, dict) or set(sources) != source_keys:
         raise DriverContractError("source_sha256 field set mismatch")
     sources = {k: require_sha(v, f"source_sha256.{k}") for k, v in sources.items()}
@@ -251,6 +253,7 @@ def parse_config(path: Path) -> ShardConfig:
         "checker": CHECKER_SHA256,
         "checkpoint": CHECKPOINT_SHA256,
         "bridge": BRIDGE_SHA256,
+        "aggregate_verifier": AGGREGATE_VERIFIER_SHA256,
         "driver": sha256_file(Path(__file__).resolve()),
     }
     if sources != compiled:

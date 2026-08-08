@@ -47,6 +47,7 @@ def source_hashes() -> dict[str, str]:
         "checker": d.CHECKER_SHA256,
         "checkpoint": d.CHECKPOINT_SHA256,
         "bridge": d.BRIDGE_SHA256,
+        "aggregate_verifier": d.AGGREGATE_VERIFIER_SHA256,
         "driver": driver_sha(),
     }
 
