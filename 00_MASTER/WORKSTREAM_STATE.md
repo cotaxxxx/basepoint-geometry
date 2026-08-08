@@ -69,16 +69,10 @@ This preserves the rule that the minimum mathematical rerun unit is one shard.
 Branch: `agent/item3-v9-analytic-proof`
 
 This branch is based on the control branch and isolates the analytic dependency closure.
-It now contains:
+It contains the real-analysis proof, source/formula map, independent formal rederivation
+source, domain-enforcement lemma, and analytic-flag validation delta.
 
-```text
-ANALYTIC_DOMAIN_INTERCHANGE_PROOF.md
-SOURCE_FORMULA_MAP_V9.md
-independent_analytic_rederivation_v9.py
-analytic_second_mixed_derivative_appendix.md   (revised)
-```
-
-The real-analysis core is now **RESOLVED** for the following statements:
+The real-analysis core is **RESOLVED** for the following statements:
 
 - on every compact machine rectangle with `0<=r<1` and `lambda>=1`,
   `q>0`, `w>0`, `W>0` and all algebraic denominators are uniformly separated from zero;
@@ -90,31 +84,53 @@ The real-analysis core is now **RESOLVED** for the following statements:
   derivatives pass through the integral;
 - mixed differentiation commutes;
 - the exact quotient identities for `G_r`, `G_rr`, `G_rlambda` hold;
-- the two-variable axis-path mean-value inclusion holds.
+- the two-variable axis-path mean-value inclusion holds;
+- exact midpoint descendants of the inherited r window and rehearsal lambda range remain
+  inside the analytic domain.
 
 Accordingly, the **analytic content** of `L-SECOND-DERIV` and `L-MIXED-DERIV`, and the
 analytic theorem inside `L-MEAN-VALUE-ENCL`, is no longer `SPEC_PENDING`.
 
-This is not yet machine authorization. The independent formal rederivation source does not
-import the prototype kernel, adapter, runner, or checker, but its pinned execution artifact
-is still pending. The current prototype has been statically mapped to the proved formulas;
-final source-byte validation remains required.
+### Integration-callback source blocker
+
+A separate audit against the pinned `python-flint==0.9.0` `acb.integral` callback contract
+found two source-level defects in the current prototype blob
+`57a7725c6ff0c4135723536b313e63d609eac4f6`:
+
+1. nested integration forwards `analytic_theta and analytic_phi`; branch-sensitive
+   operations must receive the combined requirement `analytic_theta or analytic_phi`;
+2. the branch-sensitive Gauss `2F1` angle representation has no explicit analytic cut
+   guard even though `hypgeom_2f1` exposes no `analytic=` flag.
+
+These are implementation defects, not failures of the real analytic derivative formulas.
+The source therefore remains **REPAIR REQUIRED / NOT APPROVED**.
+
+`ACB_INTEGRAL_ANALYTIC_FLAG_AUDIT.md` records the audit and
+`ANALYTIC_FLAG_VALIDATION_DELTA.md` freezes the required positive/mutation controls. A
+one-shot repair workflow has been prepared, but no repaired source bytes or passing
+repair artifact are recorded yet. The old source blob remains current and must not be
+promoted.
+
+The independent formal rederivation source does not import the prototype kernel, adapter,
+runner, or checker, but its pinned GitHub execution artifact is also still pending.
 
 ## Remaining v9 freeze blockers
 
 Overall v9 status remains **SPEC_PENDING / FREEZE NOT AUTHORIZED**. The remaining blockers
 are now primarily implementation/validation rather than real analysis:
 
-1. execute and archive the independent analytic rederivation under a pinned environment;
-2. validate concrete `acb.integral` enclosure semantics and analytic-flag behavior;
-3. freeze the interval association and `expression_id` for `G_r`, `G_rr`, `G_rlambda`;
-4. statically prove final runner/checker domain enforcement (`0<r<1`, approved lambda range);
-5. freeze child/record ordering and checkpoint durability/schema policy;
-6. build canonical dependency-entry objects and hashes;
-7. complete the independent validation corpus and post-import source identity checks;
-8. freeze performance margin/repetition policy;
-9. freeze the final aggregate-chain byte grammar and implement the multi-run aggregate
-   verifier.
+1. repair analytic-flag propagation and the `2F1` cut guard, then archive a pinned
+   `python-flint==0.9.0` source audit;
+2. execute and archive the independent analytic rederivation under a pinned environment;
+3. validate concrete `acb.integral` enclosure semantics on the repaired source;
+4. freeze the interval association and `expression_id` for `G_r`, `G_rr`, `G_rlambda`;
+5. complete the final static runner/checker domain-enforcement audit;
+6. freeze child/record ordering and checkpoint durability/schema policy;
+7. build canonical dependency-entry objects and hashes;
+8. complete the independent validation corpus and post-import source identity checks;
+9. freeze performance margin/repetition policy;
+10. freeze the final aggregate-chain byte grammar and implement the multi-run aggregate
+    verifier.
 
 ## Promotion rule
 
