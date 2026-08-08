@@ -1,0 +1,119 @@
+name: Item 3 v9 two-blocker repair
+
+on:
+  push:
+    branches:
+      - agent/item3-v9-analytic-proof
+    paths:
+      - ".github/workflows/item3-v9-two-blocker-repair.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/item3-v9-analytic-proof
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Apply exact two-blocker repair
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          base = Path("CERTIFICATES/prolate/item3_center_connection/lambda_sweep")
+
+          dep = base / "v9_candidate/build_dependency_snapshot_v9.py"
+          text = dep.read_text(encoding="utf-8")
+          old = 'FORMULA_MAP_PATH = BASE + "v9_draft/SOURCE_FORMULA_MAP_CANDIDATE_V2.md"'
+          new = 'FORMULA_MAP_PATH = BASE + "v9_candidate/SOURCE_FORMULA_MAP_CANDIDATE_V2.md"'
+          if text.count(old) != 1:
+              raise SystemExit(f"dependency path marker count = {text.count(old)}")
+          dep.write_text(text.replace(old, new, 1), encoding="utf-8")
+
+          agg = base / "v9_candidate/aggregate_verifier_v9_candidate_v2.py"
+          text = agg.read_text(encoding="utf-8")
+          old = '''    if obj["status"] != "SHARD_PASS_CANDIDATE" or obj["authorization"] != "FROZEN_PRODUCTION":
+              raise AggregateReject("shard evidence is not frozen production PASS candidate")
+          '''
+          new = old + '''    if obj["driver_id"] != "ITEM3_SWEEP_V9_REHEARSAL_DRIVER_CANDIDATE_V3":
+              raise AggregateReject("shard evidence driver ID mismatch")
+          '''
+          if text.count(old) != 1:
+              raise SystemExit(f"aggregate gate marker count = {text.count(old)}")
+          agg.write_text(text.replace(old, new, 1), encoding="utf-8")
+          PY
+
+      - name: Run focused regression controls
+        working-directory: CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m py_compile \
+            build_dependency_snapshot_v9.py \
+            build_rehearsal_plan_config_v9.py \
+            aggregate_verifier_v9_candidate_v2.py \
+            test_dependency_snapshot_builder.py \
+            test_rehearsal_plan_config_builder.py \
+            test_aggregate_verifier_v9_candidate_v2.py
+          python -m unittest -v \
+            test_dependency_snapshot_builder.py \
+            test_rehearsal_plan_config_builder.py \
+            test_aggregate_verifier_v9_candidate_v2.py
+
+      - name: Write repair receipt
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          import hashlib
+
+          base = Path("CERTIFICATES/prolate/item3_center_connection/lambda_sweep")
+          dep = base / "v9_candidate/build_dependency_snapshot_v9.py"
+          agg = base / "v9_candidate/aggregate_verifier_v9_candidate_v2.py"
+          receipt = base / "v9_draft/TWO_BLOCKER_REPAIR_RECEIPT_2026-08-08.md"
+          receipt.write_text(
+              "# Item 3 sweep v9 — two-blocker repair receipt\n\n"
+              "Status: **FOCUSED REGRESSION PASS / FREEZE STILL NOT AUTHORIZED**\n\n"
+              "Date: 2026-08-08\n\n"
+              "## Repairs\n\n"
+              "1. Dependency builder now binds the existing `v9_candidate/SOURCE_FORMULA_MAP_CANDIDATE_V2.md`.\n"
+              "2. Aggregate verifier now rejects any shard evidence whose `driver_id` is not exactly "
+              "`ITEM3_SWEEP_V9_REHEARSAL_DRIVER_CANDIDATE_V3`.\n\n"
+              "## Focused controls\n\n"
+              "The workflow compiled and ran the dependency-builder, plan/config-builder, and aggregate-verifier "
+              "unit-control suites. This receipt is written only after all focused controls pass.\n\n"
+              "## Source identities after repair\n\n"
+              f"- build_dependency_snapshot_v9.py sha256: `{hashlib.sha256(dep.read_bytes()).hexdigest()}`\n"
+              f"- aggregate_verifier_v9_candidate_v2.py sha256: `{hashlib.sha256(agg.read_bytes()).hexdigest()}`\n\n"
+              "This repair does not issue a production tag, freeze receipt, production rehearsal, "
+              "`CERTIFIED_LAMBDA_RANGE`, or paper-level completion claim.\n",
+              encoding="utf-8",
+          )
+          PY
+
+      - name: Commit repair
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- \
+            CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/build_dependency_snapshot_v9.py \
+            CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/aggregate_verifier_v9_candidate_v2.py \
+            CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_draft/TWO_BLOCKER_REPAIR_RECEIPT_2026-08-08.md
+          git diff --cached --check
+          git commit -m "Repair item3 v9 dependency path and driver gate"
+          git push origin HEAD:agent/item3-v9-analytic-proof
