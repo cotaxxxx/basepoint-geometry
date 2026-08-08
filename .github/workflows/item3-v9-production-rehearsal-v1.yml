@@ -1,0 +1,368 @@
+name: Item 3 v9 frozen production rehearsal v1
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: item3-v9-frozen-production-rehearsal-v1
+  cancel-in-progress: false
+
+env:
+  BASE: CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate
+  FREEZE_BASE: CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/freeze_v1
+  PACKAGE: CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/production_rehearsal_v1
+  CONFIG: CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/rehearsal_bundle_candidate_v2/plan_config/rehearsal_shard_config_v1.json
+  PLAN: CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/rehearsal_bundle_candidate_v2/plan_config/rehearsal_plan_v2.json
+  RECEIPT: CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/freeze_v1/FREEZE_RECEIPT.json
+  MANIFEST: CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/freeze_v1/QUALIFICATION_MANIFEST.json
+  COMPANION: CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/freeze_v1/FREEZE_AUTHORIZATION_COMPANION_2026-08-09.json
+  FROZEN_COMMIT: aaf13afaca086ed30771c828d99b8b96f3d5f776
+  FROZEN_RECEIPT_SHA256: 1e9597c0a8476dd918bae8131a5b1c3f8a89166fc1d136058ad48d35806f4e86
+  FROZEN_MANIFEST_SHA256: d5c13378f656a3bc2221b7489914ef7023800054eb52f8b382fb73f8315df0dd
+  FROZEN_COMPANION_SHA256: c117919885fe675c1ee426f8c121c6f6f4ebdec93715a7482a5789328a8e6c74
+
+jobs:
+  rehearsal:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 300
+    steps:
+      - name: Checkout dispatched commit
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+
+      - name: Set up pinned Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.13.14"
+
+      - name: Install pinned validated arithmetic
+        run: python -m pip install --disable-pip-version-check python-flint==0.9.0
+
+      - name: Fail-closed frozen-identity preflight
+        shell: bash
+        run: |
+          set -euo pipefail
+          actual_head="$(git rev-parse HEAD)"
+          printf '%s\n' "$actual_head" > ACTUAL_HEAD.txt
+          git merge-base --is-ancestor "$FROZEN_COMMIT" HEAD || {
+            echo "Frozen commit is not an ancestor of dispatched HEAD" >&2
+            exit 1
+          }
+          python - <<'PY'
+          import hashlib, json, os, platform, subprocess
+          from pathlib import Path
+          import flint
+
+          def sha(path):
+              return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+
+          manifest_path = Path(os.environ["MANIFEST"])
+          receipt_path = Path(os.environ["RECEIPT"])
+          companion_path = Path(os.environ["COMPANION"])
+
+          pinned_freeze = {
+              str(manifest_path): os.environ["FROZEN_MANIFEST_SHA256"],
+              str(receipt_path): os.environ["FROZEN_RECEIPT_SHA256"],
+              str(companion_path): os.environ["FROZEN_COMPANION_SHA256"],
+          }
+          for path, expected in pinned_freeze.items():
+              observed = sha(path)
+              if observed != expected:
+                  raise SystemExit(f"freeze_v1 drift: {path}: {observed} != {expected}")
+
+          manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+          artifacts = manifest.get("artifacts")
+          if not isinstance(artifacts, list) or len(artifacts) != 18:
+              raise SystemExit("qualification manifest must contain exactly 18 referents")
+          seen = set()
+          for entry in artifacts:
+              if not isinstance(entry, dict) or set(entry) != {"path", "sha256"}:
+                  raise SystemExit("qualification manifest entry field-set mismatch")
+              path = entry["path"]
+              expected = entry["sha256"]
+              if path in seen:
+                  raise SystemExit(f"duplicate manifest referent: {path}")
+              seen.add(path)
+              observed = sha(path)
+              if observed != expected:
+                  raise SystemExit(f"manifest referent drift: {path}: {observed} != {expected}")
+
+          if getattr(flint, "__version__", None) != "0.9.0":
+              raise SystemExit(f"python-flint mismatch: {getattr(flint, '__version__', None)!r}")
+          if getattr(flint, "__FLINT_VERSION__", None) != "3.6.0":
+              raise SystemExit(f"FLINT mismatch: {getattr(flint, '__FLINT_VERSION__', None)!r}")
+          if platform.python_version() != "3.13.14":
+              raise SystemExit(f"Python mismatch: {platform.python_version()}")
+
+          report = {
+              "actual_head": subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip(),
+              "frozen_commit_ancestor": True,
+              "freeze_file_count": 3,
+              "freeze_sha256": {
+                  "companion": os.environ["FROZEN_COMPANION_SHA256"],
+                  "manifest": os.environ["FROZEN_MANIFEST_SHA256"],
+                  "receipt": os.environ["FROZEN_RECEIPT_SHA256"],
+              },
+              "manifest_referent_count": 18,
+              "manifest_referents_verified": True,
+              "python": platform.python_version(),
+              "python_flint": getattr(flint, "__version__", "UNKNOWN"),
+              "flint_library": getattr(flint, "__FLINT_VERSION__", "UNKNOWN"),
+              "schema": "ITEM3_SWEEP_V9_PRODUCTION_REHEARSAL_PREFLIGHT_V1",
+              "status": "PASS",
+          }
+          Path("PREFLIGHT.json").write_text(
+              json.dumps(report, sort_keys=True, separators=(",", ":")) + "\n",
+              encoding="utf-8",
+          )
+          PY
+
+      - name: Record environment identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p rehearsal-work
+          python -m pip download --disable-pip-version-check --only-binary=:all: --no-deps python-flint==0.9.0 -d rehearsal-work/wheel >/dev/null
+          python - <<'PY'
+          import hashlib, json, os, platform
+          from pathlib import Path
+          import flint
+
+          def sha(path):
+              return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+
+          wheel = next(Path("rehearsal-work/wheel").glob("python_flint-*.whl"))
+          cpu = "UNKNOWN"
+          cpuinfo = Path("/proc/cpuinfo")
+          if cpuinfo.exists():
+              for line in cpuinfo.read_text(errors="replace").splitlines():
+                  if line.lower().startswith("model name"):
+                      cpu = line.split(":", 1)[1].strip()
+                      break
+          mem = None
+          meminfo = Path("/proc/meminfo")
+          if meminfo.exists():
+              for line in meminfo.read_text().splitlines():
+                  if line.startswith("MemTotal:"):
+                      mem = int(line.split()[1])
+                      break
+          report = {
+              "actual_head": Path("ACTUAL_HEAD.txt").read_text().strip(),
+              "cpu_model": cpu,
+              "flint_library": getattr(flint, "__FLINT_VERSION__", "UNKNOWN"),
+              "freeze_receipt_sha256": os.environ["FROZEN_RECEIPT_SHA256"],
+              "github_ref": os.environ.get("GITHUB_REF"),
+              "github_run_attempt": os.environ.get("GITHUB_RUN_ATTEMPT"),
+              "github_run_id": os.environ.get("GITHUB_RUN_ID"),
+              "github_sha": os.environ.get("GITHUB_SHA"),
+              "image_os": os.environ.get("ImageOS"),
+              "image_version": os.environ.get("ImageVersion"),
+              "logical_cpu_count": os.cpu_count(),
+              "memory_total_kib": mem,
+              "python": platform.python_version(),
+              "python_flint": getattr(flint, "__version__", "UNKNOWN"),
+              "python_flint_wheel": wheel.name,
+              "python_flint_wheel_sha256": sha(wheel),
+              "runner_arch": os.environ.get("RUNNER_ARCH"),
+              "runner_name": os.environ.get("RUNNER_NAME"),
+              "runner_os": os.environ.get("RUNNER_OS"),
+              "schema": "ITEM3_SWEEP_V9_PRODUCTION_REHEARSAL_ENVIRONMENT_V1",
+          }
+          Path("rehearsal-work/ENVIRONMENT.json").write_text(
+              json.dumps(report, sort_keys=True, separators=(",", ":")) + "\n",
+              encoding="utf-8",
+          )
+          PY
+
+      - name: Execute frozen production driver
+        shell: bash
+        run: |
+          set -uo pipefail
+          OUT="rehearsal-work/output"
+          mkdir -p "$OUT"
+          start_ns=$(date +%s%N)
+          set +e
+          timeout --signal=TERM --kill-after=5m 270m \
+            python "$BASE/rehearsal_driver_v9_candidate_v3.py" \
+              --checkout-root . \
+              --config "$CONFIG" \
+              --freeze-receipt "$RECEIPT" \
+              --output-dir "$OUT" \
+              > rehearsal-work/DRIVER_STDOUT.log 2> rehearsal-work/DRIVER_STDERR.log
+          rc=$?
+          set -e
+          end_ns=$(date +%s%N)
+          printf '%s\n' "$rc" > rehearsal-work/DRIVER_EXIT_CODE.txt
+          printf '%s\n' "$start_ns" > rehearsal-work/START_NS.txt
+          printf '%s\n' "$end_ns" > rehearsal-work/END_NS.txt
+
+      - name: Run pinned aggregate verifier
+        if: always()
+        shell: bash
+        run: |
+          set -uo pipefail
+          OUT="rehearsal-work/output"
+          mkdir -p rehearsal-work
+          set +e
+          python - <<'PY' > rehearsal-work/AGGREGATE_STDOUT.log 2> rehearsal-work/AGGREGATE_STDERR.log
+          import importlib.util, os, sys
+          from pathlib import Path
+
+          base = Path(os.environ["BASE"])
+          verifier_path = base / "aggregate_verifier_v9_candidate_v2.py"
+          spec = importlib.util.spec_from_file_location("item3_v9_prod_rehearsal_aggregate", verifier_path)
+          mod = importlib.util.module_from_spec(spec)
+          sys.modules[spec.name] = mod
+          spec.loader.exec_module(mod)
+          out = Path("rehearsal-work/output")
+          mod.write_aggregate_verdict(
+              output_path=Path("rehearsal-work/AGGREGATE_VERIFIER_REPORT.json"),
+              plan_path=Path(os.environ["PLAN"]),
+              config_paths=[Path(os.environ["CONFIG"])],
+              freeze_receipt_paths=[Path(os.environ["RECEIPT"])],
+              evidence_paths=[out / "SHARD_EVIDENCE_CANDIDATE.json"],
+              provenance_paths=[out / "SHARD_PROVENANCE.json"],
+          )
+          PY
+          rc=$?
+          set -e
+          printf '%s\n' "$rc" > rehearsal-work/AGGREGATE_EXIT_CODE.txt
+          if [ "$rc" -ne 0 ]; then
+            python - <<'PY'
+          import json
+          from pathlib import Path
+          obj = {
+              "aggregate_exit_code": int(Path("rehearsal-work/AGGREGATE_EXIT_CODE.txt").read_text().strip()),
+              "schema": "ITEM3_SWEEP_V9_PRODUCTION_REHEARSAL_AGGREGATE_FAILURE_V1",
+              "status": "FAILED",
+          }
+          Path("rehearsal-work/AGGREGATE_VERIFIER_FAILURE.json").write_text(
+              json.dumps(obj, sort_keys=True, separators=(",", ":")) + "\n",
+              encoding="utf-8",
+          )
+          PY
+          fi
+
+      - name: Build additive rehearsal package
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -e "$PACKAGE" ]; then
+            echo "Refusing to modify existing production_rehearsal_v1 package" >&2
+            exit 1
+          fi
+          mkdir -p "$PACKAGE"
+          cp PREFLIGHT.json "$PACKAGE/" 2>/dev/null || true
+          cp rehearsal-work/ENVIRONMENT.json "$PACKAGE/" 2>/dev/null || true
+          cp rehearsal-work/DRIVER_EXIT_CODE.txt "$PACKAGE/" 2>/dev/null || true
+          cp rehearsal-work/DRIVER_STDOUT.log "$PACKAGE/" 2>/dev/null || true
+          cp rehearsal-work/DRIVER_STDERR.log "$PACKAGE/" 2>/dev/null || true
+          cp rehearsal-work/AGGREGATE_EXIT_CODE.txt "$PACKAGE/" 2>/dev/null || true
+          cp rehearsal-work/AGGREGATE_STDOUT.log "$PACKAGE/" 2>/dev/null || true
+          cp rehearsal-work/AGGREGATE_STDERR.log "$PACKAGE/" 2>/dev/null || true
+          cp rehearsal-work/AGGREGATE_VERIFIER_REPORT.json "$PACKAGE/" 2>/dev/null || true
+          cp rehearsal-work/AGGREGATE_VERIFIER_REPORT.json.sha256 "$PACKAGE/" 2>/dev/null || true
+          cp rehearsal-work/AGGREGATE_VERIFIER_FAILURE.json "$PACKAGE/" 2>/dev/null || true
+          if [ -d rehearsal-work/output ]; then
+            cp -a rehearsal-work/output/. "$PACKAGE/"
+          fi
+          python - <<'PY'
+          import hashlib, json, os
+          from pathlib import Path
+
+          pkg = Path(os.environ["PACKAGE"])
+          aggregate = pkg / "AGGREGATE_VERIFIER_REPORT.json"
+          aggregate_failure = pkg / "AGGREGATE_VERIFIER_FAILURE.json"
+
+          def sha(path):
+              return hashlib.sha256(path.read_bytes()).hexdigest()
+
+          machine_sha = sha(aggregate) if aggregate.is_file() else None
+          machine_status = None
+          chain_tip = None
+          if aggregate.is_file():
+              obj = json.loads(aggregate.read_text(encoding="utf-8"))
+              machine_status = obj.get("status")
+              chain_tip = obj.get("selected_chain_tip_sha256")
+              if chain_tip:
+                  (pkg / "CHAIN_TIP.txt").write_text(chain_tip + "\n", encoding="ascii")
+
+          status = {
+              "aggregate_failure_present": aggregate_failure.is_file(),
+              "certified_lambda_range": False,
+              "machine_report_sha256": machine_sha,
+              "machine_status_recorded": machine_status,
+              "nonclaim": "The pinned aggregate verifier machine status is recorded as raw machine output only; it is not an official CERTIFIED_LAMBDA_RANGE assertion until chat full audit and separate explicit user approval.",
+              "production_sweep_authorized": False,
+              "schema": "ITEM3_SWEEP_V9_PRODUCTION_REHEARSAL_STATUS_V1",
+              "status": "PROMOTION_PENDING_AUDIT",
+              "tag_created": False,
+          }
+          (pkg / "REHEARSAL_STATUS.json").write_text(
+              json.dumps(status, sort_keys=True, separators=(",", ":")) + "\n",
+              encoding="utf-8",
+          )
+
+          hashes = {}
+          for name in (
+              "SHARD_EVIDENCE_CANDIDATE.json",
+              "SHARD_PROVENANCE.json",
+              "AGGREGATE_VERIFIER_REPORT.json",
+              "CHAIN_TIP.txt",
+              "ENVIRONMENT.json",
+              "REHEARSAL_STATUS.json",
+          ):
+              path = pkg / name
+              if path.is_file():
+                  hashes[name] = sha(path)
+          (pkg / "PACKAGE_HASHES.json").write_text(
+              json.dumps(
+                  {"files": hashes, "schema": "ITEM3_SWEEP_V9_PRODUCTION_REHEARSAL_PACKAGE_HASHES_V1"},
+                  sort_keys=True, separators=(",", ":")
+              ) + "\n",
+              encoding="utf-8",
+          )
+          PY
+
+      - name: Upload rehearsal evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: item3-v9-production-rehearsal-v1-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            rehearsal-work/
+            CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/production_rehearsal_v1/
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Commit rehearsal package on PASS or FAIL
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ ! -d "$PACKAGE" ]; then
+            echo "No package directory exists; nothing to commit" >&2
+            exit 1
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- "$PACKAGE"
+          if git diff --cached --quiet; then
+            echo "No new rehearsal package bytes to commit" >&2
+            exit 1
+          fi
+          changed="$(git diff --cached --name-only)"
+          while IFS= read -r path; do
+            case "$path" in
+              "$PACKAGE"/*) ;;
+              *) echo "Refusing non-package staged path: $path" >&2; exit 1 ;;
+            esac
+          done <<< "$changed"
+          git commit -m "Record item3 v9 production rehearsal v1 package"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
