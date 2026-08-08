@@ -203,8 +203,6 @@ def evidence_for(
             "verify_kernel_call_counts": {"F": 1},
             "verified_leaves_dps70": [verified],
         },
-        "checkpoint_commit_count": 1,
-        "checkpoint_last_sha256": "7" * 64,
         "config_sha256": config_sha,
         "dependency_snapshot_sha256": plan["dependency_snapshot_sha256"],
         "design_sha256": plan["design_sha256"],
@@ -250,23 +248,109 @@ def evidence_for(
     }
 
 
-def materialize_fixture(root: Path, plan_obj: dict) -> tuple[Path, list[Path], list[Path], list[Path]]:
+
+def write_provenance_fixture(
+    root: Path,
+    *,
+    plan: dict,
+    plan_sha: str,
+    shard_index: int,
+    config_sha: str,
+    receipt_sha: str,
+    evidence_sha: str,
+    record_count: int = 1,
+) -> Path:
+    shard = plan["ordered_shards"][shard_index]
+    out = root / f"provenance-{shard_index}"
+    checkpoint_root = out / "checkpoint"
+    progress_dir = checkpoint_root / "checkpoint_payloads" / "progress"
+    partial_dir = checkpoint_root / "checkpoint_payloads" / "partial"
+    progress_dir.mkdir(parents=True, exist_ok=True)
+    partial_dir.mkdir(parents=True, exist_ok=True)
+    run_context = {
+        "aggregate_plan_sha256": plan_sha,
+        "authorization": "FROZEN_PRODUCTION",
+        "config_sha256": config_sha,
+        "dependency_snapshot_sha256": plan["dependency_snapshot_sha256"],
+        "design_sha256": plan["design_sha256"],
+        "freeze_receipt_sha256": receipt_sha,
+        "shard_id": shard["shard_id"],
+        "shard_index": shard["shard_index"],
+        "source_sha256": deepcopy(plan["source_sha256"]),
+    }
+    previous = a.ZERO_SHA
+    lines = []
+    last_sha = None
+    for i in range(record_count):
+        progress = {"checkpoint_fixture_index": i, "frontier": [], "run_context": deepcopy(run_context)}
+        partial = {"checkpoint_fixture_index": i, "run_context": deepcopy(run_context), "status": "PARTIAL"}
+        progress_raw = a.canonical_json_bytes(progress)
+        partial_raw = a.canonical_json_bytes(partial)
+        progress_sha = sha256(progress_raw).hexdigest()
+        partial_sha = sha256(partial_raw).hexdigest()
+        (progress_dir / f"{progress_sha}.json").write_bytes(progress_raw)
+        (partial_dir / f"{partial_sha}.json").write_bytes(partial_raw)
+        frontier_sha = sha256(a.canonical_json_bytes(progress["frontier"])).hexdigest()
+        line_obj = {
+            "checkpoint_sequence": i,
+            "frontier_digest_sha256": frontier_sha,
+            "last_complete_attempt_id": f"A{i}",
+            "partial_evidence_sha256": partial_sha,
+            "previous_checkpoint_sha256": previous,
+            "progress_payload_sha256": progress_sha,
+            "schema": "ITEM3_SWEEP_V9_PROGRESS_LINE_V1",
+            "status": "PARTIAL",
+        }
+        line = a.canonical_json_bytes(line_obj)
+        lines.append(line)
+        last_sha = sha256(line).hexdigest()
+        previous = last_sha
+    ledger_raw = b"".join(lines)
+    (checkpoint_root / "SWEEP_PROGRESS.jsonl").write_bytes(ledger_raw)
+    provenance = {
+        "aggregate_plan_sha256": plan_sha,
+        "authorization": "FROZEN_PRODUCTION",
+        "checkpoint_commit_count": record_count,
+        "checkpoint_last_sha256": last_sha,
+        "checkpoint_ledger_sha256": sha256(ledger_raw).hexdigest(),
+        "config_sha256": config_sha,
+        "dependency_snapshot_sha256": plan["dependency_snapshot_sha256"],
+        "design_sha256": plan["design_sha256"],
+        "freeze_receipt_sha256": receipt_sha,
+        "proof_status": "PROVENANCE_ONLY",
+        "schema": a.PROVENANCE_SCHEMA,
+        "shard_evidence_sha256": evidence_sha,
+        "shard_id": shard["shard_id"],
+        "shard_index": shard["shard_index"],
+        "source_sha256": deepcopy(plan["source_sha256"]),
+    }
+    provenance_path = out / "SHARD_PROVENANCE.json"
+    canonical_write(provenance_path, provenance)
+    return provenance_path
+
+def materialize_fixture(root: Path, plan_obj: dict) -> tuple[Path, list[Path], list[Path], list[Path], list[Path]]:
     plan_path = root / "plan.json"
     plan_sha = canonical_write(plan_path, plan_obj)
     configs: list[Path] = []
     receipts: list[Path] = []
     evidence: list[Path] = []
+    provenance: list[Path] = []
     for i in range(plan_obj["shard_count"]):
         config_path = root / f"config-{i}.json"
         config_sha = canonical_write(config_path, config_for(plan_obj, plan_sha, i))
         receipt_path = root / f"receipt-{i}.json"
         receipt_sha = canonical_write(receipt_path, freeze_for(plan_obj, plan_sha, config_sha))
         evidence_path = root / f"evidence-{i}.json"
-        canonical_write(evidence_path, evidence_for(plan_obj, plan_sha, i, config_sha, receipt_sha))
+        evidence_sha = canonical_write(evidence_path, evidence_for(plan_obj, plan_sha, i, config_sha, receipt_sha))
+        provenance_path = write_provenance_fixture(
+            root, plan=plan_obj, plan_sha=plan_sha, shard_index=i,
+            config_sha=config_sha, receipt_sha=receipt_sha, evidence_sha=evidence_sha,
+        )
         configs.append(config_path)
         receipts.append(receipt_path)
         evidence.append(evidence_path)
-    return plan_path, configs, receipts, evidence
+        provenance.append(provenance_path)
+    return plan_path, configs, receipts, evidence, provenance
 
 
 class AggregateV2Controls(unittest.TestCase):
@@ -275,7 +359,7 @@ class AggregateV2Controls(unittest.TestCase):
             paths = materialize_fixture(Path(td), two_shard_plan())
             result = a.verify_aggregate(
                 plan_path=paths[0], config_paths=paths[1],
-                freeze_receipt_paths=paths[2], evidence_paths=paths[3],
+                freeze_receipt_paths=paths[2], evidence_paths=paths[3], provenance_paths=paths[4],
             )
             self.assertEqual(result["status"], "CERTIFIED_LAMBDA_RANGE")
             self.assertEqual(len(result["adjacency_connections"]), 1)
@@ -288,7 +372,7 @@ class AggregateV2Controls(unittest.TestCase):
             paths = materialize_fixture(Path(td), one_shard_plan())
             result = a.verify_aggregate(
                 plan_path=paths[0], config_paths=paths[1],
-                freeze_receipt_paths=paths[2], evidence_paths=paths[3],
+                freeze_receipt_paths=paths[2], evidence_paths=paths[3], provenance_paths=paths[4],
             )
             self.assertEqual(result["status"], "CERTIFIED_LAMBDA_RANGE")
             self.assertEqual(result["adjacency_connections"], [])
@@ -363,7 +447,7 @@ class AggregateV2Controls(unittest.TestCase):
             with self.assertRaises(a.AggregateReject):
                 a.verify_aggregate(
                     plan_path=paths[0], config_paths=paths[1],
-                    freeze_receipt_paths=paths[2], evidence_paths=paths[3],
+                    freeze_receipt_paths=paths[2], evidence_paths=paths[3], provenance_paths=paths[4],
                 )
 
     def test_runner_checker_and_source_mutations_rejected(self) -> None:
@@ -384,7 +468,7 @@ class AggregateV2Controls(unittest.TestCase):
                 with self.assertRaises(a.AggregateReject):
                     a.verify_aggregate(
                         plan_path=paths[0], config_paths=paths[1],
-                        freeze_receipt_paths=paths[2], evidence_paths=paths[3],
+                        freeze_receipt_paths=paths[2], evidence_paths=paths[3], provenance_paths=paths[4],
                     )
 
     def test_selected_chain_binds_full_evidence_bytes(self) -> None:
@@ -393,16 +477,63 @@ class AggregateV2Controls(unittest.TestCase):
             paths = materialize_fixture(root, one_shard_plan())
             first = a.verify_aggregate(
                 plan_path=paths[0], config_paths=paths[1],
-                freeze_receipt_paths=paths[2], evidence_paths=paths[3],
+                freeze_receipt_paths=paths[2], evidence_paths=paths[3], provenance_paths=paths[4],
             )
             obj = json.loads(paths[3][0].read_text(encoding="utf-8"))
             obj["nonclaim"] = "same proof fields, changed evidence bytes"
-            canonical_write(paths[3][0], obj)
+            evidence_sha = canonical_write(paths[3][0], obj)
+            provenance_obj = json.loads(paths[4][0].read_text(encoding="utf-8"))
+            paths[4][0] = write_provenance_fixture(
+                root, plan=one_shard_plan(),
+                plan_sha=provenance_obj["aggregate_plan_sha256"], shard_index=0,
+                config_sha=provenance_obj["config_sha256"],
+                receipt_sha=provenance_obj["freeze_receipt_sha256"],
+                evidence_sha=evidence_sha,
+                record_count=provenance_obj["checkpoint_commit_count"],
+            )
             second = a.verify_aggregate(
                 plan_path=paths[0], config_paths=paths[1],
-                freeze_receipt_paths=paths[2], evidence_paths=paths[3],
+                freeze_receipt_paths=paths[2], evidence_paths=paths[3], provenance_paths=paths[4],
             )
             self.assertNotEqual(first["selected_chain_tip_sha256"], second["selected_chain_tip_sha256"])
+
+
+    def test_checkpoint_provenance_history_does_not_change_selected_chain(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            plan = one_shard_plan()
+            paths = list(materialize_fixture(root, plan))
+            first = a.verify_aggregate(
+                plan_path=paths[0], config_paths=paths[1],
+                freeze_receipt_paths=paths[2], evidence_paths=paths[3], provenance_paths=paths[4],
+            )
+            provenance_obj = json.loads(paths[4][0].read_text(encoding="utf-8"))
+            evidence_sha = sha256(paths[3][0].read_bytes()).hexdigest()
+            paths[4][0] = write_provenance_fixture(
+                root, plan=plan, plan_sha=provenance_obj["aggregate_plan_sha256"],
+                shard_index=0, config_sha=provenance_obj["config_sha256"],
+                receipt_sha=provenance_obj["freeze_receipt_sha256"], evidence_sha=evidence_sha,
+                record_count=2,
+            )
+            second = a.verify_aggregate(
+                plan_path=paths[0], config_paths=paths[1],
+                freeze_receipt_paths=paths[2], evidence_paths=paths[3], provenance_paths=paths[4],
+            )
+            self.assertEqual(first["selected_shard_evidence_sha256"], second["selected_shard_evidence_sha256"])
+            self.assertEqual(first["selected_chain_tip_sha256"], second["selected_chain_tip_sha256"])
+
+    def test_corrupt_checkpoint_provenance_rejected_without_entering_chain(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            paths = materialize_fixture(root, one_shard_plan())
+            obj = json.loads(paths[4][0].read_text(encoding="utf-8"))
+            obj["checkpoint_last_sha256"] = "0" * 64
+            canonical_write(paths[4][0], obj)
+            with self.assertRaises(a.AggregateReject):
+                a.verify_aggregate(
+                    plan_path=paths[0], config_paths=paths[1],
+                    freeze_receipt_paths=paths[2], evidence_paths=paths[3], provenance_paths=paths[4],
+                )
 
 
 if __name__ == "__main__":

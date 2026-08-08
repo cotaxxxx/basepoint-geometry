@@ -705,7 +705,7 @@ single-receipt/config-hash ambiguity.
 The source-bound driver writes one canonical shard evidence object with schema
 
 ```text
-ITEM3_SWEEP_V9_SHARD_EVIDENCE_CANDIDATE_V1.
+ITEM3_SWEEP_V9_SHARD_EVIDENCE_CANDIDATE_V2.
 ```
 
 It includes:
@@ -716,8 +716,9 @@ It includes:
 - source pre/post-import binding evidence;
 - runner result;
 - checker report including dps70 leaf bounds;
-- committed-checkpoint provenance;
 - explicit errors if any.
+
+Checkpoint history is deliberately excluded from this mathematical evidence object. The driver writes a separate canonical `ITEM3_SWEEP_V9_SHARD_PROVENANCE_V1` object bound to the exact shard-evidence SHA-256. That provenance object records the committed-checkpoint count/tip and ledger identity, while the aggregate verifier independently revalidates the canonical JSONL chain and immutable payload hashes. No checkpoint count, checkpoint hash, checkpoint timing value, provenance-object hash, or ledger hash enters `shard_evidence_sha256` or the selected-shard mathematical chain.
 
 Only
 
@@ -750,7 +751,7 @@ The aggregate verifier is stdlib-only and independently checks:
 9. checker V2 PASS, equal dps50/dps70 leaf counts, and strict-negative dps70 bounds;
 10. source pre/post-import identities for adapter/runner/checker/checkpoint/bridge and all
     kernel imports;
-11. nonempty committed checkpoint provenance for each complete shard;
+11. a separate shard-provenance object bound to the selected shard-evidence hash, with a nonempty checkpoint ledger whose canonical line chain, immutable payload hashes, frontier digests and run-context bindings are independently reverified;
 12. selected-evidence SHA chain in exact mathematical shard order.
 
 The selected chain uses domain bytes

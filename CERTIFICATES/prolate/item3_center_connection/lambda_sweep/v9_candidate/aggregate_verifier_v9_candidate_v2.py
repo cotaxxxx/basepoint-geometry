@@ -31,7 +31,8 @@ VERIFIER_ID = "ITEM3_SWEEP_V9_AGGREGATE_VERIFIER_CANDIDATE_V2"
 PLAN_SCHEMA = "ITEM3_SWEEP_V9_SHARD_PLAN_V2"
 CONFIG_SCHEMA = "ITEM3_SWEEP_V9_SHARD_RUN_CONFIG_V1"
 FREEZE_SCHEMA = "ITEM3_SWEEP_V9_FREEZE_RECEIPT_V1"
-EVIDENCE_SCHEMA = "ITEM3_SWEEP_V9_SHARD_EVIDENCE_CANDIDATE_V1"
+EVIDENCE_SCHEMA = "ITEM3_SWEEP_V9_SHARD_EVIDENCE_CANDIDATE_V2"
+PROVENANCE_SCHEMA = "ITEM3_SWEEP_V9_SHARD_PROVENANCE_V1"
 AGGREGATE_SCHEMA = "ITEM3_SWEEP_V9_AGGREGATE_VERDICT_V2"
 CHAIN_DOMAIN = b"ITEM3_SWEEP_V9_SELECTED_SHARD_CHAIN_V2\0"
 SOURCE_KEYS = {
@@ -326,8 +327,8 @@ def validate_shard_evidence(
     obj, _raw, evidence_sha = load_canonical(path)
     required = {
         "aggregate_plan_sha256", "authorization", "checker_error", "checker_report",
-        "checkpoint_commit_count", "checkpoint_last_sha256", "config_sha256",
-        "dependency_snapshot_sha256", "design_sha256", "driver_id", "freeze_receipt_sha256",
+        "config_sha256", "dependency_snapshot_sha256", "design_sha256", "driver_id",
+        "freeze_receipt_sha256",
         "lambda_box", "nonclaim", "root_r", "runner_error", "runner_result", "schema",
         "shard_id", "shard_index", "source_bindings", "status",
     }
@@ -349,10 +350,6 @@ def validate_shard_evidence(
     _expect_interval_list(obj["lambda_box"], shard.lambda_box, "evidence.lambda_box")
     if obj["runner_error"] is not None or obj["checker_error"] is not None:
         raise AggregateReject("shard evidence contains runner/checker error")
-    if not isinstance(obj["checkpoint_commit_count"], int) or obj["checkpoint_commit_count"] < 1:
-        raise AggregateReject("complete shard lacks committed checkpoint provenance")
-    require_sha(obj["checkpoint_last_sha256"], "checkpoint_last_sha256")
-
     runner = obj["runner_result"]
     checker = obj["checker_report"]
     if not isinstance(runner, dict) or not isinstance(checker, dict):
@@ -415,6 +412,118 @@ def validate_shard_evidence(
     return obj, evidence_sha
 
 
+
+def validate_shard_provenance(
+    path: Path,
+    *,
+    plan: Plan,
+    shard: PlannedShard,
+    config_sha: str,
+    receipt_sha: str,
+    evidence_sha: str,
+) -> None:
+    obj, _raw, _provenance_sha = load_canonical(path)
+    expected = {
+        "aggregate_plan_sha256", "authorization", "checkpoint_commit_count",
+        "checkpoint_last_sha256", "checkpoint_ledger_sha256", "config_sha256",
+        "dependency_snapshot_sha256", "design_sha256", "freeze_receipt_sha256",
+        "proof_status", "schema", "shard_evidence_sha256", "shard_id", "shard_index",
+        "source_sha256",
+    }
+    if set(obj) != expected or obj["schema"] != PROVENANCE_SCHEMA:
+        raise AggregateReject("shard provenance schema/field set mismatch")
+    if obj["proof_status"] != "PROVENANCE_ONLY" or obj["authorization"] != "FROZEN_PRODUCTION":
+        raise AggregateReject("shard provenance authorization/status mismatch")
+    if obj["shard_evidence_sha256"] != evidence_sha:
+        raise AggregateReject("provenance/evidence hash mismatch")
+    if obj["config_sha256"] != config_sha or obj["aggregate_plan_sha256"] != plan.plan_sha256:
+        raise AggregateReject("provenance config/plan hash mismatch")
+    if obj["design_sha256"] != plan.design_sha256 or obj["dependency_snapshot_sha256"] != plan.dependency_snapshot_sha256:
+        raise AggregateReject("provenance design/dependency mismatch")
+    if obj["freeze_receipt_sha256"] != receipt_sha:
+        raise AggregateReject("provenance freeze receipt hash mismatch")
+    if obj["shard_id"] != shard.shard_id or obj["shard_index"] != shard.shard_index:
+        raise AggregateReject("provenance shard identity mismatch")
+    if require_source_map(obj["source_sha256"]) != plan.source_sha256:
+        raise AggregateReject("provenance source map mismatch")
+    count = obj["checkpoint_commit_count"]
+    if not isinstance(count, int) or isinstance(count, bool) or count < 1:
+        raise AggregateReject("complete shard lacks committed checkpoint provenance")
+    last_expected = require_sha(obj["checkpoint_last_sha256"], "checkpoint_last_sha256")
+    ledger_expected = require_sha(obj["checkpoint_ledger_sha256"], "checkpoint_ledger_sha256")
+
+    checkpoint_root = path.parent / "checkpoint"
+    ledger_path = checkpoint_root / "SWEEP_PROGRESS.jsonl"
+    if not ledger_path.is_file():
+        raise AggregateReject("checkpoint ledger missing")
+    ledger_raw = ledger_path.read_bytes()
+    if not ledger_raw or not ledger_raw.endswith(b"\n"):
+        raise AggregateReject("complete shard checkpoint ledger must end in LF")
+    if sha256_bytes(ledger_raw) != ledger_expected:
+        raise AggregateReject("checkpoint ledger hash mismatch")
+
+    lines = ledger_raw.splitlines(keepends=True)
+    if len(lines) != count:
+        raise AggregateReject("checkpoint provenance count mismatch")
+    previous = ZERO_SHA
+    last_sha = None
+    expected_context = {
+        "aggregate_plan_sha256": plan.plan_sha256,
+        "authorization": "FROZEN_PRODUCTION",
+        "config_sha256": config_sha,
+        "dependency_snapshot_sha256": plan.dependency_snapshot_sha256,
+        "design_sha256": plan.design_sha256,
+        "freeze_receipt_sha256": receipt_sha,
+        "shard_id": shard.shard_id,
+        "shard_index": shard.shard_index,
+        "source_sha256": plan.source_sha256,
+    }
+    line_fields = {
+        "checkpoint_sequence", "frontier_digest_sha256", "last_complete_attempt_id",
+        "partial_evidence_sha256", "previous_checkpoint_sha256",
+        "progress_payload_sha256", "schema", "status",
+    }
+    for index, line in enumerate(lines):
+        try:
+            line_obj = json.loads(line.decode("utf-8"))
+        except Exception as exc:
+            raise AggregateReject("checkpoint ledger JSON parse failure") from exc
+        if canonical_json_bytes(line_obj) != line:
+            raise AggregateReject("checkpoint ledger line is not canonical")
+        if not isinstance(line_obj, dict) or set(line_obj) != line_fields:
+            raise AggregateReject("checkpoint ledger line field set mismatch")
+        if line_obj["schema"] != "ITEM3_SWEEP_V9_PROGRESS_LINE_V1" or line_obj["status"] != "PARTIAL":
+            raise AggregateReject("checkpoint ledger schema/status mismatch")
+        if line_obj["checkpoint_sequence"] != index:
+            raise AggregateReject("checkpoint sequence mismatch")
+        if line_obj["previous_checkpoint_sha256"] != previous:
+            raise AggregateReject("checkpoint previous-line hash mismatch")
+        progress_sha = require_sha(line_obj["progress_payload_sha256"], "progress_payload_sha256")
+        partial_sha = require_sha(line_obj["partial_evidence_sha256"], "partial_evidence_sha256")
+        frontier_sha = require_sha(line_obj["frontier_digest_sha256"], "frontier_digest_sha256")
+        progress_path = checkpoint_root / "checkpoint_payloads" / "progress" / f"{progress_sha}.json"
+        partial_path = checkpoint_root / "checkpoint_payloads" / "partial" / f"{partial_sha}.json"
+        if not progress_path.is_file() or not partial_path.is_file():
+            raise AggregateReject("committed checkpoint payload missing")
+        progress, _progress_raw, observed_progress_sha = load_canonical(progress_path)
+        partial, _partial_raw, observed_partial_sha = load_canonical(partial_path)
+        if observed_progress_sha != progress_sha or observed_partial_sha != partial_sha:
+            raise AggregateReject("committed checkpoint payload digest mismatch")
+        frontier = progress.get("frontier")
+        if sha256_bytes(canonical_json_bytes(frontier)) != frontier_sha:
+            raise AggregateReject("checkpoint frontier digest mismatch")
+        for label, payload in (("progress", progress), ("partial", partial)):
+            context = payload.get("run_context")
+            if not isinstance(context, dict):
+                raise AggregateReject(f"{label} checkpoint run_context missing")
+            for key, value in expected_context.items():
+                if context.get(key) != value:
+                    raise AggregateReject(f"{label} checkpoint run_context mismatch: {key}")
+        last_sha = sha256_bytes(line)
+        previous = last_sha
+    if last_sha != last_expected:
+        raise AggregateReject("checkpoint last hash mismatch")
+
 def selected_chain_tip(plan_sha256: str, evidence_hashes: Sequence[str]) -> str:
     plan_raw = bytes.fromhex(require_sha(plan_sha256, "plan_sha256"))
     previous: bytes | None = None
@@ -436,19 +545,21 @@ def verify_aggregate(
     config_paths: Sequence[Path],
     freeze_receipt_paths: Sequence[Path],
     evidence_paths: Sequence[Path],
+    provenance_paths: Sequence[Path],
 ) -> dict[str, Any]:
     plan = parse_plan(plan_path)
     n = len(plan.ordered_shards)
-    if len(config_paths) != n or len(freeze_receipt_paths) != n or len(evidence_paths) != n:
-        raise AggregateReject("config/receipt/evidence count must equal shard count")
+    if (len(config_paths) != n or len(freeze_receipt_paths) != n or len(evidence_paths) != n or len(provenance_paths) != n):
+        raise AggregateReject("config/receipt/evidence/provenance count must equal shard count")
 
     config_hashes: list[str] = []
     receipt_hashes: list[str] = []
     evidence_hashes: list[str] = []
     adjacency: list[dict[str, Any]] = []
 
-    for shard, config_path, receipt_path, evidence_path in zip(
-        plan.ordered_shards, config_paths, freeze_receipt_paths, evidence_paths, strict=True
+    for shard, config_path, receipt_path, evidence_path, provenance_path in zip(
+        plan.ordered_shards, config_paths, freeze_receipt_paths, evidence_paths,
+        provenance_paths, strict=True
     ):
         config_obj, config_sha = parse_config_for_plan(config_path, plan, shard)
         _receipt, receipt_sha = parse_freeze_for_config(
@@ -456,6 +567,10 @@ def verify_aggregate(
         )
         _evidence, evidence_sha = validate_shard_evidence(
             evidence_path, plan=plan, shard=shard, config_sha=config_sha, receipt_sha=receipt_sha
+        )
+        validate_shard_provenance(
+            provenance_path, plan=plan, shard=shard, config_sha=config_sha,
+            receipt_sha=receipt_sha, evidence_sha=evidence_sha,
         )
         config_hashes.append(config_sha)
         receipt_hashes.append(receipt_sha)
@@ -510,10 +625,12 @@ def verify_aggregate(
 def write_aggregate_verdict(
     *, output_path: Path, plan_path: Path, config_paths: Sequence[Path],
     freeze_receipt_paths: Sequence[Path], evidence_paths: Sequence[Path],
+    provenance_paths: Sequence[Path],
 ) -> dict[str, Any]:
     result = verify_aggregate(
         plan_path=plan_path, config_paths=config_paths,
         freeze_receipt_paths=freeze_receipt_paths, evidence_paths=evidence_paths,
+        provenance_paths=provenance_paths,
     )
     data = canonical_json_bytes(result)
     output_path.parent.mkdir(parents=True, exist_ok=True)

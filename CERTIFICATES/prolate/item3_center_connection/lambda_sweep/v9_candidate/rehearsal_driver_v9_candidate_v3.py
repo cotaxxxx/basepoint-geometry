@@ -44,7 +44,7 @@ CHECKPOINT_SHA256 = "253ace8c28c9c5f2d4cb8a9c42b951f759c8f2be619da6845992dca0da1
 BRIDGE_PATH = BASE + "checkpoint_bridge_v9_candidate_v2.py"
 BRIDGE_SHA256 = "59edc8bb73a9e263e8b0b102086ff92dff3898580f92bfe10d6c7216bdfbdebc"
 AGGREGATE_VERIFIER_PATH = BASE + "aggregate_verifier_v9_candidate_v2.py"
-AGGREGATE_VERIFIER_SHA256 = "bdb0eaa12f241108fbdd03e38cde34d1f1ffe085cff8fef89b413fe4dd255001"
+AGGREGATE_VERIFIER_SHA256 = "c8990f24f28fba74178b99129d1fd1c4d0bd05a46a65e7e0a11e1fea9b251eef"
 
 SHA_RE = re.compile(r"[0-9a-f]{64}\Z")
 INT_RE = re.compile(r"-?(0|[1-9][0-9]*)\Z")
@@ -526,7 +526,7 @@ def execute_shard(
     }
 
     result = {
-        "schema": "ITEM3_SWEEP_V9_SHARD_EVIDENCE_CANDIDATE_V1",
+        "schema": "ITEM3_SWEEP_V9_SHARD_EVIDENCE_CANDIDATE_V2",
         "driver_id": DRIVER_ID,
         "status": result_status,
         "authorization": authorization,
@@ -544,19 +544,43 @@ def execute_shard(
         "runner_error": runner_error,
         "checker_report": encode_value(checker_report) if checker_report is not None else None,
         "checker_error": checker_error,
-        "checkpoint_commit_count": len(hook.commit_records),
-        "checkpoint_last_sha256": hook.commit_records[-1].checkpoint_sha256 if hook.commit_records else None,
         "nonclaim": (
             "A shard evidence candidate is not CERTIFIED_LAMBDA_RANGE. Aggregate and freeze "
             "gates remain external to this driver."
         ),
     }
     result_bytes = canonical_json_bytes(result)
+    result_sha = sha256_bytes(result_bytes)
     result_path = output_dir / "SHARD_EVIDENCE_CANDIDATE.json"
     result_path.write_bytes(result_bytes)
     (output_dir / "SHARD_EVIDENCE_CANDIDATE.json.sha256").write_text(
-        sha256_bytes(result_bytes) + "\n", encoding="ascii"
+        result_sha + "\n", encoding="ascii"
     )
+
+    checkpoint_root = output_dir / "checkpoint"
+    checkpoint_ledger = checkpoint_root / "SWEEP_PROGRESS.jsonl"
+    provenance = {
+        "schema": "ITEM3_SWEEP_V9_SHARD_PROVENANCE_V1",
+        "proof_status": "PROVENANCE_ONLY",
+        "authorization": authorization,
+        "shard_evidence_sha256": result_sha,
+        "config_sha256": config.config_sha256,
+        "aggregate_plan_sha256": config.aggregate_plan_sha256,
+        "design_sha256": config.design_sha256,
+        "dependency_snapshot_sha256": config.dependency_snapshot_sha256,
+        "freeze_receipt_sha256": freeze_receipt_sha,
+        "shard_id": config.shard_id,
+        "shard_index": config.shard_index,
+        "source_sha256": config.source_sha256,
+        "checkpoint_commit_count": len(hook.commit_records),
+        "checkpoint_last_sha256": (
+            hook.commit_records[-1].checkpoint_sha256 if hook.commit_records else None
+        ),
+        "checkpoint_ledger_sha256": (
+            sha256_file(checkpoint_ledger) if checkpoint_ledger.is_file() else None
+        ),
+    }
+    (output_dir / "SHARD_PROVENANCE.json").write_bytes(canonical_json_bytes(provenance))
 
     timing = {
         "schema": "ITEM3_SWEEP_V9_SHARD_TIMING_DIAGNOSTIC_V1",
