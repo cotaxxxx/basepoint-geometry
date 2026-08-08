@@ -1,0 +1,79 @@
+name: Item 3 v9 driver v3 source-map patch
+
+on:
+  push:
+    branches:
+      - agent/item3-v9-analytic-proof
+    paths:
+      - ".github/workflows/item3-v9-driver-v3-source-map-patch.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/item3-v9-analytic-proof
+          fetch-depth: 1
+      - name: Patch source-map semantics
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          driver = Path("CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/rehearsal_driver_v9_candidate_v3.py")
+          text = driver.read_text(encoding="utf-8")
+          old_keys = 'source_keys = {"kernel", "adapter", "runner", "checker", "checkpoint", "bridge", "driver"}'
+          new_keys = 'source_keys = {"kernel", "adapter", "runner", "checker", "checkpoint", "bridge", "driver", "aggregate_verifier"}'
+          if text.count(old_keys) != 1:
+              raise SystemExit(f"unexpected source_keys count: {text.count(old_keys)}")
+          text = text.replace(old_keys, new_keys, 1)
+          old_compare = '''    if sources != compiled:
+              raise DriverContractError("config source hash set does not match compiled driver source set")
+          '''
+          new_compare = '''    for key, expected in compiled.items():
+              if sources[key] != expected:
+                  raise DriverContractError(
+                      f"config source hash does not match compiled driver source: {key}"
+                  )
+              # aggregate_verifier is intentionally not imported by the shard driver.
+              # Its source hash is nevertheless required in the same config/freeze source
+              # map and is independently checked by the aggregate verifier itself.
+          '''
+          import textwrap
+          old_compare = textwrap.dedent(old_compare)
+          new_compare = textwrap.dedent(new_compare)
+          # Function body needs four-space indentation.
+          old_compare = ''.join(('    ' + line if line.strip() else line) for line in old_compare.splitlines(True))
+          new_compare = ''.join(('    ' + line if line.strip() else line) for line in new_compare.splitlines(True))
+          if text.count(old_compare) != 1:
+              raise SystemExit(f"unexpected source compare block count: {text.count(old_compare)}")
+          text = text.replace(old_compare, new_compare, 1)
+          driver.write_text(text, encoding="utf-8")
+
+          test = Path("CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/test_rehearsal_driver_v3_binding.py")
+          t = test.read_text(encoding="utf-8")
+          old_line = '        "driver": driver_sha(),\n'
+          new_line = '        "driver": driver_sha(),\n        "aggregate_verifier": "7" * 64,\n'
+          if t.count(old_line) != 1:
+              raise SystemExit(f"unexpected test driver hash line count: {t.count(old_line)}")
+          t = t.replace(old_line, new_line, 1)
+          test.write_text(t, encoding="utf-8")
+          PY
+          python -m py_compile CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/rehearsal_driver_v9_candidate_v3.py CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/test_rehearsal_driver_v3_binding.py
+      - name: Commit patched bytes
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/rehearsal_driver_v9_candidate_v3.py
+          git add -- CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/test_rehearsal_driver_v3_binding.py
+          git diff --cached --check
+          git commit -m "Bind aggregate verifier hash in item3 v9 shard config"
+          git push origin HEAD:agent/item3-v9-analytic-proof
