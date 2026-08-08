@@ -1,0 +1,69 @@
+name: Item 3 v9 checker v2 structural audit
+
+on:
+  push:
+    branches:
+      - agent/item3-v9-analytic-proof
+    paths:
+      - "CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/checker_v9_candidate_v2.py"
+      - "CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/test_checker_v9_v2_structure.py"
+      - ".github/workflows/item3-v9-checker-v2-structure-audit.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/item3-v9-analytic-proof
+          fetch-depth: 1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Compile and run controls
+        working-directory: CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate
+        shell: bash
+        run: |
+          set +e
+          python -m py_compile runner_v9_candidate_v2.py checker_v9_candidate_v2.py test_checker_v9_v2_structure.py
+          code=$?
+          if [ "$code" -eq 0 ]; then
+            python -m unittest -v test_checker_v9_v2_structure.py > checker_v2_structure_audit.log 2>&1
+            code=$?
+          fi
+          cat checker_v2_structure_audit.log 2>/dev/null || true
+          python - "$code" <<'PY'
+          import hashlib,json,sys
+          from pathlib import Path
+          code=int(sys.argv[1])
+          report={
+            "schema":"ITEM3_SWEEP_V9_CHECKER_V2_STRUCTURE_AUDIT_V1",
+            "status":"PASSED" if code == 0 else "FAILED",
+            "exit_code":code,
+            "checker_source_sha256":hashlib.sha256(Path("checker_v9_candidate_v2.py").read_bytes()).hexdigest(),
+            "test_source_sha256":hashlib.sha256(Path("test_checker_v9_v2_structure.py").read_bytes()).hexdigest(),
+          }
+          Path("checker_v2_structure_audit.json").write_text(json.dumps(report,sort_keys=True,separators=(",",":"))+"\n",encoding="utf-8")
+          PY
+          exit "$code"
+      - name: Commit audit record
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate
+          if [ -f checker_v2_structure_audit.json ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add -- checker_v2_structure_audit.json
+            if ! git diff --cached --quiet; then
+              git diff --cached --check
+              git commit -m "Record item3 v9 checker v2 structural audit"
+              git push origin HEAD:agent/item3-v9-analytic-proof
+            fi
+          fi
