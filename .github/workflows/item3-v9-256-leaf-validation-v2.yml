@@ -1,4 +1,4 @@
-name: Item 3 v9 256-leaf validation v2 run2
+name: Item 3 v9 256-leaf validation v2 run3
 
 on:
   push:
@@ -85,7 +85,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -- "$DIR/CONTROL_MATRIX.json" "$DIR/VALIDATION_REPORT.json" "$DIR/VALIDATION_ENVIRONMENT.json"
           git diff --cached --check
-          git commit -m "Record item3 v9 validation corpus v2 run2 outcome"
+          git commit -m "Record item3 v9 validation corpus v2 run3 outcome"
           git push origin HEAD:agent/item3-v9-analytic-proof
 
       - name: Enforce counted verdict
@@ -103,5 +103,5 @@ jobs:
               raise SystemExit('counted validation did not pass all 256 leaves')
           if obj.get('freeze_authorized') or obj.get('production_rehearsal_authorized') or obj.get('tag_created') or obj.get('certified_lambda_range'):
               raise SystemExit('validation report contains forbidden promotion flag')
-          print('COUNTED_VALIDATION_V2_RUN2=PASSED')
+          print('COUNTED_VALIDATION_V2_RUN3=PASSED')
           PY
