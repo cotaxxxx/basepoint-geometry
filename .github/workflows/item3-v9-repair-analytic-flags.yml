@@ -38,27 +38,26 @@ jobs:
               raise SystemExit(f"unexpected angle_data_3 signature count: {text.count(old_sig)}")
           text = text.replace(old_sig, new_sig, 1)
 
-          old_z = '''    one = acb(1)
-              z = (one - c) / 2
-              H = z.hypgeom_2f1(one / 2, one / 2, acb(3) / 2)
-          '''
-          new_z = '''    one = acb(1)
-              z = (one - c) / 2
-              if analytic:
-                  nan = acb(arb.nan(), arb.nan())
-                  if not c.is_finite():
-                      return nan, nan, nan, nan
-                  # Principal 2F1 has its real branch cut from z=1 to +infinity.
-                  # If the rectangular z-ball can meet that cut, fail closed so
-                  # acb.integral can subdivide rather than silently accepting a
-                  # non-analytic callback value.
-                  if 0 in z.imag and z.real.upper() >= 1:
-                      return nan, nan, nan, nan
-              H = z.hypgeom_2f1(one / 2, one / 2, acb(3) / 2)
-          '''
-          import textwrap
-          old_z = textwrap.dedent(old_z)
-          new_z = textwrap.dedent(new_z)
+          old_z = (
+              "    one = acb(1)\n"
+              "    z = (one - c) / 2\n"
+              "    H = z.hypgeom_2f1(one / 2, one / 2, acb(3) / 2)\n"
+          )
+          new_z = (
+              "    one = acb(1)\n"
+              "    z = (one - c) / 2\n"
+              "    if analytic:\n"
+              "        nan = acb(arb.nan(), arb.nan())\n"
+              "        if not c.is_finite():\n"
+              "            return nan, nan, nan, nan\n"
+              "        # Principal 2F1 has its real branch cut from z=1 to +infinity.\n"
+              "        # If the rectangular z-ball can meet that cut, fail closed so\n"
+              "        # acb.integral can subdivide rather than silently accepting a\n"
+              "        # non-analytic callback value.\n"
+              "        if 0 in z.imag and z.real.upper() >= 1:\n"
+              "            return nan, nan, nan, nan\n"
+              "    H = z.hypgeom_2f1(one / 2, one / 2, acb(3) / 2)\n"
+          )
           if text.count(old_z) != 1:
               raise SystemExit(f"unexpected angle-data body count: {text.count(old_z)}")
           text = text.replace(old_z, new_z, 1)
