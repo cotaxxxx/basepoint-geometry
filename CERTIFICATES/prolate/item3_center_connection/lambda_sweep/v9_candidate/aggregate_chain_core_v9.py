@@ -2,8 +2,9 @@
 """Pure-Python exact aggregate-chain core for Item 3 sweep v9.
 
 No GitHub, filesystem traversal, numerical kernel, or interval-library operations occur in
-this module. It implements only the exact rational shard-plan checks and the selected-shard
-SHA-256 byte grammar frozen in SCHEMA_AGGREGATE_FREEZE_CANDIDATE.md.
+this module. It implements only canonical shard-plan hashing, exact rational shard checks,
+and the selected-shard SHA-256 byte grammar frozen in
+SCHEMA_AGGREGATE_FREEZE_CANDIDATE.md.
 
 STATUS: IMPLEMENTATION CANDIDATE / NOT PRODUCTION AUTHORIZATION.
 """
@@ -11,6 +12,7 @@ from __future__ import annotations
 
 from fractions import Fraction
 from hashlib import sha256
+import json
 import math
 import re
 import struct
@@ -31,6 +33,25 @@ def require_sha256_hex(value: object, label: str) -> str:
     if not isinstance(value, str) or SHA256_HEX_RE.fullmatch(value) is None:
         raise AggregateValidationError(f"{label}: require 64 lowercase hex")
     return value
+
+
+def canonical_json_bytes(value: object) -> bytes:
+    """Canonical JSON bytes for the v9 shard-plan hash envelope."""
+    try:
+        text = json.dumps(
+            value,
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=False,
+            allow_nan=False,
+        )
+    except (TypeError, ValueError) as exc:
+        raise AggregateValidationError(f"noncanonical JSON value: {exc}") from exc
+    return text.encode("utf-8")
+
+
+def shard_plan_sha256(plan: Mapping[str, object]) -> str:
+    return sha256(canonical_json_bytes(plan)).hexdigest()
 
 
 def parse_canonical_rational(value: object, label: str) -> Fraction:
@@ -68,7 +89,10 @@ def validate_shard_plan_structure(plan: Mapping[str, object]) -> list[tuple[Frac
     shards = plan.get("ordered_shards")
     if not isinstance(shards, list) or not shards:
         raise AggregateValidationError("ordered_shards must be a nonempty list")
-    if plan.get("shard_count") != len(shards):
+    shard_count = plan.get("shard_count")
+    if isinstance(shard_count, bool) or not isinstance(shard_count, int):
+        raise AggregateValidationError("shard_count must be an integer")
+    if shard_count != len(shards):
         raise AggregateValidationError("shard_count mismatch")
 
     result: list[tuple[Fraction, Fraction]] = []
@@ -76,7 +100,10 @@ def validate_shard_plan_structure(plan: Mapping[str, object]) -> list[tuple[Frac
     for expected_index, item in enumerate(shards):
         if not isinstance(item, Mapping):
             raise AggregateValidationError(f"shard[{expected_index}] is not an object")
-        if item.get("shard_index") != expected_index:
+        actual_index = item.get("shard_index")
+        if isinstance(actual_index, bool) or not isinstance(actual_index, int):
+            raise AggregateValidationError(f"shard[{expected_index}] index is not an integer")
+        if actual_index != expected_index:
             raise AggregateValidationError(f"shard[{expected_index}] index mismatch")
         shard_id = item.get("shard_id")
         if not isinstance(shard_id, str) or not shard_id:
@@ -125,7 +152,10 @@ def selected_shard_hashes(
     for i, (planned, chosen) in enumerate(zip(shards, selected, strict=True)):
         if not isinstance(planned, Mapping) or not isinstance(chosen, Mapping):
             raise AggregateValidationError(f"selected[{i}] invalid object")
-        if chosen.get("shard_index") != i:
+        chosen_index = chosen.get("shard_index")
+        if isinstance(chosen_index, bool) or not isinstance(chosen_index, int):
+            raise AggregateValidationError(f"selected[{i}] index is not an integer")
+        if chosen_index != i:
             raise AggregateValidationError(f"selected[{i}] index mismatch")
         if chosen.get("shard_id") != planned.get("shard_id"):
             raise AggregateValidationError(f"selected[{i}] shard_id mismatch")
@@ -161,10 +191,14 @@ def verify_aggregate_selection(
     selected: Sequence[Mapping[str, object]],
     claimed_tip_sha256: str,
 ) -> str:
-    """Validate exact shard structure/selection and return the independently derived tip."""
+    """Validate exact shard structure/plan hash/selection and return the derived tip."""
     validate_shard_plan_structure(plan)
+    claimed_plan_hash = require_sha256_hex(aggregate_plan_sha256, "aggregate_plan_sha256")
+    derived_plan_hash = shard_plan_sha256(plan)
+    if claimed_plan_hash != derived_plan_hash:
+        raise AggregateValidationError("aggregate plan SHA-256 mismatch")
     hashes = selected_shard_hashes(plan, selected)
-    derived = selected_chain_tip(aggregate_plan_sha256, hashes)
+    derived = selected_chain_tip(claimed_plan_hash, hashes)
     claimed = require_sha256_hex(claimed_tip_sha256, "selected_chain_tip_sha256")
     if derived != claimed:
         raise AggregateValidationError("selected shard chain tip mismatch")
