@@ -1,0 +1,657 @@
+name: Item 3 v9 checkpoint hash-separation repair
+
+on:
+  push:
+    branches:
+      - agent/item3-v9-analytic-proof
+    paths:
+      - ".github/workflows/item3-v9-checkpoint-hash-separation-repair.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: agent/item3-v9-analytic-proof
+          fetch-depth: 1
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.13.14"
+
+      - name: Apply checkpoint provenance separation repair
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          import hashlib
+
+          base = Path("CERTIFICATES/prolate/item3_center_connection/lambda_sweep")
+          cand = base / "v9_candidate"
+          draft = base / "v9_draft"
+
+          # ------------------------------------------------------------------
+          # 1. Integrated contract: mathematical shard evidence and checkpoint
+          #    provenance are separate canonical objects.  The selected chain
+          #    hashes only mathematical shard evidence bytes.
+          # ------------------------------------------------------------------
+          contract = draft / "design_contract_v9_integrated_candidate_v2.md"
+          text = contract.read_text(encoding="utf-8")
+          old = "schema = ITEM3_SWEEP_V9_SHARD_EVIDENCE_CANDIDATE_V1."
+          if text.count(old) != 1:
+              raise SystemExit(f"contract evidence-schema anchor count={text.count(old)}")
+          text = text.replace(old, "schema = ITEM3_SWEEP_V9_SHARD_EVIDENCE_CANDIDATE_V2.", 1)
+
+          old = "- checker report including dps70 leaf bounds;\n- committed-checkpoint provenance;\n- explicit errors if any."
+          new = (
+              "- checker report including dps70 leaf bounds;\n"
+              "- explicit errors if any.\n\n"
+              "Checkpoint history is deliberately excluded from this mathematical evidence object. "
+              "The driver writes a separate canonical `ITEM3_SWEEP_V9_SHARD_PROVENANCE_V1` object "
+              "bound to the exact shard-evidence SHA-256.  That provenance object records the "
+              "committed-checkpoint count/tip and ledger identity, while the aggregate verifier "
+              "independently revalidates the canonical JSONL chain and immutable payload hashes. "
+              "No checkpoint count, checkpoint hash, checkpoint timing value, provenance-object hash, "
+              "or ledger hash enters `shard_evidence_sha256` or the selected-shard mathematical chain."
+          )
+          if text.count(old) != 1:
+              raise SystemExit(f"contract provenance bullet anchor count={text.count(old)}")
+          text = text.replace(old, new, 1)
+
+          old = "11. nonempty committed checkpoint provenance for each complete shard;"
+          new = (
+              "11. a separate shard-provenance object bound to the selected shard-evidence hash, "
+              "with a nonempty checkpoint ledger whose canonical line chain, immutable payload hashes, "
+              "frontier digests and run-context bindings are independently reverified;"
+          )
+          if text.count(old) != 1:
+              raise SystemExit(f"contract aggregate provenance anchor count={text.count(old)}")
+          text = text.replace(old, new, 1)
+          contract.write_text(text, encoding="utf-8")
+
+          # ------------------------------------------------------------------
+          # 2. Aggregate verifier: V2 mathematical evidence excludes checkpoint
+          #    fields; provenance is verified independently and never added to
+          #    selected evidence hashes or the aggregate verdict.
+          # ------------------------------------------------------------------
+          agg = cand / "aggregate_verifier_v9_candidate_v2.py"
+          text = agg.read_text(encoding="utf-8")
+          old = 'EVIDENCE_SCHEMA = "ITEM3_SWEEP_V9_SHARD_EVIDENCE_CANDIDATE_V1"\n'
+          new = (
+              'EVIDENCE_SCHEMA = "ITEM3_SWEEP_V9_SHARD_EVIDENCE_CANDIDATE_V2"\n'
+              'PROVENANCE_SCHEMA = "ITEM3_SWEEP_V9_SHARD_PROVENANCE_V1"\n'
+          )
+          if text.count(old) != 1:
+              raise SystemExit(f"aggregate schema anchor count={text.count(old)}")
+          text = text.replace(old, new, 1)
+
+          old = (
+              '        "checkpoint_commit_count", "checkpoint_last_sha256", "config_sha256",\n'
+              '        "dependency_snapshot_sha256", "design_sha256", "driver_id", "freeze_receipt_sha256",\n'
+          )
+          new = (
+              '        "config_sha256", "dependency_snapshot_sha256", "design_sha256", "driver_id",\n'
+              '        "freeze_receipt_sha256",\n'
+          )
+          if text.count(old) != 1:
+              raise SystemExit(f"aggregate required-field anchor count={text.count(old)}")
+          text = text.replace(old, new, 1)
+
+          old = (
+              '    if not isinstance(obj["checkpoint_commit_count"], int) or obj["checkpoint_commit_count"] < 1:\n'
+              '        raise AggregateReject("complete shard lacks committed checkpoint provenance")\n'
+              '    require_sha(obj["checkpoint_last_sha256"], "checkpoint_last_sha256")\n\n'
+          )
+          if text.count(old) != 1:
+              raise SystemExit(f"aggregate embedded checkpoint gate anchor count={text.count(old)}")
+          text = text.replace(old, "", 1)
+
+          helper = r'''
+
+def validate_shard_provenance(
+    path: Path,
+    *,
+    plan: Plan,
+    shard: PlannedShard,
+    config_sha: str,
+    receipt_sha: str,
+    evidence_sha: str,
+) -> None:
+    obj, _raw, _provenance_sha = load_canonical(path)
+    expected = {
+        "aggregate_plan_sha256", "authorization", "checkpoint_commit_count",
+        "checkpoint_last_sha256", "checkpoint_ledger_sha256", "config_sha256",
+        "dependency_snapshot_sha256", "design_sha256", "freeze_receipt_sha256",
+        "proof_status", "schema", "shard_evidence_sha256", "shard_id", "shard_index",
+        "source_sha256",
+    }
+    if set(obj) != expected or obj["schema"] != PROVENANCE_SCHEMA:
+        raise AggregateReject("shard provenance schema/field set mismatch")
+    if obj["proof_status"] != "PROVENANCE_ONLY" or obj["authorization"] != "FROZEN_PRODUCTION":
+        raise AggregateReject("shard provenance authorization/status mismatch")
+    if obj["shard_evidence_sha256"] != evidence_sha:
+        raise AggregateReject("provenance/evidence hash mismatch")
+    if obj["config_sha256"] != config_sha or obj["aggregate_plan_sha256"] != plan.plan_sha256:
+        raise AggregateReject("provenance config/plan hash mismatch")
+    if obj["design_sha256"] != plan.design_sha256 or obj["dependency_snapshot_sha256"] != plan.dependency_snapshot_sha256:
+        raise AggregateReject("provenance design/dependency mismatch")
+    if obj["freeze_receipt_sha256"] != receipt_sha:
+        raise AggregateReject("provenance freeze receipt hash mismatch")
+    if obj["shard_id"] != shard.shard_id or obj["shard_index"] != shard.shard_index:
+        raise AggregateReject("provenance shard identity mismatch")
+    if require_source_map(obj["source_sha256"]) != plan.source_sha256:
+        raise AggregateReject("provenance source map mismatch")
+    count = obj["checkpoint_commit_count"]
+    if not isinstance(count, int) or isinstance(count, bool) or count < 1:
+        raise AggregateReject("complete shard lacks committed checkpoint provenance")
+    last_expected = require_sha(obj["checkpoint_last_sha256"], "checkpoint_last_sha256")
+    ledger_expected = require_sha(obj["checkpoint_ledger_sha256"], "checkpoint_ledger_sha256")
+
+    checkpoint_root = path.parent / "checkpoint"
+    ledger_path = checkpoint_root / "SWEEP_PROGRESS.jsonl"
+    if not ledger_path.is_file():
+        raise AggregateReject("checkpoint ledger missing")
+    ledger_raw = ledger_path.read_bytes()
+    if not ledger_raw or not ledger_raw.endswith(b"\n"):
+        raise AggregateReject("complete shard checkpoint ledger must end in LF")
+    if sha256_bytes(ledger_raw) != ledger_expected:
+        raise AggregateReject("checkpoint ledger hash mismatch")
+
+    lines = ledger_raw.splitlines(keepends=True)
+    if len(lines) != count:
+        raise AggregateReject("checkpoint provenance count mismatch")
+    previous = ZERO_SHA
+    last_sha = None
+    expected_context = {
+        "aggregate_plan_sha256": plan.plan_sha256,
+        "authorization": "FROZEN_PRODUCTION",
+        "config_sha256": config_sha,
+        "dependency_snapshot_sha256": plan.dependency_snapshot_sha256,
+        "design_sha256": plan.design_sha256,
+        "freeze_receipt_sha256": receipt_sha,
+        "shard_id": shard.shard_id,
+        "shard_index": shard.shard_index,
+        "source_sha256": plan.source_sha256,
+    }
+    line_fields = {
+        "checkpoint_sequence", "frontier_digest_sha256", "last_complete_attempt_id",
+        "partial_evidence_sha256", "previous_checkpoint_sha256",
+        "progress_payload_sha256", "schema", "status",
+    }
+    for index, line in enumerate(lines):
+        try:
+            line_obj = json.loads(line.decode("utf-8"))
+        except Exception as exc:
+            raise AggregateReject("checkpoint ledger JSON parse failure") from exc
+        if canonical_json_bytes(line_obj) != line:
+            raise AggregateReject("checkpoint ledger line is not canonical")
+        if not isinstance(line_obj, dict) or set(line_obj) != line_fields:
+            raise AggregateReject("checkpoint ledger line field set mismatch")
+        if line_obj["schema"] != "ITEM3_SWEEP_V9_PROGRESS_LINE_V1" or line_obj["status"] != "PARTIAL":
+            raise AggregateReject("checkpoint ledger schema/status mismatch")
+        if line_obj["checkpoint_sequence"] != index:
+            raise AggregateReject("checkpoint sequence mismatch")
+        if line_obj["previous_checkpoint_sha256"] != previous:
+            raise AggregateReject("checkpoint previous-line hash mismatch")
+        progress_sha = require_sha(line_obj["progress_payload_sha256"], "progress_payload_sha256")
+        partial_sha = require_sha(line_obj["partial_evidence_sha256"], "partial_evidence_sha256")
+        frontier_sha = require_sha(line_obj["frontier_digest_sha256"], "frontier_digest_sha256")
+        progress_path = checkpoint_root / "checkpoint_payloads" / "progress" / f"{progress_sha}.json"
+        partial_path = checkpoint_root / "checkpoint_payloads" / "partial" / f"{partial_sha}.json"
+        if not progress_path.is_file() or not partial_path.is_file():
+            raise AggregateReject("committed checkpoint payload missing")
+        progress, progress_raw, observed_progress_sha = load_canonical(progress_path)
+        partial, _partial_raw, observed_partial_sha = load_canonical(partial_path)
+        if observed_progress_sha != progress_sha or observed_partial_sha != partial_sha:
+            raise AggregateReject("committed checkpoint payload digest mismatch")
+        frontier = progress.get("frontier")
+        if sha256_bytes(canonical_json_bytes(frontier)) != frontier_sha:
+            raise AggregateReject("checkpoint frontier digest mismatch")
+        for label, payload in (("progress", progress), ("partial", partial)):
+            context = payload.get("run_context")
+            if not isinstance(context, dict):
+                raise AggregateReject(f"{label} checkpoint run_context missing")
+            for key, value in expected_context.items():
+                if context.get(key) != value:
+                    raise AggregateReject(f"{label} checkpoint run_context mismatch: {key}")
+        last_sha = sha256_bytes(line)
+        previous = last_sha
+    if last_sha != last_expected:
+        raise AggregateReject("checkpoint last hash mismatch")
+'''
+          anchor = "\ndef selected_chain_tip(plan_sha256: str, evidence_hashes: Sequence[str]) -> str:\n"
+          if text.count(anchor) != 1:
+              raise SystemExit(f"aggregate helper insertion anchor count={text.count(anchor)}")
+          text = text.replace(anchor, helper + anchor, 1)
+
+          old = (
+              "    freeze_receipt_paths: Sequence[Path],\n"
+              "    evidence_paths: Sequence[Path],\n"
+              ") -> dict[str, Any]:"
+          )
+          new = (
+              "    freeze_receipt_paths: Sequence[Path],\n"
+              "    evidence_paths: Sequence[Path],\n"
+              "    provenance_paths: Sequence[Path],\n"
+              ") -> dict[str, Any]:"
+          )
+          if text.count(old) != 1:
+              raise SystemExit(f"aggregate verify signature anchor count={text.count(old)}")
+          text = text.replace(old, new, 1)
+
+          old = (
+              "    if len(config_paths) != n or len(freeze_receipt_paths) != n or len(evidence_paths) != n:\n"
+              "        raise AggregateReject(\"config/receipt/evidence count must equal shard count\")"
+          )
+          new = (
+              "    if (len(config_paths) != n or len(freeze_receipt_paths) != n or "
+              "len(evidence_paths) != n or len(provenance_paths) != n):\n"
+              "        raise AggregateReject(\"config/receipt/evidence/provenance count must equal shard count\")"
+          )
+          if text.count(old) != 1:
+              raise SystemExit(f"aggregate count anchor count={text.count(old)}")
+          text = text.replace(old, new, 1)
+
+          old = (
+              "    for shard, config_path, receipt_path, evidence_path in zip(\n"
+              "        plan.ordered_shards, config_paths, freeze_receipt_paths, evidence_paths, strict=True\n"
+              "    ):"
+          )
+          new = (
+              "    for shard, config_path, receipt_path, evidence_path, provenance_path in zip(\n"
+              "        plan.ordered_shards, config_paths, freeze_receipt_paths, evidence_paths,\n"
+              "        provenance_paths, strict=True\n"
+              "    ):"
+          )
+          if text.count(old) != 1:
+              raise SystemExit(f"aggregate zip anchor count={text.count(old)}")
+          text = text.replace(old, new, 1)
+
+          old = (
+              "        _evidence, evidence_sha = validate_shard_evidence(\n"
+              "            evidence_path, plan=plan, shard=shard, config_sha=config_sha, receipt_sha=receipt_sha\n"
+              "        )\n"
+              "        config_hashes.append(config_sha)"
+          )
+          new = (
+              "        _evidence, evidence_sha = validate_shard_evidence(\n"
+              "            evidence_path, plan=plan, shard=shard, config_sha=config_sha, receipt_sha=receipt_sha\n"
+              "        )\n"
+              "        validate_shard_provenance(\n"
+              "            provenance_path, plan=plan, shard=shard, config_sha=config_sha,\n"
+              "            receipt_sha=receipt_sha, evidence_sha=evidence_sha,\n"
+              "        )\n"
+              "        config_hashes.append(config_sha)"
+          )
+          if text.count(old) != 1:
+              raise SystemExit(f"aggregate provenance call anchor count={text.count(old)}")
+          text = text.replace(old, new, 1)
+
+          old = (
+              "    freeze_receipt_paths: Sequence[Path], evidence_paths: Sequence[Path],\n"
+              ") -> dict[str, Any]:\n"
+              "    result = verify_aggregate(\n"
+              "        plan_path=plan_path, config_paths=config_paths,\n"
+              "        freeze_receipt_paths=freeze_receipt_paths, evidence_paths=evidence_paths,\n"
+              "    )"
+          )
+          new = (
+              "    freeze_receipt_paths: Sequence[Path], evidence_paths: Sequence[Path],\n"
+              "    provenance_paths: Sequence[Path],\n"
+              ") -> dict[str, Any]:\n"
+              "    result = verify_aggregate(\n"
+              "        plan_path=plan_path, config_paths=config_paths,\n"
+              "        freeze_receipt_paths=freeze_receipt_paths, evidence_paths=evidence_paths,\n"
+              "        provenance_paths=provenance_paths,\n"
+              "    )"
+          )
+          if text.count(old) != 1:
+              raise SystemExit(f"aggregate write signature anchor count={text.count(old)}")
+          text = text.replace(old, new, 1)
+          agg.write_text(text, encoding="utf-8")
+          aggregate_sha = hashlib.sha256(agg.read_bytes()).hexdigest()
+
+          # ------------------------------------------------------------------
+          # 3. Driver: mathematical evidence V2 excludes checkpoint fields.
+          #    Host-dependent checkpoint data moves to SHARD_PROVENANCE.json.
+          # ------------------------------------------------------------------
+          driver = cand / "rehearsal_driver_v9_candidate_v3.py"
+          text = driver.read_text(encoding="utf-8")
+          old_hash_line = next(
+              line for line in text.splitlines(keepends=True)
+              if line.startswith("AGGREGATE_VERIFIER_SHA256 = ")
+          )
+          text = text.replace(
+              old_hash_line,
+              f'AGGREGATE_VERIFIER_SHA256 = "{aggregate_sha}"\n',
+              1,
+          )
+          old = '        "schema": "ITEM3_SWEEP_V9_SHARD_EVIDENCE_CANDIDATE_V1",\n'
+          if text.count(old) != 1:
+              raise SystemExit(f"driver evidence schema anchor count={text.count(old)}")
+          text = text.replace(old, '        "schema": "ITEM3_SWEEP_V9_SHARD_EVIDENCE_CANDIDATE_V2",\n', 1)
+          old = (
+              '        "checker_error": checker_error,\n'
+              '        "checkpoint_commit_count": len(hook.commit_records),\n'
+              '        "checkpoint_last_sha256": hook.commit_records[-1].checkpoint_sha256 if hook.commit_records else None,\n'
+              '        "nonclaim": (\n'
+          )
+          new = (
+              '        "checker_error": checker_error,\n'
+              '        "nonclaim": (\n'
+          )
+          if text.count(old) != 1:
+              raise SystemExit(f"driver checkpoint-field anchor count={text.count(old)}")
+          text = text.replace(old, new, 1)
+
+          old = (
+              "    result_bytes = canonical_json_bytes(result)\n"
+              "    result_path = output_dir / \"SHARD_EVIDENCE_CANDIDATE.json\"\n"
+              "    result_path.write_bytes(result_bytes)\n"
+              "    (output_dir / \"SHARD_EVIDENCE_CANDIDATE.json.sha256\").write_text(\n"
+              "        sha256_bytes(result_bytes) + \"\\n\", encoding=\"ascii\"\n"
+              "    )\n\n"
+              "    timing = {"
+          )
+          new = (
+              "    result_bytes = canonical_json_bytes(result)\n"
+              "    result_sha = sha256_bytes(result_bytes)\n"
+              "    result_path = output_dir / \"SHARD_EVIDENCE_CANDIDATE.json\"\n"
+              "    result_path.write_bytes(result_bytes)\n"
+              "    (output_dir / \"SHARD_EVIDENCE_CANDIDATE.json.sha256\").write_text(\n"
+              "        result_sha + \"\\n\", encoding=\"ascii\"\n"
+              "    )\n\n"
+              "    checkpoint_root = output_dir / \"checkpoint\"\n"
+              "    checkpoint_ledger = checkpoint_root / \"SWEEP_PROGRESS.jsonl\"\n"
+              "    provenance = {\n"
+              "        \"schema\": \"ITEM3_SWEEP_V9_SHARD_PROVENANCE_V1\",\n"
+              "        \"proof_status\": \"PROVENANCE_ONLY\",\n"
+              "        \"authorization\": authorization,\n"
+              "        \"shard_evidence_sha256\": result_sha,\n"
+              "        \"config_sha256\": config.config_sha256,\n"
+              "        \"aggregate_plan_sha256\": config.aggregate_plan_sha256,\n"
+              "        \"design_sha256\": config.design_sha256,\n"
+              "        \"dependency_snapshot_sha256\": config.dependency_snapshot_sha256,\n"
+              "        \"freeze_receipt_sha256\": freeze_receipt_sha,\n"
+              "        \"shard_id\": config.shard_id,\n"
+              "        \"shard_index\": config.shard_index,\n"
+              "        \"source_sha256\": config.source_sha256,\n"
+              "        \"checkpoint_commit_count\": len(hook.commit_records),\n"
+              "        \"checkpoint_last_sha256\": (\n"
+              "            hook.commit_records[-1].checkpoint_sha256 if hook.commit_records else None\n"
+              "        ),\n"
+              "        \"checkpoint_ledger_sha256\": (\n"
+              "            sha256_file(checkpoint_ledger) if checkpoint_ledger.is_file() else None\n"
+              "        ),\n"
+              "    }\n"
+              "    (output_dir / \"SHARD_PROVENANCE.json\").write_bytes(canonical_json_bytes(provenance))\n\n"
+              "    timing = {"
+          )
+          if text.count(old) != 1:
+              raise SystemExit(f"driver provenance insertion anchor count={text.count(old)}")
+          text = text.replace(old, new, 1)
+          driver.write_text(text, encoding="utf-8")
+
+          # ------------------------------------------------------------------
+          # 4. Aggregate tests: materialize valid independent checkpoint
+          #    provenance; require it separately; prove provenance history does
+          #    not alter the selected mathematical chain.
+          # ------------------------------------------------------------------
+          test = cand / "test_aggregate_verifier_v9_candidate_v2.py"
+          text = test.read_text(encoding="utf-8")
+          old = (
+              '        "checkpoint_commit_count": 1,\n'
+              '        "checkpoint_last_sha256": "7" * 64,\n'
+          )
+          if text.count(old) != 1:
+              raise SystemExit(f"aggregate-test embedded checkpoint anchor count={text.count(old)}")
+          text = text.replace(old, "", 1)
+
+          helper = r'''
+
+def write_provenance_fixture(
+    root: Path,
+    *,
+    plan: dict,
+    plan_sha: str,
+    shard_index: int,
+    config_sha: str,
+    receipt_sha: str,
+    evidence_sha: str,
+    record_count: int = 1,
+) -> Path:
+    shard = plan["ordered_shards"][shard_index]
+    out = root / f"provenance-{shard_index}"
+    checkpoint_root = out / "checkpoint"
+    progress_dir = checkpoint_root / "checkpoint_payloads" / "progress"
+    partial_dir = checkpoint_root / "checkpoint_payloads" / "partial"
+    progress_dir.mkdir(parents=True, exist_ok=True)
+    partial_dir.mkdir(parents=True, exist_ok=True)
+    run_context = {
+        "aggregate_plan_sha256": plan_sha,
+        "authorization": "FROZEN_PRODUCTION",
+        "config_sha256": config_sha,
+        "dependency_snapshot_sha256": plan["dependency_snapshot_sha256"],
+        "design_sha256": plan["design_sha256"],
+        "freeze_receipt_sha256": receipt_sha,
+        "shard_id": shard["shard_id"],
+        "shard_index": shard["shard_index"],
+        "source_sha256": deepcopy(plan["source_sha256"]),
+    }
+    previous = a.ZERO_SHA
+    lines = []
+    last_sha = None
+    for i in range(record_count):
+        progress = {"checkpoint_fixture_index": i, "frontier": [], "run_context": deepcopy(run_context)}
+        partial = {"checkpoint_fixture_index": i, "run_context": deepcopy(run_context), "status": "PARTIAL"}
+        progress_raw = a.canonical_json_bytes(progress)
+        partial_raw = a.canonical_json_bytes(partial)
+        progress_sha = sha256(progress_raw).hexdigest()
+        partial_sha = sha256(partial_raw).hexdigest()
+        (progress_dir / f"{progress_sha}.json").write_bytes(progress_raw)
+        (partial_dir / f"{partial_sha}.json").write_bytes(partial_raw)
+        frontier_sha = sha256(a.canonical_json_bytes(progress["frontier"])).hexdigest()
+        line_obj = {
+            "checkpoint_sequence": i,
+            "frontier_digest_sha256": frontier_sha,
+            "last_complete_attempt_id": f"A{i}",
+            "partial_evidence_sha256": partial_sha,
+            "previous_checkpoint_sha256": previous,
+            "progress_payload_sha256": progress_sha,
+            "schema": "ITEM3_SWEEP_V9_PROGRESS_LINE_V1",
+            "status": "PARTIAL",
+        }
+        line = a.canonical_json_bytes(line_obj)
+        lines.append(line)
+        last_sha = sha256(line).hexdigest()
+        previous = last_sha
+    ledger_raw = b"".join(lines)
+    (checkpoint_root / "SWEEP_PROGRESS.jsonl").write_bytes(ledger_raw)
+    provenance = {
+        "aggregate_plan_sha256": plan_sha,
+        "authorization": "FROZEN_PRODUCTION",
+        "checkpoint_commit_count": record_count,
+        "checkpoint_last_sha256": last_sha,
+        "checkpoint_ledger_sha256": sha256(ledger_raw).hexdigest(),
+        "config_sha256": config_sha,
+        "dependency_snapshot_sha256": plan["dependency_snapshot_sha256"],
+        "design_sha256": plan["design_sha256"],
+        "freeze_receipt_sha256": receipt_sha,
+        "proof_status": "PROVENANCE_ONLY",
+        "schema": a.PROVENANCE_SCHEMA,
+        "shard_evidence_sha256": evidence_sha,
+        "shard_id": shard["shard_id"],
+        "shard_index": shard["shard_index"],
+        "source_sha256": deepcopy(plan["source_sha256"]),
+    }
+    provenance_path = out / "SHARD_PROVENANCE.json"
+    canonical_write(provenance_path, provenance)
+    return provenance_path
+'''
+          anchor = "\ndef materialize_fixture(root: Path, plan_obj: dict)"
+          if text.count(anchor) != 1:
+              raise SystemExit(f"aggregate-test helper insertion anchor count={text.count(anchor)}")
+          text = text.replace(anchor, helper + anchor, 1)
+
+          start = text.index("def materialize_fixture(root: Path, plan_obj: dict)")
+          end = text.index("\n\n\nclass AggregateV2Controls", start)
+          replacement = '''def materialize_fixture(root: Path, plan_obj: dict) -> tuple[Path, list[Path], list[Path], list[Path], list[Path]]:
+    plan_path = root / "plan.json"
+    plan_sha = canonical_write(plan_path, plan_obj)
+    configs: list[Path] = []
+    receipts: list[Path] = []
+    evidence: list[Path] = []
+    provenance: list[Path] = []
+    for i in range(plan_obj["shard_count"]):
+        config_path = root / f"config-{i}.json"
+        config_sha = canonical_write(config_path, config_for(plan_obj, plan_sha, i))
+        receipt_path = root / f"receipt-{i}.json"
+        receipt_sha = canonical_write(receipt_path, freeze_for(plan_obj, plan_sha, config_sha))
+        evidence_path = root / f"evidence-{i}.json"
+        evidence_sha = canonical_write(evidence_path, evidence_for(plan_obj, plan_sha, i, config_sha, receipt_sha))
+        provenance_path = write_provenance_fixture(
+            root,
+            plan=plan_obj,
+            plan_sha=plan_sha,
+            shard_index=i,
+            config_sha=config_sha,
+            receipt_sha=receipt_sha,
+            evidence_sha=evidence_sha,
+        )
+        configs.append(config_path)
+        receipts.append(receipt_path)
+        evidence.append(evidence_path)
+        provenance.append(provenance_path)
+    return plan_path, configs, receipts, evidence, provenance'''
+          text = text[:start] + replacement + text[end:]
+
+          text = text.replace(
+              "freeze_receipt_paths=paths[2], evidence_paths=paths[3],\n",
+              "freeze_receipt_paths=paths[2], evidence_paths=paths[3], provenance_paths=paths[4],\n",
+          )
+
+          extra = r'''
+
+    def test_checkpoint_provenance_history_does_not_change_selected_chain(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            plan = one_shard_plan()
+            paths = materialize_fixture(root, plan)
+            first = a.verify_aggregate(
+                plan_path=paths[0], config_paths=paths[1],
+                freeze_receipt_paths=paths[2], evidence_paths=paths[3], provenance_paths=paths[4],
+            )
+            provenance_obj = json.loads(paths[4][0].read_text(encoding="utf-8"))
+            evidence_sha = sha256(paths[3][0].read_bytes()).hexdigest()
+            paths[4][0] = write_provenance_fixture(
+                root,
+                plan=plan,
+                plan_sha=provenance_obj["aggregate_plan_sha256"],
+                shard_index=0,
+                config_sha=provenance_obj["config_sha256"],
+                receipt_sha=provenance_obj["freeze_receipt_sha256"],
+                evidence_sha=evidence_sha,
+                record_count=2,
+            )
+            second = a.verify_aggregate(
+                plan_path=paths[0], config_paths=paths[1],
+                freeze_receipt_paths=paths[2], evidence_paths=paths[3], provenance_paths=paths[4],
+            )
+            self.assertEqual(first["selected_shard_evidence_sha256"], second["selected_shard_evidence_sha256"])
+            self.assertEqual(first["selected_chain_tip_sha256"], second["selected_chain_tip_sha256"])
+
+    def test_corrupt_checkpoint_provenance_rejected_without_entering_chain(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            paths = materialize_fixture(root, one_shard_plan())
+            obj = json.loads(paths[4][0].read_text(encoding="utf-8"))
+            obj["checkpoint_last_sha256"] = "0" * 64
+            canonical_write(paths[4][0], obj)
+            with self.assertRaises(a.AggregateReject):
+                a.verify_aggregate(
+                    plan_path=paths[0], config_paths=paths[1],
+                    freeze_receipt_paths=paths[2], evidence_paths=paths[3], provenance_paths=paths[4],
+                )
+'''
+          anchor = "\n\nif __name__ == \"__main__\":\n"
+          if text.count(anchor) != 1:
+              raise SystemExit(f"aggregate-test final insertion anchor count={text.count(anchor)}")
+          text = text.replace(anchor, extra + anchor, 1)
+          test.write_text(text, encoding="utf-8")
+
+          # Record this repair as a successor-candidate source change.  It closes
+          # blocker 1 only; independent corpus and FLINT provenance remain open.
+          receipt = draft / "CHECKPOINT_HASH_SEPARATION_REPAIR_RECEIPT_2026-08-08.md"
+          receipt.write_text(
+              "# Item 3 sweep v9 — checkpoint hash-separation repair receipt\n\n"
+              "Status: **BLOCKER 1 REPAIR CANDIDATE / FOCUSED TESTS REQUIRED / FREEZE NOT AUTHORIZED**\n\n"
+              "Date: 2026-08-08\n\n"
+              "This repair separates host-dependent checkpoint provenance from canonical mathematical "
+              "shard evidence. `SHARD_EVIDENCE_CANDIDATE.json` now uses schema "
+              "`ITEM3_SWEEP_V9_SHARD_EVIDENCE_CANDIDATE_V2` and contains no checkpoint count, tip, "
+              "ledger hash or timing field. The source-bound driver writes a separate canonical "
+              "`ITEM3_SWEEP_V9_SHARD_PROVENANCE_V1` object bound to the exact mathematical evidence "
+              "SHA-256.\n\n"
+              "The aggregate verifier independently revalidates the provenance ledger, previous-line "
+              "hash chain, immutable payload hashes, frontier digest and run-context bindings, but the "
+              "provenance object/hash is never inserted into `selected_shard_evidence_sha256`, the "
+              "selected chain preimage, or the aggregate mathematical verdict.\n\n"
+              "The integrated contract candidate v2 is updated to state this separation explicitly. "
+              "All earlier qualification evidence remains provenance for its old byte identity only.\n\n"
+              "Blocker 2 (independent 256-leaf validation strength) and Blocker 3 (FLINT library "
+              "version provenance) remain open. No freeze, rehearsal tag, production tag or "
+              "`CERTIFIED_LAMBDA_RANGE` is authorized by this repair.\n",
+              encoding="utf-8",
+          )
+          PY
+
+      - name: Run focused structural controls
+        working-directory: CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m py_compile \
+            aggregate_verifier_v9_candidate_v2.py \
+            rehearsal_driver_v9_candidate_v3.py \
+            test_aggregate_verifier_v9_candidate_v2.py \
+            test_rehearsal_driver_v3_binding.py
+          python -m unittest -v \
+            test_aggregate_verifier_v9_candidate_v2.py \
+            test_rehearsal_driver_v3_binding.py
+
+      - name: Promote focused repair receipt status
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          p=Path("CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_draft/CHECKPOINT_HASH_SEPARATION_REPAIR_RECEIPT_2026-08-08.md")
+          text=p.read_text(encoding="utf-8")
+          old="Status: **BLOCKER 1 REPAIR CANDIDATE / FOCUSED TESTS REQUIRED / FREEZE NOT AUTHORIZED**"
+          new="Status: **BLOCKER 1 FOCUSED CONTROLS PASS / FULL REQUALIFICATION REQUIRED / FREEZE NOT AUTHORIZED**"
+          if text.count(old)!=1: raise SystemExit("receipt status anchor mismatch")
+          p.write_text(text.replace(old,new,1),encoding="utf-8")
+          PY
+
+      - name: Commit repair
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- \
+            CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_draft/design_contract_v9_integrated_candidate_v2.md \
+            CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_draft/CHECKPOINT_HASH_SEPARATION_REPAIR_RECEIPT_2026-08-08.md \
+            CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/aggregate_verifier_v9_candidate_v2.py \
+            CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/rehearsal_driver_v9_candidate_v3.py \
+            CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/test_aggregate_verifier_v9_candidate_v2.py
+          git diff --cached --check
+          git commit -m "Separate v9 checkpoint provenance from proof hashes"
+          git push origin HEAD:agent/item3-v9-analytic-proof
