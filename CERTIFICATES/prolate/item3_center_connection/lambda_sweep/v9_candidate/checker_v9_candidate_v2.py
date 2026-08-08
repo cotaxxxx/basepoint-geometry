@@ -1,0 +1,312 @@
+#!/usr/bin/env python3
+"""Strengthened independent checker candidate v2 for Item 3 sweep v9.
+
+STATUS: IMPLEMENTATION CANDIDATE / NOT PRODUCTION APPROVED.
+
+V2 independently replays the dps-50 tree, requires runner-v2 identity, matches runner
+endpoint evidence against fresh dps-50 calls, and records fresh dps-70 accepted-leaf upper
+bounds.  It does not import runner source.
+"""
+from __future__ import annotations
+
+from dataclasses import dataclass
+from fractions import Fraction
+from typing import Any, Literal
+
+
+CHECKER_ID = "ITEM3_SWEEP_V9_REHEARSAL_CHECKER_CANDIDATE_V2"
+EXPECTED_RUNNER_ID = "ITEM3_SWEEP_V9_REHEARSAL_RUNNER_CANDIDATE_V2"
+R_FLOOR = Fraction(1, 1 << 16)
+LAMBDA_FLOOR = Fraction(1, 1 << 16)
+Axis = Literal["r", "lambda"]
+
+
+class CheckerReject(RuntimeError):
+    pass
+
+
+@dataclass(frozen=True)
+class Node:
+    r_cell: tuple[Fraction, Fraction]
+    lambda_box: tuple[Fraction, Fraction]
+    path_id: str
+    r_depth: int
+    lambda_depth: int
+
+
+@dataclass(frozen=True)
+class VerifiedLeaf:
+    path_id: str
+    r_cell: tuple[Fraction, Fraction]
+    lambda_box: tuple[Fraction, Fraction]
+    mean_value_hi_dps70: Fraction
+
+
+@dataclass(frozen=True)
+class CheckerReport:
+    checker_id: str
+    status: str
+    reason: str
+    dps50_attempt_count: int
+    dps50_leaf_count: int
+    dps70_verified_leaf_count: int
+    endpoint_g_lo_dps50: Any
+    endpoint_g_hi_dps50: Any
+    endpoint_g_lo_dps70: Any
+    endpoint_g_hi_dps70: Any
+    verified_leaves_dps70: tuple[VerifiedLeaf, ...]
+    adapter_instances_distinct: bool
+    control_kernel_call_counts: dict[str, int]
+    verify_kernel_call_counts: dict[str, int]
+
+
+def width(interval: tuple[Fraction, Fraction]) -> Fraction:
+    lo, hi = interval
+    if lo > hi:
+        raise CheckerReject("interval lower endpoint exceeds upper endpoint")
+    return hi - lo
+
+
+def midpoint(interval: tuple[Fraction, Fraction]) -> Fraction:
+    lo, hi = interval
+    if lo > hi:
+        raise CheckerReject("interval lower endpoint exceeds upper endpoint")
+    return (lo + hi) / 2
+
+
+def can_split(interval: tuple[Fraction, Fraction], floor: Fraction) -> bool:
+    return floor > 0 and width(interval) / 2 >= floor
+
+
+def depth_cap(interval: tuple[Fraction, Fraction], floor: Fraction) -> int:
+    w = width(interval)
+    if w < floor:
+        return 0
+    d = 0
+    while w / 2 >= floor:
+        w /= 2
+        d += 1
+    return d
+
+
+def choose_axis(
+    *,
+    r_score: Fraction | None,
+    lambda_score: Fraction | None,
+    r_splittable: bool,
+    lambda_splittable: bool,
+) -> tuple[Axis | None, str]:
+    if not r_splittable and not lambda_splittable:
+        return None, "NO_SPLITTABLE_AXIS"
+    if r_splittable and not lambda_splittable:
+        return "r", "ONLY_R_SPLITTABLE"
+    if lambda_splittable and not r_splittable:
+        return "lambda", "ONLY_LAMBDA_SPLITTABLE"
+    r_nf = r_score is None
+    l_nf = lambda_score is None
+    if r_nf and not l_nf:
+        return "r", "NONFINITE_R_OUTRANKS_FINITE"
+    if l_nf and not r_nf:
+        return "lambda", "NONFINITE_LAMBDA_OUTRANKS_FINITE"
+    if r_nf and l_nf:
+        return "r", "DOUBLE_NONFINITE_TIE_TO_R"
+    assert r_score is not None and lambda_score is not None
+    if r_score > lambda_score:
+        return "r", "LARGER_EXACT_SCORE"
+    if lambda_score > r_score:
+        return "lambda", "LARGER_EXACT_SCORE"
+    return "r", "EXACT_SCORE_TIE_TO_R"
+
+
+def children(node: Node, axis: Axis) -> tuple[Node, Node]:
+    if axis == "r":
+        m = midpoint(node.r_cell)
+        return (
+            Node((node.r_cell[0], m), node.lambda_box, node.path_id + "/R0", node.r_depth + 1, node.lambda_depth),
+            Node((m, node.r_cell[1]), node.lambda_box, node.path_id + "/R1", node.r_depth + 1, node.lambda_depth),
+        )
+    m = midpoint(node.lambda_box)
+    return (
+        Node(node.r_cell, (m, node.lambda_box[1]), node.path_id + "/L1", node.r_depth, node.lambda_depth + 1),
+        Node(node.r_cell, (node.lambda_box[0], m), node.path_id + "/L0", node.r_depth, node.lambda_depth + 1),
+    )
+
+
+def _assert_attempt_matches(
+    observed: Any,
+    *,
+    activation: int,
+    node: Node,
+    verdict: str,
+    selected_axis: str | None,
+    reason: str,
+    r_score: Fraction | None,
+    lambda_score: Fraction | None,
+) -> None:
+    expected = {
+        "activation_index": activation,
+        "path_id": node.path_id,
+        "r_cell": node.r_cell,
+        "lambda_box": node.lambda_box,
+        "r_depth": node.r_depth,
+        "lambda_depth": node.lambda_depth,
+        "verdict": verdict,
+        "selected_axis": selected_axis,
+        "reason": reason,
+        "r_score": r_score,
+        "lambda_score": lambda_score,
+    }
+    for name, value in expected.items():
+        if getattr(observed, name, object()) != value:
+            raise CheckerReject(f"runner attempt mismatch: {name}")
+
+
+def verify_runner_result(
+    *,
+    runner_result: Any,
+    control_adapter: Any,
+    verification_adapter: Any,
+    dps_control: int = 50,
+    dps_verify: int = 70,
+    r_floor: Fraction = R_FLOOR,
+    lambda_floor: Fraction = LAMBDA_FLOOR,
+) -> CheckerReport:
+    if control_adapter is verification_adapter:
+        raise CheckerReject("checker requires distinct control and verification adapters")
+    if getattr(runner_result, "runner_id", None) != EXPECTED_RUNNER_ID:
+        raise CheckerReject("runner ID mismatch")
+    if runner_result.terminal_class != "COMPLETE_CANDIDATE":
+        raise CheckerReject("only complete runner candidate may pass checker")
+
+    root_r = runner_result.root_r
+    root_lambda = runner_result.root_lambda
+    attempts = tuple(runner_result.attempts)
+    runner_leaves = tuple(runner_result.accepted_leaves)
+
+    g50_lo = control_adapter.evaluate_g(
+        r_cell=(root_r[0], root_r[0]), lambda_box=root_lambda, dps=dps_control
+    )
+    g50_hi = control_adapter.evaluate_g(
+        r_cell=(root_r[1], root_r[1]), lambda_box=root_lambda, dps=dps_control
+    )
+    if not (g50_lo.strictly_positive() and g50_hi.strictly_negative()):
+        raise CheckerReject("fresh dps50 endpoint signs fail")
+    if runner_result.endpoint_g_lo != g50_lo or runner_result.endpoint_g_hi != g50_hi:
+        raise CheckerReject("runner endpoint evidence differs from fresh dps50 enclosure")
+
+    r_cap = depth_cap(root_r, r_floor)
+    l_cap = depth_cap(root_lambda, lambda_floor)
+    stack: list[Node] = [Node(root_r, root_lambda, "ROOT", 0, 0)]
+    fresh: list[tuple[str, int, tuple[Fraction, Fraction], tuple[Fraction, Fraction], int, int, Fraction]] = []
+    activation = 0
+
+    while stack:
+        if activation >= len(attempts):
+            raise CheckerReject("runner attempt stream ended before replay tree")
+        node = stack.pop()
+        ev = control_adapter.evaluate_mean_value(
+            r_cell=node.r_cell, lambda_box=node.lambda_box, dps=dps_control
+        )
+        observed = attempts[activation]
+        if ev.strict_negative:
+            if not ev.mean_value.finite:
+                raise CheckerReject("strict NEG with nonfinite mean value")
+            _assert_attempt_matches(
+                observed,
+                activation=activation,
+                node=node,
+                verdict="NEG",
+                selected_axis=None,
+                reason="STRICT_NEG",
+                r_score=ev.r_score,
+                lambda_score=ev.lambda_score,
+            )
+            fresh.append((
+                node.path_id, activation, node.r_cell, node.lambda_box,
+                node.r_depth, node.lambda_depth, ev.mean_value.hi,
+            ))
+            activation += 1
+            continue
+
+        r_split = can_split(node.r_cell, r_floor) and node.r_depth < r_cap
+        l_split = can_split(node.lambda_box, lambda_floor) and node.lambda_depth < l_cap
+        axis, reason = choose_axis(
+            r_score=ev.r_score,
+            lambda_score=ev.lambda_score,
+            r_splittable=r_split,
+            lambda_splittable=l_split,
+        )
+        if axis is None:
+            raise CheckerReject("fresh replay reaches incomplete stop floor")
+        _assert_attempt_matches(
+            observed,
+            activation=activation,
+            node=node,
+            verdict="SPLIT",
+            selected_axis=axis,
+            reason=reason,
+            r_score=ev.r_score,
+            lambda_score=ev.lambda_score,
+        )
+        first, second = children(node, axis)
+        stack.append(second)
+        stack.append(first)
+        activation += 1
+
+    if activation != len(attempts):
+        raise CheckerReject("runner attempt stream has extra records")
+
+    fresh_sorted = sorted(
+        fresh, key=lambda x: (-x[3][1], -x[3][0], x[2][0], x[2][1], x[0])
+    )
+    if len(fresh_sorted) != len(runner_leaves):
+        raise CheckerReject("accepted leaf count mismatch")
+    for f, observed in zip(fresh_sorted, runner_leaves, strict=True):
+        path_id, act, r_cell, lambda_box, rd, ld, mv_hi = f
+        expected = {
+            "path_id": path_id,
+            "activation_index": act,
+            "r_cell": r_cell,
+            "lambda_box": lambda_box,
+            "r_depth": rd,
+            "lambda_depth": ld,
+            "mean_value_hi": mv_hi,
+        }
+        for name, value in expected.items():
+            if getattr(observed, name, object()) != value:
+                raise CheckerReject(f"accepted leaf mismatch: {name}")
+
+    g70_lo = verification_adapter.evaluate_g(
+        r_cell=(root_r[0], root_r[0]), lambda_box=root_lambda, dps=dps_verify
+    )
+    g70_hi = verification_adapter.evaluate_g(
+        r_cell=(root_r[1], root_r[1]), lambda_box=root_lambda, dps=dps_verify
+    )
+    if not (g70_lo.strictly_positive() and g70_hi.strictly_negative()):
+        raise CheckerReject("fresh dps70 endpoint signs fail")
+
+    verified: list[VerifiedLeaf] = []
+    for path_id, _act, r_cell, lambda_box, _rd, _ld, _mv_hi in fresh_sorted:
+        ev70 = verification_adapter.evaluate_mean_value(
+            r_cell=r_cell, lambda_box=lambda_box, dps=dps_verify
+        )
+        if not ev70.strict_negative or not ev70.mean_value.finite:
+            raise CheckerReject(f"fresh dps70 strict NEG fails: {path_id}")
+        verified.append(VerifiedLeaf(path_id, r_cell, lambda_box, ev70.mean_value.hi))
+
+    return CheckerReport(
+        checker_id=CHECKER_ID,
+        status="PASS_CANDIDATE",
+        reason="DPS50_REPLAY_AND_DPS70_VERIFY_PASS",
+        dps50_attempt_count=activation,
+        dps50_leaf_count=len(fresh_sorted),
+        dps70_verified_leaf_count=len(verified),
+        endpoint_g_lo_dps50=g50_lo,
+        endpoint_g_hi_dps50=g50_hi,
+        endpoint_g_lo_dps70=g70_lo,
+        endpoint_g_hi_dps70=g70_hi,
+        verified_leaves_dps70=tuple(verified),
+        adapter_instances_distinct=True,
+        control_kernel_call_counts=dict(control_adapter.kernel_call_counts),
+        verify_kernel_call_counts=dict(verification_adapter.kernel_call_counts),
+    )
