@@ -1,0 +1,123 @@
+name: Item 3 v9 adapter v2 endpoint patch
+
+on:
+  push:
+    branches:
+      - agent/item3-v9-analytic-proof
+    paths:
+      - ".github/workflows/item3-v9-adapter-v2-patch.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/item3-v9-analytic-proof
+          fetch-depth: 1
+      - name: Apply exact adapter v2 patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          adapter = Path("CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/adapter_v9_candidate.py")
+          text = adapter.read_text(encoding="utf-8")
+          old_id = 'ADAPTER_ID = "ITEM3_SWEEP_V9_MEAN_VALUE_ADAPTER_CANDIDATE_V1"'
+          new_id = 'ADAPTER_ID = "ITEM3_SWEEP_V9_MEAN_VALUE_ADAPTER_CANDIDATE_V2"'
+          if text.count(old_id) != 1:
+              raise SystemExit(f"unexpected V1 adapter ID count: {text.count(old_id)}")
+          text = text.replace(old_id, new_id, 1)
+
+          marker = '''    def evaluate_mean_value(
+          '''
+          if text.count(marker) != 1:
+              raise SystemExit(f"unexpected evaluate_mean_value marker count: {text.count(marker)}")
+          method = '''    def evaluate_g(
+              self,
+              *,
+              r_cell: tuple[Fraction, Fraction],
+              lambda_box: tuple[Fraction, Fraction],
+              dps: int,
+          ) -> CanonicalInterval:
+              """Rigorous endpoint/box enclosure for G=F/r using the pinned kernel."""
+              self._validate_coordinates(r_cell, lambda_box)
+              if not isinstance(dps, int) or isinstance(dps, bool) or dps <= 0:
+                  raise AdapterContractError("dps must be a positive integer")
+              old_dps = ctx.dps
+              try:
+                  ctx.dps = dps
+                  r_ball = _interval_to_arb(r_cell)
+                  lambda_ball = _interval_to_arb(lambda_box)
+                  F = self._call("F", r_ball, lambda_ball)
+                  return _canonical_interval(F / r_ball)
+              finally:
+                  ctx.dps = old_dps
+
+          '''
+          text = text.replace(marker, method + marker, 1)
+          adapter.write_text(text, encoding="utf-8")
+
+          test = Path("CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/test_adapter_v9_candidate.py")
+          t = test.read_text(encoding="utf-8")
+          old_expect = 'record(checks, "adapter_id_exact", adapter.adapter_id == a.ADAPTER_ID)'
+          if t.count(old_expect) != 1:
+              raise SystemExit("adapter id expectation marker missing")
+
+          insert_marker = '''    old_dps = ctx.dps
+              evidence = adapter.evaluate_mean_value(r_cell=r_cell, lambda_box=lambda_box, dps=50)
+          '''
+          if t.count(insert_marker) != 1:
+              raise SystemExit(f"endpoint insertion marker count: {t.count(insert_marker)}")
+          endpoint_block = '''    g_lo = adapter.evaluate_g(
+              r_cell=(Fraction(1, 64), Fraction(1, 64)),
+              lambda_box=lambda_box,
+              dps=50,
+          )
+              g_hi = adapter.evaluate_g(
+              r_cell=(Fraction(11, 256), Fraction(11, 256)),
+              lambda_box=lambda_box,
+              dps=50,
+          )
+              record(checks, "endpoint_g_lo_strict_positive", g_lo.finite and g_lo.lo > 0)
+              record(checks, "endpoint_g_hi_strict_negative", g_hi.finite and g_hi.hi < 0)
+              details["endpoint_g"] = {
+              "lo_interval": [str(g_lo.lo), str(g_lo.hi)] if g_lo.finite else None,
+              "hi_interval": [str(g_hi.lo), str(g_hi.hi)] if g_hi.finite else None,
+          }
+
+              old_dps = ctx.dps
+              evidence = adapter.evaluate_mean_value(r_cell=r_cell, lambda_box=lambda_box, dps=50)
+          '''
+          import textwrap
+          endpoint_block = textwrap.dedent(endpoint_block)
+          insert_marker = textwrap.dedent(insert_marker)
+          # restore class/function indentation expected at this location
+          endpoint_block = ''.join(('    ' + line if line.strip() else line) for line in endpoint_block.splitlines(True))
+          insert_marker = ''.join(('    ' + line if line.strip() else line) for line in insert_marker.splitlines(True))
+          if t.count(insert_marker) != 1:
+              raise SystemExit("normalized endpoint insertion marker missing")
+          t = t.replace(insert_marker, endpoint_block, 1)
+          test.write_text(t, encoding="utf-8")
+          PY
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Syntax check
+        run: python -m py_compile CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/adapter_v9_candidate.py CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/test_adapter_v9_candidate.py
+      - name: Commit v2 source bytes
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/adapter_v9_candidate.py
+          git add -- CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/test_adapter_v9_candidate.py
+          git diff --cached --check
+          git commit -m "Add endpoint G interface to item3 v9 adapter candidate"
+          git push origin HEAD:agent/item3-v9-analytic-proof
