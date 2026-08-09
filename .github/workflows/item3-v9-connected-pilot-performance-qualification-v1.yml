@@ -1,0 +1,412 @@
+name: Item 3 v9 connected-pilot performance qualification v1
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: item3-v9-connected-pilot-performance-qualification-v1
+  cancel-in-progress: false
+
+env:
+  BASE: CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate
+  IDBASE: CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/connected_pilot_identity_v1
+  VALIDATION: CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/validation_connected_pilot_v1/run_v1/CONNECTED_VALIDATION_REPORT.json
+  PLAN: CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/connected_pilot_identity_v1/plan_config/connected_pilot_plan_v2.json
+  DEPS: CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/connected_pilot_identity_v1/dependencies/dependency_snapshot_v9_candidate.json
+  WORKFLOW_PATH: .github/workflows/item3-v9-connected-pilot-performance-qualification-v1.yml
+  PLAN_SHA: aba9b2d1571cdc7c9aa7c4520233cafe7d7690f45bbcd7bbf7068339c78d67a9
+  DEPS_SHA: ee033ab46b844168887a6e2e1f5a2b97cc460d1b43bbafd77be49897127950aa
+  VALIDATION_SHA: 25e34aa51fe935d544e967d97c181ad8e21b59220e7d0d75eb22628a191f85cb
+  REQUIRED_ANCESTOR: e720f70787124d5b629f1ee8bcf26c4fc12fd644
+
+jobs:
+  full_path:
+    name: shard ${{ matrix.shard }} repetition ${{ matrix.repetition }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 350
+    strategy:
+      fail-fast: false
+      max-parallel: 12
+      matrix:
+        shard: [0, 1, 2, 3]
+        repetition: [1, 2, 3]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.13.14"
+
+      - name: Install pinned validated arithmetic
+        run: python -m pip install --disable-pip-version-check python-flint==0.9.0
+
+      - name: Select exact shard config
+        env:
+          SHARD: ${{ matrix.shard }}
+        run: |
+          set -euo pipefail
+          echo "CONFIG=$IDBASE/plan_config/shard_${SHARD}_config_v1.json" >> "$GITHUB_ENV"
+
+      - name: Verify exact identity and counted validation gate
+        env:
+          SHARD: ${{ matrix.shard }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git merge-base --is-ancestor "$REQUIRED_ANCESTOR" HEAD
+          python - <<'PY'
+          import hashlib,json,os,platform
+          from pathlib import Path
+          import flint
+          def sha(p): return hashlib.sha256(Path(p).read_bytes()).hexdigest()
+          def load(p): return json.loads(Path(p).read_text(encoding='utf-8'))
+          shard=int(os.environ['SHARD'])
+          expected_configs=[
+            'f3838d1c49f917e19fabfdb8c991dd5040128f81aadd58a930218dceecef2b03',
+            '2c1a612c1d32c5675af92dd0fad2c07b4af18b0bab370e62d44a68a8d44d0f41',
+            '32214842510f63cdf781dac4f145d5d4a46942b1194d9386717cdba1a4c95002',
+            '36bd40c39c722805f3742b3a9e8f562e2c39deca07c4f27666f54a88bf6e7ebe']
+          if sha(os.environ['VALIDATION'])!=os.environ['VALIDATION_SHA']: raise SystemExit('connected validation report drift')
+          if sha(os.environ['PLAN'])!=os.environ['PLAN_SHA']: raise SystemExit('plan drift')
+          if sha(os.environ['DEPS'])!=os.environ['DEPS_SHA']: raise SystemExit('dependency drift')
+          if sha(os.environ['CONFIG'])!=expected_configs[shard]: raise SystemExit('config drift')
+          v=load(os.environ['VALIDATION']); cfg=load(os.environ['CONFIG']); plan=load(os.environ['PLAN']); deps=load(os.environ['DEPS'])
+          if v.get('schema')!='ITEM3_SWEEP_V9_CONNECTED_IDENTITY_VALIDATION_REPORT_V1' or v.get('status')!='PASSED' or v.get('leaf_count')!=256 or v.get('failure_count')!=0: raise SystemExit('counted validation gate failed')
+          if v.get('failed_control_ids') or v.get('missing_control_ids') or v.get('extra_control_ids'): raise SystemExit('validation ID set not exact')
+          target=v['target_bundle']
+          if target['config_sha256']!=expected_configs or target['plan_sha256']!=os.environ['PLAN_SHA'] or target['dependency_snapshot_sha256']!=os.environ['DEPS_SHA']: raise SystemExit('validation target bundle drift')
+          if cfg['aggregate_plan_sha256']!=os.environ['PLAN_SHA'] or cfg['source_sha256']!=target['source_sha256']: raise SystemExit('config binding drift')
+          if plan['source_sha256']!=target['source_sha256'] or deps['machine_source_sha256']!=target['source_sha256']: raise SystemExit('source map drift')
+          if platform.python_version()!='3.13.14' or getattr(flint,'__version__',None)!='0.9.0' or getattr(flint,'__FLINT_VERSION__',None)!='3.6.0': raise SystemExit('arithmetic environment mismatch')
+          print('CONNECTED_QUALIFICATION_IDENTITY=PASS')
+          PY
+
+      - name: Record exact environment and wheel identity
+        env:
+          SHARD: ${{ matrix.shard }}
+          REPETITION: ${{ matrix.repetition }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="perf-s${SHARD}-rep-${REPETITION}"
+          mkdir -p "$ROOT/wheel"
+          python -m pip download --disable-pip-version-check --only-binary=:all: --no-deps python-flint==0.9.0 -d "$ROOT/wheel" >/dev/null
+          python - <<'PY'
+          import hashlib,json,os,platform
+          from pathlib import Path
+          import flint
+          shard=int(os.environ['SHARD']); rep=int(os.environ['REPETITION']); root=Path(f'perf-s{shard}-rep-{rep}')
+          wheel=next((root/'wheel').glob('python_flint-*.whl'))
+          def sha(p): return hashlib.sha256(Path(p).read_bytes()).hexdigest()
+          cfg=json.loads(Path(os.environ['CONFIG']).read_text())
+          report={'schema':'ITEM3_SWEEP_V9_CONNECTED_PERFORMANCE_ENVIRONMENT_V1','shard_index':shard,'repetition':rep,
+            'github_run_id':os.environ.get('GITHUB_RUN_ID'),'github_run_attempt':os.environ.get('GITHUB_RUN_ATTEMPT'),'github_sha':os.environ.get('GITHUB_SHA'),
+            'runner_name':os.environ.get('RUNNER_NAME'),'runner_os':os.environ.get('RUNNER_OS'),'runner_arch':os.environ.get('RUNNER_ARCH'),
+            'python':platform.python_version(),'python_flint':getattr(flint,'__version__','UNKNOWN'),'flint_library':getattr(flint,'__FLINT_VERSION__','UNKNOWN'),
+            'python_flint_wheel':wheel.name,'python_flint_wheel_sha256':sha(wheel),'workflow_sha256':sha(os.environ['WORKFLOW_PATH']),
+            'config_sha256':sha(os.environ['CONFIG']),'aggregate_plan_sha256':sha(os.environ['PLAN']),'dependency_snapshot_sha256':sha(os.environ['DEPS']),
+            'validation_report_sha256':sha(os.environ['VALIDATION']),'design_sha256':cfg['design_sha256'],'source_sha256':cfg['source_sha256']}
+          (root/'PERFORMANCE_ENVIRONMENT.json').write_text(json.dumps(report,sort_keys=True,separators=(',',':'))+'\n')
+          PY
+
+      - name: Execute complete qualification path
+        env:
+          SHARD: ${{ matrix.shard }}
+          REPETITION: ${{ matrix.repetition }}
+        shell: bash
+        run: |
+          set -uo pipefail
+          ROOT="perf-s${SHARD}-rep-${REPETITION}"; OUT="$ROOT/output"; mkdir -p "$OUT"
+          start_ns=$(date +%s%N)
+          set +e
+          /usr/bin/time -v -o "$ROOT/RESOURCE_USAGE.txt" \
+            python "$BASE/rehearsal_driver_v9_candidate_v3.py" \
+              --checkout-root . --config "$CONFIG" --output-dir "$OUT" --qualification-mode \
+              > "$ROOT/DRIVER_STDOUT.log" 2> "$ROOT/DRIVER_STDERR.log"
+          rc=$?
+          set -e
+          tar -C "$OUT" -cf "$ROOT/qualification_payload.tar" .
+          end_ns=$(date +%s%N)
+          printf '%s\n' "$rc" > "$ROOT/DRIVER_EXIT_CODE.txt"
+          printf '%s\n' "$start_ns" > "$ROOT/COMPLETE_PATH_START_NS.txt"
+          printf '%s\n' "$end_ns" > "$ROOT/COMPLETE_PATH_END_NS.txt"
+
+      - name: Verify full path and separated checkpoint provenance
+        env:
+          SHARD: ${{ matrix.shard }}
+          REPETITION: ${{ matrix.repetition }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import hashlib,importlib.util,json,os,re,sys
+          from pathlib import Path
+          shard=int(os.environ['SHARD']); rep=int(os.environ['REPETITION']); root=Path(f'perf-s{shard}-rep-{rep}'); out=root/'output'
+          start=int((root/'COMPLETE_PATH_START_NS.txt').read_text()); end=int((root/'COMPLETE_PATH_END_NS.txt').read_text()); wall=(end-start)/1e9
+          rc=int((root/'DRIVER_EXIT_CODE.txt').read_text())
+          ep=out/'SHARD_EVIDENCE_CANDIDATE.json'; pp=out/'SHARD_PROVENANCE.json'; tp=out/'SHARD_TIMING_DIAGNOSTIC.json'
+          evidence=json.loads(ep.read_text()) if ep.exists() else {}; provenance=json.loads(pp.read_text()) if pp.exists() else {}; timing=json.loads(tp.read_text()) if tp.exists() else {}
+          runner=evidence.get('runner_result') or {}; checker=evidence.get('checker_report') or {}
+          src=Path(os.environ['BASE'])/'checkpoint_v9_candidate.py'; spec=importlib.util.spec_from_file_location(f'cp_s{shard}_r{rep}',src); mod=importlib.util.module_from_spec(spec); sys.modules[spec.name]=mod; spec.loader.exec_module(mod)
+          recovered=[]; last_sha=None; chain_ok=False
+          try:
+              recovered=mod.recover_committed(out/'checkpoint'); last_sha=recovered[-1].checkpoint_sha256 if recovered else None
+              ledger=out/'checkpoint'/'SWEEP_PROGRESS.jsonl'; evidence_sha=hashlib.sha256(ep.read_bytes()).hexdigest(); ledger_sha=hashlib.sha256(ledger.read_bytes()).hexdigest()
+              chain_ok=bool(recovered) and provenance.get('schema')=='ITEM3_SWEEP_V9_SHARD_PROVENANCE_V1' and provenance.get('authorization')=='QUALIFICATION_ONLY' and provenance.get('shard_evidence_sha256')==evidence_sha and provenance.get('checkpoint_commit_count')==len(recovered) and provenance.get('checkpoint_last_sha256')==last_sha and provenance.get('checkpoint_ledger_sha256')==ledger_sha
+          except Exception: chain_ok=False
+          leaves=runner.get('accepted_leaves') or []; attempts=runner.get('attempts') or []
+          fresh=checker.get('status')=='PASS_CANDIDATE' and checker.get('reason')=='DPS50_REPLAY_AND_DPS70_VERIFY_PASS' and checker.get('dps50_leaf_count')==checker.get('dps70_verified_leaf_count')==len(leaves)
+          mathematical=rc==0 and evidence.get('status')=='QUALIFICATION_PASS_CANDIDATE' and evidence.get('authorization')=='QUALIFICATION_ONLY' and runner.get('terminal_class')=='COMPLETE_CANDIDATE' and fresh
+          no_stop=mathematical and all(a.get('reason')!='NO_SPLITTABLE_AXIS' for a in attempts)
+          cpsec=float(timing.get('checkpoint_wall_seconds') or 0.0); overhead=cpsec/wall if wall>0 else 1.0
+          artifact=(root/'qualification_payload.tar').is_file() and (root/'qualification_payload.tar').stat().st_size>0
+          hard=wall<10800.0; overhead_gate=overhead<=0.05; counted=all([mathematical,no_stop,chain_ok,fresh,artifact,hard,overhead_gate])
+          rs=sum(1 for a in attempts if a.get('selected_axis')=='r'); ls=sum(1 for a in attempts if a.get('selected_axis')=='lambda')
+          maxr=max([int(a.get('r_depth',0)) for a in attempts],default=0); maxl=max([int(a.get('lambda_depth',0)) for a in attempts],default=0)
+          resource=(root/'RESOURCE_USAGE.txt').read_text(errors='replace'); m=re.search(r'Maximum resident set size \(kbytes\):\s*(\d+)',resource); peak=int(m.group(1)) if m else None
+          algorithm={'schema':'ITEM3_SWEEP_V9_CONNECTED_ALGORITHM_PERFORMANCE_REPETITION_V1','shard_index':shard,'repetition':rep,'attempt_count':len(attempts),'accepted_leaf_count':len(leaves),'r_split_count':rs,'lambda_split_count':ls,'max_r_depth':maxr,'max_lambda_depth':maxl,'complete_path_wall_seconds':wall,'peak_memory_kib':peak}
+          cp={'schema':'ITEM3_SWEEP_V9_CONNECTED_CHECKPOINT_OVERHEAD_REPETITION_V1','shard_index':shard,'repetition':rep,'checkpoint_wall_seconds':cpsec,'complete_path_wall_seconds':wall,'checkpoint_overhead_fraction':overhead,'recovered_commit_count':len(recovered),'record_chain_match':chain_ok,'last_checkpoint_sha256':last_sha,'status':'PASSED' if overhead_gate and chain_ok else 'FAILED'}
+          report={'schema':'ITEM3_SWEEP_V9_CONNECTED_PERFORMANCE_REPETITION_V1','shard_index':shard,'repetition':rep,'authorization':'QUALIFICATION_ONLY','driver_exit_code':rc,'complete_path_wall_seconds':wall,'hard_time_gate':hard,'mathematical_completion':mathematical,'stop_floor_incomplete_count':0 if no_stop else 1,'partition_replay_dps50':fresh,'accepted_cell_verification_dps70':fresh,'record_chain_match':chain_ok,'final_partition_match':fresh,'checkpoint_overhead_fraction':overhead,'checkpoint_overhead_gate':overhead_gate,'artifact_prepared':artifact,'counted_success':counted,'status':'COUNTED_PASS' if counted else 'FAILED','tag_created':False,'freeze_authorized':False,'certified_lambda_range':False}
+          for name,obj in [('ALGORITHM_PERFORMANCE.json',algorithm),('CHECKPOINT_OVERHEAD.json',cp),('REPETITION_REPORT.json',report)]: (root/name).write_text(json.dumps(obj,sort_keys=True,separators=(',',':'))+'\n')
+          print(json.dumps(report,indent=2,sort_keys=True))
+          PY
+
+      - name: Run hosted component timing samples
+        env:
+          SHARD: ${{ matrix.shard }}
+          REPETITION: ${{ matrix.repetition }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import importlib.util,json,os,sys,time
+          from fractions import Fraction
+          from pathlib import Path
+          from flint import arb,ctx
+          shard=int(os.environ['SHARD']); rep=int(os.environ['REPETITION']); root=Path(f'perf-s{shard}-rep-{rep}'); base=Path(os.environ['BASE'])
+          cfg=json.loads(Path(os.environ['CONFIG']).read_text()); lb=cfg['lambda_box']
+          def frac(x): return Fraction(int(x['p']),int(x['q']))
+          llo,lhi=frac(lb['lo']),frac(lb['hi'])
+          def load(name,path): spec=importlib.util.spec_from_file_location(name,path); mod=importlib.util.module_from_spec(spec); sys.modules[name]=mod; spec.loader.exec_module(mod); return mod
+          kpath=base/'prolate_F_derivatives_cleanroom_v9_candidate.py'; apath=base/'adapter_v9_candidate_v2.py'
+          kernel=load(f'k_s{shard}_r{rep}',kpath); adapter_mod=load(f'a_s{shard}_r{rep}',apath); ctx.dps=50
+          lam_lo=arb(llo.numerator)/arb(llo.denominator); lam_hi=arb(lhi.numerator)/arb(lhi.denominator)
+          classes={'point_center':(arb('0.03'),(lam_lo+lam_hi)/2),'narrow_box':(arb('0.02999').union(arb('0.03001')),lam_lo.union(lam_hi))}
+          rows=[]
+          for cls,(r,lmb) in classes.items():
+              for op in ['F_arb','F_r_arb','F_lambda_arb','F_rr_arb','F_rlambda_arb']:
+                  fn=getattr(kernel,op)
+                  for sample in range(1,4):
+                      t0=time.perf_counter(); err=None
+                      try: value=fn(r,lmb,tol='1e-8',depth=12,limit=200000)
+                      except Exception as exc: value=None; err=f'{type(exc).__name__}:{exc}'
+                      sec=time.perf_counter()-t0; finite=bool(value is not None and value.is_finite())
+                      rows.append({'schema':'ITEM3_SWEEP_V9_CONNECTED_KERNEL_MICROBENCHMARK_ROW_V1','shard_index':shard,'repetition':rep,'input_class':cls,'operation':op,'sample':sample,'seconds':sec,'finite':finite,'error':err})
+          with (root/'KERNEL_MICROBENCHMARK.jsonl').open('w') as f:
+              for row in rows: f.write(json.dumps(row,sort_keys=True,separators=(',',':'))+'\n')
+          ad=adapter_mod.V9MeanValueAdapter(checkout_root=Path.cwd(),kernel_source_path=str(kpath),kernel_source_sha256=cfg['source_sha256']['kernel'],tol='1e-8',integration_depth=12,integration_limit=200000,module_name=f'mv_s{shard}_r{rep}')
+          rcells=[(Fraction(1,64),Fraction(1,64)+Fraction(1,1<<14)),(Fraction(3,100)-Fraction(1,1<<15),Fraction(3,100)+Fraction(1,1<<15)),(Fraction(11,256)-Fraction(1,1<<14),Fraction(11,256))]
+          def rat(x): return {'p':str(x.numerator),'q':str(x.denominator)}
+          mv=[]
+          for i,cell in enumerate(rcells,1):
+              ev=ad.evaluate_mean_value(r_cell=cell,lambda_box=(llo,lhi),dps=50)
+              mv.append({'schema':'ITEM3_SWEEP_V9_CONNECTED_MEAN_VALUE_COMPONENT_ROW_V1','shard_index':shard,'repetition':rep,'sample':i,'r_cell':[rat(cell[0]),rat(cell[1])],'lambda_box':[rat(llo),rat(lhi)],'mean_value_hi':rat(ev.mean_value.hi) if ev.mean_value.finite else None})
+          with (root/'MEAN_VALUE_COMPONENTS.jsonl').open('w') as f:
+              for row in mv: f.write(json.dumps(row,sort_keys=True,separators=(',',':'))+'\n')
+          PY
+
+      - name: Upload repetition evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: item3-v9-connected-qualification-s${{ matrix.shard }}-rep-${{ matrix.repetition }}
+          path: perf-s${{ matrix.shard }}-rep-${{ matrix.repetition }}
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Repetition final gate
+        env:
+          SHARD: ${{ matrix.shard }}
+          REPETITION: ${{ matrix.repetition }}
+        run: |
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          p=Path(f"perf-s{os.environ['SHARD']}-rep-{os.environ['REPETITION']}/REPETITION_REPORT.json")
+          raise SystemExit(0 if json.loads(p.read_text())['status']=='COUNTED_PASS' else 1)
+          PY
+
+  cancellation:
+    name: shard ${{ matrix.shard }} cancellation recovery
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.13.14"
+      - run: python -m pip install --disable-pip-version-check python-flint==0.9.0
+      - name: Select exact shard config
+        env:
+          SHARD: ${{ matrix.shard }}
+        run: echo "CONFIG=$IDBASE/plan_config/shard_${SHARD}_config_v1.json" >> "$GITHUB_ENV"
+      - name: Fail-closed cancellation identity preflight
+        env:
+          SHARD: ${{ matrix.shard }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git merge-base --is-ancestor "$REQUIRED_ANCESTOR" HEAD
+          python - <<'PY'
+          import hashlib,json,os
+          from pathlib import Path
+          def sha(p): return hashlib.sha256(Path(p).read_bytes()).hexdigest()
+          shard=int(os.environ['SHARD'])
+          configs=['f3838d1c49f917e19fabfdb8c991dd5040128f81aadd58a930218dceecef2b03','2c1a612c1d32c5675af92dd0fad2c07b4af18b0bab370e62d44a68a8d44d0f41','32214842510f63cdf781dac4f145d5d4a46942b1194d9386717cdba1a4c95002','36bd40c39c722805f3742b3a9e8f562e2c39deca07c4f27666f54a88bf6e7ebe']
+          if sha(os.environ['CONFIG'])!=configs[shard] or sha(os.environ['PLAN'])!=os.environ['PLAN_SHA'] or sha(os.environ['DEPS'])!=os.environ['DEPS_SHA'] or sha(os.environ['VALIDATION'])!=os.environ['VALIDATION_SHA']: raise SystemExit('cancellation identity drift')
+          v=json.loads(Path(os.environ['VALIDATION']).read_text())
+          if v.get('status')!='PASSED' or v.get('leaf_count')!=256 or v.get('failure_count')!=0: raise SystemExit('validation gate failed')
+          PY
+      - name: Interrupt after durable checkpoints exist
+        env:
+          SHARD: ${{ matrix.shard }}
+        shell: bash
+        run: |
+          set -uo pipefail
+          ROOT="cancel-s${SHARD}"; mkdir -p "$ROOT/output"
+          set +e
+          timeout --signal=TERM 180s python "$BASE/rehearsal_driver_v9_candidate_v3.py" --checkout-root . --config "$CONFIG" --output-dir "$ROOT/output" --qualification-mode > "$ROOT/DRIVER_STDOUT.log" 2> "$ROOT/DRIVER_STDERR.log"
+          rc=$?
+          set -e
+          printf '%s\n' "$rc" > "$ROOT/TIMEOUT_EXIT_CODE.txt"
+          printf '{"truncated":' > "$ROOT/output/checkpoint/.truncated-temp-for-recovery-test" || true
+      - name: Verify cancellation recovery
+        env:
+          SHARD: ${{ matrix.shard }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import importlib.util,json,os,sys
+          from pathlib import Path
+          shard=int(os.environ['SHARD']); base=Path(f'cancel-s{shard}'); root=base/'output/checkpoint'; src=Path(os.environ['BASE'])/'checkpoint_v9_candidate.py'
+          spec=importlib.util.spec_from_file_location(f'cancel_s{shard}',src); mod=importlib.util.module_from_spec(spec); sys.modules[spec.name]=mod; spec.loader.exec_module(mod)
+          rc=int((base/'TIMEOUT_EXIT_CODE.txt').read_text()); records=mod.recover_committed(root); last=records[-1] if records else None; partial={}
+          if last: partial=json.loads((root/'checkpoint_payloads'/'partial'/f'{last.partial_evidence_sha256}.json').read_text())
+          forbidden={'verdict','terminal_class','certified_lambda_range','certificate'}; no_verdict=partial.get('status')=='PARTIAL' and not(forbidden&set(partial)); temp=(root/'.truncated-temp-for-recovery-test').exists()
+          status='PASSED' if rc in {124,143} and bool(records) and no_verdict and temp else 'FAILED'
+          report={'schema':'ITEM3_SWEEP_V9_CONNECTED_CANCELLATION_RECOVERY_V1','shard_index':shard,'status':status,'timeout_exit_code':rc,'recovered_checkpoint_count':len(records),'last_checkpoint_sha256':last.checkpoint_sha256 if last else None,'partial_status':partial.get('status'),'partial_contains_verdict':not no_verdict,'truncated_temp_ignored':temp,'tag_created':False,'certified_lambda_range':False}
+          (base/'CANCELLATION_RECOVERY.json').write_text(json.dumps(report,sort_keys=True,separators=(',',':'))+'\n'); raise SystemExit(0 if status=='PASSED' else 1)
+          PY
+      - name: Upload cancellation evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: item3-v9-connected-cancellation-s${{ matrix.shard }}
+          path: cancel-s${{ matrix.shard }}
+          if-no-files-found: error
+          retention-days: 30
+
+  aggregate:
+    name: aggregate four-config qualification
+    if: always()
+    needs: [full_path, cancellation]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+      - name: Download all repetition evidence
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          pattern: item3-v9-connected-qualification-*
+          path: downloaded/reps
+          merge-multiple: false
+      - name: Download all cancellation evidence
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          pattern: item3-v9-connected-cancellation-*
+          path: downloaded/cancellation
+          merge-multiple: false
+      - name: Build canonical four-config performance package
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import hashlib,json,math,statistics
+          from collections import defaultdict
+          from pathlib import Path
+          root=Path('downloaded'); out=Path('CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/connected_pilot_qualification_v1')
+          if out.exists(): raise SystemExit('connected qualification package already exists')
+          out.mkdir(parents=True)
+          config_shas=['f3838d1c49f917e19fabfdb8c991dd5040128f81aadd58a930218dceecef2b03','2c1a612c1d32c5675af92dd0fad2c07b4af18b0bab370e62d44a68a8d44d0f41','32214842510f63cdf781dac4f145d5d4a46942b1194d9386717cdba1a4c95002','36bd40c39c722805f3742b3a9e8f562e2c39deca07c4f27666f54a88bf6e7ebe']
+          summary=[]
+          for shard in range(4):
+              reps=[]; envs=[]; micro=[]; algs=[]; cps=[]; mv=[]
+              for rep in (1,2,3):
+                  d=root/'reps'/f'item3-v9-connected-qualification-s{shard}-rep-{rep}'
+                  reps.append(json.loads((d/'REPETITION_REPORT.json').read_text())); envs.append(json.loads((d/'PERFORMANCE_ENVIRONMENT.json').read_text())); algs.append(json.loads((d/'ALGORITHM_PERFORMANCE.json').read_text())); cps.append(json.loads((d/'CHECKPOINT_OVERHEAD.json').read_text()))
+                  micro += [json.loads(x) for x in (d/'KERNEL_MICROBENCHMARK.jsonl').read_text().splitlines() if x]; mv += [json.loads(x) for x in (d/'MEAN_VALUE_COMPONENTS.jsonl').read_text().splitlines() if x]
+              cdir=root/'cancellation'/f'item3-v9-connected-cancellation-s{shard}'; cancellation=json.loads((cdir/'CANCELLATION_RECOVERY.json').read_text())
+              times=[float(r['complete_path_wall_seconds']) for r in reps if r.get('counted_success')]; exactly_three=len(times)==3; median=statistics.median(times) if times else None; maximum=max(times) if times else None
+              hard=exactly_three and all(t<10800 for t in times); margin=exactly_three and median<=9000 and maximum<=9900
+              overhead=all(float(r['checkpoint_overhead_fraction'])<=0.05 for r in reps); mathematical=all(r.get('mathematical_completion') and r.get('stop_floor_incomplete_count')==0 for r in reps)
+              fresh=all(r.get('partition_replay_dps50') and r.get('accepted_cell_verification_dps70') and r.get('record_chain_match') and r.get('final_partition_match') for r in reps)
+              grouped=defaultdict(list); finite=True
+              for row in micro: grouped[(row['input_class'],row['operation'])].append(float(row['seconds'])); finite=finite and bool(row.get('finite'))
+              micro_ok=len(grouped)==10 and all(len(v)==9 for v in grouped.values())
+              identity=all(e['config_sha256']==config_shas[shard] and e['aggregate_plan_sha256']=='aba9b2d1571cdc7c9aa7c4520233cafe7d7690f45bbcd7bbf7068339c78d67a9' and e['dependency_snapshot_sha256']=='ee033ab46b844168887a6e2e1f5a2b97cc460d1b43bbafd77be49897127950aa' and e['validation_report_sha256']=='25e34aa51fe935d544e967d97c181ad8e21b59220e7d0d75eb22628a191f85cb' and e['python']=='3.13.14' and e['python_flint']=='0.9.0' and e['flint_library']=='3.6.0' and e['design_sha256']=='1f5666692cae73c1442e281fb8feab1da95fd58ac6988ad65ac229fd6fdf91ef' for e in envs) and len({e['workflow_sha256'] for e in envs})==1 and len({json.dumps(e['source_sha256'],sort_keys=True) for e in envs})==1 and len({e['python_flint_wheel_sha256'] for e in envs})==1
+              passed=all([exactly_three,hard,margin,overhead,mathematical,fresh,cancellation.get('status')=='PASSED',micro_ok,finite,identity])
+              sdir=out/f'shard_{shard}'; sdir.mkdir()
+              report={'schema':'ITEM3_SWEEP_V9_CONNECTED_PERFORMANCE_GATE_REPORT_V1','shard_index':shard,'status':'PASSED' if passed else 'PERFORMANCE_GATE_FAIL','authorization':'QUALIFICATION_ONLY','config_sha256':config_shas[shard],'plan_sha256':'aba9b2d1571cdc7c9aa7c4520233cafe7d7690f45bbcd7bbf7068339c78d67a9','dependency_snapshot_sha256':'ee033ab46b844168887a6e2e1f5a2b97cc460d1b43bbafd77be49897127950aa','validation_report_sha256':'25e34aa51fe935d544e967d97c181ad8e21b59220e7d0d75eb22628a191f85cb','counted_repetition_count':len(times),'required_repetition_count':3,'complete_path_wall_seconds':times,'median_complete_path_wall_seconds':median,'maximum_complete_path_wall_seconds':maximum,'hard_three_hour_gate':hard,'median_2h30_gate':bool(median is not None and median<=9000),'maximum_2h45_gate':bool(maximum is not None and maximum<=9900),'checkpoint_overhead_gate':overhead,'mathematical_completion_gate':mathematical,'fresh_checker_gate':fresh,'cancellation_recovery_gate':cancellation.get('status')=='PASSED','microbenchmark_nine_sample_gate':micro_ok,'microbenchmark_all_finite':finite,'identity_stable':identity,'tag_created':False,'freeze_authorized':False,'production_rehearsal_authorized':False,'certified_lambda_range':False}
+              (sdir/'PERFORMANCE_GATE_REPORT.json').write_text(json.dumps(report,sort_keys=True,separators=(',',':'))+'\n')
+              (sdir/'REPETITIONS.json').write_text(json.dumps({'schema':'ITEM3_SWEEP_V9_CONNECTED_REPETITIONS_V1','runs':reps},sort_keys=True,separators=(',',':'))+'\n')
+              (sdir/'PERFORMANCE_ENVIRONMENTS.json').write_text(json.dumps({'schema':'ITEM3_SWEEP_V9_CONNECTED_PERFORMANCE_ENVIRONMENTS_V1','runs':envs},sort_keys=True,separators=(',',':'))+'\n')
+              (sdir/'ALGORITHM_PERFORMANCE.json').write_text(json.dumps({'schema':'ITEM3_SWEEP_V9_CONNECTED_ALGORITHM_PERFORMANCE_V1','runs':algs},sort_keys=True,separators=(',',':'))+'\n')
+              (sdir/'CHECKPOINT_OVERHEAD.json').write_text(json.dumps({'schema':'ITEM3_SWEEP_V9_CONNECTED_CHECKPOINT_OVERHEAD_V1','runs':cps},sort_keys=True,separators=(',',':'))+'\n')
+              (sdir/'CANCELLATION_RECOVERY.json').write_text(json.dumps(cancellation,sort_keys=True,separators=(',',':'))+'\n')
+              with (sdir/'KERNEL_MICROBENCHMARK.jsonl').open('w') as f:
+                  for row in sorted(micro,key=lambda x:(x['input_class'],x['operation'],x['repetition'],x['sample'])): f.write(json.dumps(row,sort_keys=True,separators=(',',':'))+'\n')
+              with (sdir/'MEAN_VALUE_COMPONENTS.jsonl').open('w') as f:
+                  for row in sorted(mv,key=lambda x:(x['repetition'],x['sample'])): f.write(json.dumps(row,sort_keys=True,separators=(',',':'))+'\n')
+              summary.append({'shard_index':shard,'config_sha256':config_shas[shard],'status':report['status'],'gate_report_sha256':hashlib.sha256((sdir/'PERFORMANCE_GATE_REPORT.json').read_bytes()).hexdigest()})
+          all_pass=all(x['status']=='PASSED' for x in summary)
+          top={'schema':'ITEM3_SWEEP_V9_CONNECTED_QUALIFICATION_INDEX_V1','status':'PASSED' if all_pass else 'QUALIFICATION_FAIL','plan_sha256':'aba9b2d1571cdc7c9aa7c4520233cafe7d7690f45bbcd7bbf7068339c78d67a9','validation_report_sha256':'25e34aa51fe935d544e967d97c181ad8e21b59220e7d0d75eb22628a191f85cb','shards':summary,'counted_repetition_total':12 if all_pass else sum(3 for x in summary if x['status']=='PASSED'),'tag_created':False,'freeze_authorized':False,'certified_lambda_range':False}
+          (out/'QUALIFICATION_INDEX.json').write_text(json.dumps(top,sort_keys=True,separators=(',',':'))+'\n'); print(json.dumps(top,indent=2,sort_keys=True))
+          PY
+
+      - name: Commit qualification package regardless of PASS or FAIL
+        shell: bash
+        run: |
+          set -euo pipefail
+          P="$BASE/connected_pilot_qualification_v1"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- "$P"
+          git diff --cached --check
+          git commit -m "Record item3 v9 connected-pilot four-config qualification"
+          git push origin HEAD:agent/item3-v9-analytic-proof
+
+      - name: Final four-config gate
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path('CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/connected_pilot_qualification_v1/QUALIFICATION_INDEX.json')
+          raise SystemExit(0 if json.loads(p.read_text())['status']=='PASSED' else 1)
+          PY
