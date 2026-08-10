@@ -62,7 +62,7 @@ def _r_ball(arb_type: Any, fmpq_type: Any,
 def _regular_K(kernel: Any, acb_type: Any, arb_type: Any, fmpq_type: Any,
                u_lower: Fraction, u_upper: Fraction,
                s_lower: Fraction, s_upper: Fraction,
-               c_ball: Any, phi_ball: Any) -> Any:
+               c_ball: Any, phi_ball: Any, q_floor: Fraction) -> Any:
     r = _r_ball(arb_type, fmpq_type, u_lower, u_upper)
     lam = _lambda_ball(arb_type, fmpq_type, s_lower, s_upper)
     one = arb_type(1)
@@ -72,10 +72,16 @@ def _regular_K(kernel: Any, acb_type: Any, arb_type: Any, fmpq_type: Any,
     B = one-U*U
     W = one-r*U
     q = W*W + A + r*r*B
+    # The region-specific q_floor was proved independently before this call.
+    # max(q,q_floor) is an enclosure of the same mathematical q because q>=q_floor.
+    q = q.max(_arb_exact(arb_type, fmpq_type, q_floor))
     sqrt_q = q.sqrt()
     w = (lam*lam*(one-c_ball*c_ball) + c_ball*c_ball).sqrt()
     L = lam/w
-    gamma = L*W/sqrt_q
+    # The exact sum-of-squares identity audited in blocal_v22_symbolic_audit.py
+    # proves 0<=gamma<=1. Use that bounded extension instead of permitting
+    # dependency overestimation to cross the angle-data branch boundary.
+    gamma = _unit_interval(arb_type)
     h1, h2 = _h_derivatives(kernel, acb_type, gamma)
     N = -U*A-r*B
     gamma_r = L*N/(q*sqrt_q)
@@ -84,6 +90,8 @@ def _regular_K(kernel: Any, acb_type: Any, arb_type: Any, fmpq_type: Any,
 
 
 def _bhat_lower(eps: Fraction) -> Fraction:
+    # sin(t)/t >= cos(eps) >= 1-eps^2/2 on [0,eps]. Therefore
+    # B/rho^2 >= (1-eps^2/2)^2 on either Duffy triangle.
     lower_cos = 1 - eps*eps/Fraction(2)
     model.need(lower_cos > 0, "positive cosine lower bound")
     return lower_cos*lower_cos
@@ -96,6 +104,8 @@ def _r1_q_min(s_lower: Fraction, eps: Fraction) -> Fraction:
 
 
 def _r2_q_min(eps: Fraction) -> Fraction:
+    # On phi>=eps, U<=cos(eps), r<=1, so W>=1-cos(eps).
+    # Alternating Taylor: 1-cos(eps) >= eps^2/2-eps^4/24.
     d = eps*eps/Fraction(2) - eps**4/Fraction(24)
     model.need(d > 0, "positive R2 W lower bound")
     return d*d
@@ -147,6 +157,9 @@ def _duffy_J(kernel: Any, acb_type: Any, arb_type: Any, fmpq_type: Any,
     w = (lam*lam*(one-c*c)+c*c).sqrt()
     L = lam/w
 
+    # The exact Bhat is finite but would require a sinc implementation at x=0.
+    # The design permits certified interval bounds. We use the exact inequalities
+    # bhat_lo <= Bhat <= 1, valid on the whole dyadic square.
     bh_lo = _bhat_lower(eps)
     Bhat = _arb_interval(arb_type, fmpq_type, bh_lo, Fraction(1))
     M = U*Ahat+r*Bhat
@@ -156,7 +169,7 @@ def _duffy_J(kernel: Any, acb_type: Any, arb_type: Any, fmpq_type: Any,
     z = arb_type(0).union(z_upper)
     yq = _unit_interval(arb_type)
     v = _signed_unit_interval(arb_type)
-    gamma = _unit_interval(arb_type)
+    gamma = _unit_interval(arb_type)  # exact geometric bound, symbolically audited
     h1, h2 = _h_derivatives(kernel, acb_type, gamma)
     rho = eps_a*x*(one+t*t).sqrt()
 
@@ -211,6 +224,8 @@ def _integrate_regular(kernel: Any, acb_type: Any, arb_type: Any, fmpq_type: Any
         jac = eps_a*(pi-eps_a)
     else:
         raise ValueError("region")
+    # q_min is proved before direct evaluation. Its positivity is an invariant
+    # checked by both route and checker.
     model.need(q_min > 0, f"{region} q_min")
     count=0
     for a0,a1 in _grid(power):
@@ -224,7 +239,7 @@ def _integrate_regular(kernel: Any, acb_type: Any, arb_type: Any, fmpq_type: Any
                 c = eps_a*a
                 phi = eps_a+(pi-eps_a)*b
             value = _regular_K(kernel,acb_type,arb_type,fmpq_type,
-                               u_lower,u_upper,s_lower,s_upper,c,phi)
+                               u_lower,u_upper,s_lower,s_upper,c,phi,q_min)
             area = (a1-a0)*(b1-b0)
             total += value*jac*_arb_exact(arb_type,fmpq_type,area)
             count += 1
