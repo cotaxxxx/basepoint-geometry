@@ -112,7 +112,7 @@ It is insufficient merely to state that `B_hat` is approximately one near the co
 
 Failure to prove `Z_DEN_LO > 0` is `INDETERMINATE` and fails closed.
 
-## 4. Integration variable c = cos(theta)
+## 4. Integration variable c = cos(theta) and exact measure cancellation
 
 The normative angular variables for the boundary-strip route are `(c,phi)`, not `(theta,phi)`.
 
@@ -122,13 +122,23 @@ Since
 
 one has
 
-`dtheta = -dc / sqrt(1-c^2)`.
+`dtheta = -dc / sqrt(1-c^2)`
 
-After reversing limits, the angular integral is written over `c in [0,1]` with the exact Jacobian factor
+and
 
-`1 / sqrt(1-c^2)`.
+`sin(theta) = sqrt(1-c^2)`.
 
-This factor is part of the full regularized integrand and must be enclosed rigorously. The singular patch is placed near `c=0`, so on the patch this denominator is separated from zero. The implementation must prove the relevant lower bound for `1-c^2` on every patch box before taking the square root or reciprocal.
+Therefore the factor `sin(theta)` already present in the pinned full `dFdr` angular integrand cancels the change-of-variable denominator exactly:
+
+`sin(theta) dtheta = -dc`.
+
+After reversing limits,
+
+`sin(theta) K dtheta dphi = K dc dphi`,
+
+where `K` is the full derivative bracket defined in Section 7.
+
+This cancellation is normative and must be recorded by the symbolic audit before interval evaluation. The implementation must **not** separately enclose `1/sqrt(1-c^2)` and must not impose a positive lower-bound obligation on `1-c^2`. In particular, the regular piece `R1` is allowed to contain `c=1`; no artificial singularity may be reintroduced there by separating factors that cancel exactly.
 
 Using `c` as the integration variable is normative because it keeps all patch boundaries exact dyadic rationals and avoids transcendental endpoints such as `arccos(eps)`.
 
@@ -184,17 +194,26 @@ The absolute Jacobian is
 
 for both triangles.
 
+The local radial factor is triangle-specific and must be recorded explicitly:
+
+- on T1, `rho_T1 = eps x sqrt(1+y^2)` because `(c,phi) = (eps x, eps x y)`;
+- on T2, `rho_T2 = eps x sqrt(1+y^2)` because `(c,phi) = (eps x y, eps x)`.
+
+Although the same scalar expression occurs in both triangles, the assignments of `c` and `phi` are exchanged. Consequently `A_hat`, `B_hat`, `M`, and the proof of `Z_DEN_LO` must be evaluated using the correct triangle-specific substitution; values or bounds from T1 may not be silently reused for T2.
+
 The transformed integrand must be algebraically rewritten before Arb evaluation so that the factor `x` supplied by the Jacobian cancels the corner growth. A literal singular quotient evaluated first and multiplied by `x` afterwards is forbidden.
 
 The shared diagonal and the coordinate axes may be covered by both transformed triangles only as shared measure-zero faces. The checker must verify the exact square reconstruction.
 
 ## 7. Normative cancellation-free full dFdr expression
 
-Let the full `dFdr` angular integrand before changing `theta` to `c` be
+Define the full derivative bracket **without** the outer `sin(theta)` factor by
 
-`I = sin(theta) * [-2 U h'(gamma) gamma_r + W(h''(gamma) gamma_r^2 + h'(gamma) gamma_rr)]`.
+`K = -2 U h'(gamma) gamma_r + W(h''(gamma) gamma_r^2 + h'(gamma) gamma_rr)`.
 
-After the exact substitutions above, and after multiplication by the local radial Jacobian factor `rho`, the following expression is normative wherever the original formula is finite:
+The pinned full angular integrand is `sin(theta) * K`.
+
+After the exact substitutions above, and after multiplication of `K` by the local radial factor `rho`, the following expression is normative wherever the original formula is finite:
 
 `J = L * [ 2 U h'(gamma) M z^3`
 
@@ -204,17 +223,27 @@ After the exact substitutions above, and after multiplication by the local radia
 
 The symbolic audit must verify exact equality
 
-`J = rho * I`
+`J = rho * K`
 
 on the algebraic domain where the original `gamma_r` and `gamma_rr` expressions are defined.
 
-For the actual `(c,phi)` integral, the implementation must additionally include the exact change-of-variable factor
+By Section 4, the `sin(theta)` factor and `dtheta/dc` cancel exactly. Thus the `(c,phi)` integrand is simply `K`.
 
-`1 / sqrt(1-c^2)`
+On either Duffy triangle,
 
-and the exact Duffy Jacobian `eps^2 x`.
+`dc dphi = eps^2 x dx dy`
 
-No implementation may drop, absorb without record, or approximate either Jacobian.
+and
+
+`rho = eps x sqrt(1+y^2)`.
+
+Therefore the actual transformed singular-patch integrand is exactly
+
+`(eps / sqrt(1+y^2)) * J`.
+
+This transformed expression, not `J` alone and not a separately evaluated `1/sqrt(1-c^2)` factor, is the normative finite quantity to be enclosed and integrated on the Duffy square.
+
+No implementation may drop, approximate, or absorb without record the factor `eps/sqrt(1+y^2)`.
 
 ## 8. Corner enclosure rule
 
@@ -227,19 +256,19 @@ Instead, on any transformed box containing `x=0`, it must use certified bounded 
 - `0 <= z <= 1/sqrt(Z_DEN_LO)` from Section 3;
 - exact interval bounds for `U`, `L`, `A_hat`, `B_hat`, `M`, `h'(gamma)`, and `h''(gamma)` from finite expressions and the bounded `gamma = L y` range.
 
-The product expression in Section 7 is then enclosed as a finite interval directly.
+The product expression in Section 7 is then enclosed as a finite interval directly, including the exact transformed measure factor `eps/sqrt(1+y^2)`.
 
 A direct quotient evaluation that produces non-finite Arb followed by exception handling is forbidden.
 
 ## 9. Regular complement route
 
-On `R1` and `R2`, the route must first certify a strict positive lower bound
+On `R1` and `R2`, after the exact measure cancellation of Section 4, the route must first certify a strict positive lower bound
 
 `q_min > 0`
 
-for each proof box.
+for each proof box before using a direct algebraic representation containing negative powers of `q`.
 
-Only then may the direct pinned full `dFdr` formula be used on that box. The existing canonical Arb-to-dyadic adapter remains unchanged and accepts only finite output.
+Only then may the direct pinned full `dFdr` bracket `K` be evaluated on that box. The existing canonical Arb-to-dyadic adapter remains unchanged and accepts only finite output.
 
 If a box cannot prove `q_min > 0`, it must be subdivided or fail closed according to the fixed budget. No silent switch to the Duffy route is permitted on a regular-region box.
 
@@ -251,9 +280,11 @@ The new symbolic audit must independently establish at least:
 2. `q = (r-U)^2 + B + A`;
 3. `N = -U A - r B`;
 4. with `A=rho^2 A_hat`, `B=rho^2 B_hat`, `N=-rho^2 M`;
-5. the exact algebraic equality `J = rho * I`;
+5. the exact algebraic equality `J = rho * K`;
 6. the two Duffy Jacobians equal `eps^2 x`;
-7. the `c=cos(theta)` Jacobian equals `1/sqrt(1-c^2)` after reversing limits.
+7. `sin(theta) * dtheta/dc = -1`, with the sign removed only by exact reversal of the `c` integration limits;
+8. on each triangle, `rho = eps x sqrt(1+y^2)` with the triangle-specific assignment of `(c,phi)`;
+9. the final transformed singular-patch integrand is exactly `(eps/sqrt(1+y^2)) * J`.
 
 The audit is exact algebra only. Numerical agreement is not a substitute.
 
@@ -266,24 +297,27 @@ In addition to the v2.2 base-design fields, each boundary-strip singular-patch r
 - Duffy triangle ID (`T1` or `T2`);
 - exact transformed `(x,y)` box;
 - exact source `(c,phi)` image bounds or reconstruction data;
+- the triangle-specific `rho` definition;
 - proved lower bound `Z_DEN_LO`;
 - bounds used for `y`, `v`, and `z`;
-- the `1/sqrt(1-c^2)` enclosure;
-- the finite regularized full-integrand enclosure;
+- the exact measure-cancellation identity ID;
+- the finite regularized `J` enclosure;
 - the Duffy-Jacobian factor;
-- the resulting contribution enclosure;
+- the final `(eps/sqrt(1+y^2))*J` contribution enclosure;
 - symbolic-audit source SHA-256;
 - boundary-route source SHA-256;
 - pinned kernel SHA-256.
 
-Regular-region records must expose their exact `(c,phi)` box and proved `q_min > 0` before the direct evaluation enclosure.
+Regular-region records must expose their exact `(c,phi)` box, the measure-cancellation identity ID, and proved `q_min > 0` before the direct evaluation enclosure.
 
 ## 12. Negative controls
 
 The implementation/checker test suite must include at least:
 
-- omit the `c=cos(theta)` Jacobian => rejection;
-- omit the Duffy Jacobian => rejection;
+- fail to prove the exact `sin(theta)` / `dtheta/dc` cancellation => release-readiness rejection;
+- separately evaluate `1/sqrt(1-c^2)` after cancellation should have occurred => rejection;
+- omit the Duffy Jacobian or the derived `eps/sqrt(1+y^2)` factor => rejection;
+- use the T1 substitution or `A_hat/B_hat` bounds silently for a T2 record, or conversely => rejection;
 - use a circular patch or transcendental patch boundary => config/checker rejection;
 - permit `Z_DEN_LO <= 0` => boundary record not certified;
 - directly evaluate `z`, `y`, or `v` as `0/0` at a box containing the corner => fail closed;
@@ -295,6 +329,6 @@ The implementation/checker test suite must include at least:
 
 This addendum is design-only.
 
-1. Add this file only. **STOP for chat byte-audit.**
+1. Add and audit this corrected file only. **STOP for chat byte-audit.**
 2. After GREEN, step 2 implementation may begin using this addendum and the base v2.2 design together as the normative design contract.
 3. No code/config/pin/workflow/tag change is authorized by this addendum itself.
