@@ -66,7 +66,10 @@ def _regular_K(kernel: Any, acb_type: Any, arb_type: Any, fmpq_type: Any,
     r = _r_ball(arb_type, fmpq_type, u_lower, u_upper)
     lam = _lambda_ball(arb_type, fmpq_type, s_lower, s_upper)
     one = arb_type(1)
-    S = (one-c_ball*c_ball).sqrt()
+    # c is mathematically in [0,1]. Clamp only the dependency-rounding
+    # overshoot before sqrt; this is the exact nonnegative quantity S^2.
+    S2 = (one-c_ball*c_ball).max(arb_type(0))
+    S = S2.sqrt()
     U = S * phi_ball.cos()
     A = (lam*lam-one) * c_ball*c_ball
     B = one-U*U
@@ -76,7 +79,7 @@ def _regular_K(kernel: Any, acb_type: Any, arb_type: Any, fmpq_type: Any,
     # max(q,q_floor) is an enclosure of the same mathematical q because q>=q_floor.
     q = q.max(_arb_exact(arb_type, fmpq_type, q_floor))
     sqrt_q = q.sqrt()
-    w = (lam*lam*(one-c_ball*c_ball) + c_ball*c_ball).sqrt()
+    w = (lam*lam*S2 + c_ball*c_ball).sqrt()
     L = lam/w
     # The exact sum-of-squares identity audited in blocal_v22_symbolic_audit.py
     # proves 0<=gamma<=1. Use that bounded extension instead of permitting
