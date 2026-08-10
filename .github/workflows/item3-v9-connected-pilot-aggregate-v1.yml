@@ -1,0 +1,204 @@
+name: Item 3 v9 connected-pilot aggregate v1
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: item3-v9-connected-pilot-aggregate-v1
+  cancel-in-progress: false
+
+env:
+  BASE: CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate
+  IDBASE: CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/connected_pilot_identity_v1
+  PILOT: CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/connected_pilot_v1
+  PLAN: CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/connected_pilot_identity_v1/plan_config/connected_pilot_plan_v2.json
+  MANIFEST: CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/connected_pilot_identity_v1/qualification_manifest_v1/QUALIFICATION_MANIFEST.json
+  FREEZE_BASE: CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/connected_pilot_identity_v1/freeze_v1
+  OUT: CERTIFICATES/prolate/item3_center_connection/lambda_sweep/v9_candidate/connected_pilot_v1/aggregate_v1
+  FROZEN_COMMIT: 9c98d2ab5f7df7825162e76e5380caaae46e4a2f
+  PLAN_SHA256: aba9b2d1571cdc7c9aa7c4520233cafe7d7690f45bbcd7bbf7068339c78d67a9
+  MANIFEST_SHA256: 56b5cddb2791d5547dd08615d609ccdf3847c3c1df419426e2caac5f9bd40a83
+  COMPANION_SHA256: 0e81899add6ad773eb08e2bc29e7519b55bc580022f54573d5e791ccef718a2a
+
+jobs:
+  aggregate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout dispatched commit
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+
+      - name: Set up pinned Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.13.14"
+
+      - name: Install pinned validated arithmetic
+        run: python -m pip install --disable-pip-version-check python-flint==0.9.0
+
+      - name: Fail-closed aggregate preflight
+        shell: bash
+        run: |
+          set -euo pipefail
+          git merge-base --is-ancestor "$FROZEN_COMMIT" HEAD
+          test ! -e "$OUT"
+          python - <<'PY'
+          import hashlib,json,os,platform
+          from pathlib import Path
+          import flint
+
+          def sha(p): return hashlib.sha256(Path(p).read_bytes()).hexdigest()
+          def require(p,h,label):
+              got=sha(p)
+              if got!=h: raise SystemExit(f"{label} drift: {got} != {h}")
+
+          require(os.environ["PLAN"],os.environ["PLAN_SHA256"],"plan")
+          require(os.environ["MANIFEST"],os.environ["MANIFEST_SHA256"],"manifest")
+          companion=Path(os.environ["FREEZE_BASE"])/"FREEZE_AUTHORIZATION_COMPANION_2026-08-09.json"
+          require(companion,os.environ["COMPANION_SHA256"],"companion")
+
+          manifest=json.loads(Path(os.environ["MANIFEST"]).read_text())
+          arts=manifest.get("artifacts")
+          if not isinstance(arts,list) or len(arts)!=24: raise SystemExit("qualification manifest referent count mismatch")
+          seen=set()
+          for e in arts:
+              if not isinstance(e,dict) or set(e)!={"path","sha256"}: raise SystemExit("manifest entry field set mismatch")
+              if e["path"] in seen: raise SystemExit("duplicate manifest referent")
+              seen.add(e["path"]); require(e["path"],e["sha256"],f"manifest referent {e['path']}")
+
+          configs=[
+            "f3838d1c49f917e19fabfdb8c991dd5040128f81aadd58a930218dceecef2b03",
+            "2c1a612c1d32c5675af92dd0fad2c07b4af18b0bab370e62d44a68a8d44d0f41",
+            "32214842510f63cdf781dac4f145d5d4a46942b1194d9386717cdba1a4c95002",
+            "36bd40c39c722805f3742b3a9e8f562e2c39deca07c4f27666f54a88bf6e7ebe",
+          ]
+          receipts=[
+            "dd95ef88e693c141cdf992addb7e288effc498d022d7c8d5332587e5ba89a8dc",
+            "e0fe7e31fed5714ef4c1605976e8285e2196a960bef6978e67bfcedfe6f09524",
+            "1d0f47982cd489f36267479441ade3f112e1493dc0cd53972273dc5765644d62",
+            "18694837519ac9e4bcaac4566643d7e4cba5dedb0516342dc4178553909315ee",
+          ]
+          for i in range(4):
+              cfg=Path(os.environ["IDBASE"])/"plan_config"/f"shard_{i}_config_v1.json"
+              rec=Path(os.environ["FREEZE_BASE"])/f"shard_{i}"/"FREEZE_RECEIPT.json"
+              ev=Path(os.environ["PILOT"])/f"shard_{i}"/"SHARD_EVIDENCE_CANDIDATE.json"
+              prov=Path(os.environ["PILOT"])/f"shard_{i}"/"SHARD_PROVENANCE.json"
+              status=Path(os.environ["PILOT"])/f"shard_{i}"/"SHARD_STATUS.json"
+              require(cfg,configs[i],f"config {i}")
+              require(rec,receipts[i],f"receipt {i}")
+              for p in (ev,prov,status):
+                  if not p.is_file(): raise SystemExit(f"missing shard artifact: {p}")
+              e=json.loads(ev.read_text()); p=json.loads(prov.read_text()); s=json.loads(status.read_text())
+              if e.get("authorization")!="FROZEN_PRODUCTION" or p.get("authorization")!="FROZEN_PRODUCTION": raise SystemExit(f"shard {i} authorization mismatch")
+              if e.get("freeze_receipt_sha256")!=receipts[i] or p.get("freeze_receipt_sha256")!=receipts[i]: raise SystemExit(f"shard {i} receipt propagation mismatch")
+              if s.get("status")!="MACHINE_PASS_PENDING_AGGREGATION": raise SystemExit(f"shard {i} status mismatch")
+              if s.get("certified_lambda_range") or s.get("tag_created") or s.get("connected_sweep_authorized"): raise SystemExit(f"shard {i} forbidden promotion flag")
+
+          if platform.python_version()!="3.13.14": raise SystemExit("Python mismatch")
+          if getattr(flint,"__version__",None)!="0.9.0": raise SystemExit("python-flint mismatch")
+          if getattr(flint,"__FLINT_VERSION__",None)!="3.6.0": raise SystemExit("FLINT mismatch")
+          PY
+
+      - name: Run pinned four-shard aggregate verifier
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p aggregate-work
+          python - <<'PY' > aggregate-work/AGGREGATE_STDOUT.log 2> aggregate-work/AGGREGATE_STDERR.log
+          import importlib.util,os,sys
+          from pathlib import Path
+          base=Path(os.environ["BASE"])
+          verifier_path=base/"aggregate_verifier_v9_candidate_v2.py"
+          spec=importlib.util.spec_from_file_location("item3_v9_connected_pilot_aggregate",verifier_path)
+          mod=importlib.util.module_from_spec(spec)
+          sys.modules[spec.name]=mod
+          spec.loader.exec_module(mod)
+          idbase=Path(os.environ["IDBASE"]); freeze=Path(os.environ["FREEZE_BASE"]); pilot=Path(os.environ["PILOT"])
+          mod.write_aggregate_verdict(
+              output_path=Path("aggregate-work/AGGREGATE_VERIFIER_REPORT.json"),
+              plan_path=Path(os.environ["PLAN"]),
+              config_paths=[idbase/"plan_config"/f"shard_{i}_config_v1.json" for i in range(4)],
+              freeze_receipt_paths=[freeze/f"shard_{i}"/"FREEZE_RECEIPT.json" for i in range(4)],
+              evidence_paths=[pilot/f"shard_{i}"/"SHARD_EVIDENCE_CANDIDATE.json" for i in range(4)],
+              provenance_paths=[pilot/f"shard_{i}"/"SHARD_PROVENANCE.json" for i in range(4)],
+          )
+          PY
+
+      - name: Build additive aggregate package
+        shell: bash
+        run: |
+          set -euo pipefail
+          test ! -e "$OUT"
+          mkdir -p "$OUT"
+          cp aggregate-work/AGGREGATE_STDOUT.log "$OUT/"
+          cp aggregate-work/AGGREGATE_STDERR.log "$OUT/"
+          cp aggregate-work/AGGREGATE_VERIFIER_REPORT.json "$OUT/"
+          cp aggregate-work/AGGREGATE_VERIFIER_REPORT.json.sha256 "$OUT/" 2>/dev/null || true
+          python - <<'PY'
+          import hashlib,json,os
+          from pathlib import Path
+          out=Path(os.environ["OUT"]); report=out/"AGGREGATE_VERIFIER_REPORT.json"
+          def sha(p): return hashlib.sha256(Path(p).read_bytes()).hexdigest()
+          obj=json.loads(report.read_text()); chain=obj.get("selected_chain_tip_sha256")
+          if chain: (out/"CHAIN_TIP.txt").write_text(chain+"\n",encoding="ascii")
+          status={
+              "schema":"ITEM3_SWEEP_V9_CONNECTED_PILOT_STATUS_V1",
+              "status":"PROMOTION_PENDING_AUDIT",
+              "machine_status_recorded":obj.get("status"),
+              "machine_report_sha256":sha(report),
+              "selected_chain_tip_sha256":chain,
+              "certified_lambda_range":False,
+              "tag_created":False,
+              "connected_sweep_authorized":False,
+              "promotion_pending_audit":True,
+              "nonclaim":"The pinned aggregate verifier machine status is stored unmodified as raw machine output and is not an official promotion until chat full audit and separate explicit user approval."
+          }
+          (out/"CONNECTED_PILOT_STATUS.json").write_text(json.dumps(status,sort_keys=True,separators=(",",":"))+"\n")
+          hashes={}
+          for p in sorted(out.iterdir()):
+              if p.is_file() and p.name!="PACKAGE_HASHES.json": hashes[p.name]=sha(p)
+          (out/"PACKAGE_HASHES.json").write_text(json.dumps({"schema":"ITEM3_SWEEP_V9_CONNECTED_PILOT_AGGREGATE_PACKAGE_HASHES_V1","files":hashes},sort_keys=True,separators=(",",":"))+"\n")
+          PY
+
+      - name: Upload aggregate evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: item3-v9-connected-pilot-aggregate-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            aggregate-work/
+            ${{ env.OUT }}/
+
+      - name: Commit aggregate package additively
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- "$OUT"
+          git diff --cached --check
+          git diff --cached --name-only | awk -v p="$OUT/" 'index($0,p)!=1 {bad=1} END {exit bad}'
+          git commit -m "Record item3 v9 connected-pilot aggregate v1"
+          git fetch origin agent/item3-v9-analytic-proof
+          git rebase origin/agent/item3-v9-analytic-proof
+          git push origin HEAD:agent/item3-v9-analytic-proof
+
+      - name: Enforce machine-result/promotion separation
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          out=Path(os.environ["OUT"])
+          report=json.loads((out/"AGGREGATE_VERIFIER_REPORT.json").read_text())
+          status=json.loads((out/"CONNECTED_PILOT_STATUS.json").read_text())
+          if report.get("status")!="CERTIFIED_LAMBDA_RANGE": raise SystemExit(f"unexpected aggregate machine status: {report.get('status')!r}")
+          if status.get("status")!="PROMOTION_PENDING_AUDIT": raise SystemExit("status separation failed")
+          if status.get("certified_lambda_range") or status.get("tag_created") or status.get("connected_sweep_authorized"): raise SystemExit("promotion flag must remain false")
+          PY
