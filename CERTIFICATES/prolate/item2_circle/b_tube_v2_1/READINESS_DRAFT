@@ -1,6 +1,9 @@
 B-LOCAL v2.2 READINESS DRAFT
 base_commit=f21704b2cbd2954acb492ec2a58dbb0765773f1f
+readiness_draft_revision=2
 source_count=9
+native_repairs=R-1,R-2,R-3,R-4
+performance_blocker=R-5_UNRESOLVED
 config_materialized=false
 certificate_evidence=false
 production_authorized=false
