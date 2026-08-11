@@ -1,0 +1,141 @@
+name: B-LOCAL v2.2 method-selection Taylor2 diagnostic
+
+on:
+  push:
+    branches:
+      - agent/blocal-v22-method-selection-taylor2
+
+permissions:
+  contents: read
+  statuses: write
+
+env:
+  BLOCAL_DIR: CERTIFICATES/prolate/item2_circle/b_tube_v2_1
+  EPHEMERAL_CONFIG: CERTIFICATES/prolate/item2_circle/b_tube_v2_1/config.blocal-v2.2-readiness-ephemeral.json
+  PROBE: CERTIFICATES/prolate/item2_circle/b_tube_v2_1/diagnostics/blocal_v22_method_taylor2_probe.py
+
+jobs:
+  method-selection:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/blocal-v22-method-selection-taylor2
+          persist-credentials: false
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Guard diagnostic-only authorization
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -qx 'config_materialized=false' "$BLOCAL_DIR/READINESS_DRAFT"
+          grep -qx 'production_authorized=false' "$BLOCAL_DIR/READINESS_DRAFT"
+          grep -qx 'tag_authorized=false' "$BLOCAL_DIR/READINESS_DRAFT"
+          echo "COMMITTED_CONFIG_SHA256=$(sha256sum "$BLOCAL_DIR/config.blocal-v2.2-run.json" | awk '{print $1}')" >> "$GITHUB_ENV"
+
+      - name: Install pinned Arb runtime
+        run: python -m pip install --disable-pip-version-check python-flint==0.9.0
+
+      - name: Runtime version record
+        shell: bash
+        run: |
+          set -euo pipefail
+          python --version
+          python - <<'PY'
+          import importlib.metadata, platform
+          print('python-flint='+importlib.metadata.version('python-flint'))
+          print('platform='+platform.platform())
+          PY
+
+      - name: Materialize diagnostic ephemeral config
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import hashlib,json,sys
+          from pathlib import Path
+          h=Path('CERTIFICATES/prolate/item2_circle/b_tube_v2_1')
+          sys.path.insert(0,str(h.resolve()))
+          import blocal_v22_checker_test as ct
+          import blocal_v22_model as model
+          old=json.loads((h/'config.blocal-v2.2-run.json').read_text())
+          cfg=ct.config()
+          for key in ('stage1_dependency','kernel','adapter','base_v21','outputs'):
+              cfg[key]=old[key]
+          names=['blocal_v22_policy.py','blocal_v22_model.py','blocal_v22_boundary.py','blocal_v22_checker.py','blocal_v22_checker_test.py','blocal_v22_runner.py','blocal_v22_static_test.py','blocal_v22_symbolic_audit.py','blocal_v22_readiness_test.py']
+          prefix='CERTIFICATES/prolate/item2_circle/b_tube_v2_1/'
+          hashes={prefix+n:hashlib.sha256((h/n).read_bytes()).hexdigest() for n in names}
+          cfg['implementation']={'entrypoint_path':prefix+'blocal_v22_runner.py','sources_sha256':hashes}
+          cfg['checker']={'id':model.CHECKER_ID,'path':prefix+'blocal_v22_checker.py','source_sha256':hashes[prefix+'blocal_v22_checker.py']}
+          cfg['symbolic_audit']={'id':model.SYMBOLIC_AUDIT_ID,'path':prefix+'blocal_v22_symbolic_audit.py','source_sha256':hashes[prefix+'blocal_v22_symbolic_audit.py']}
+          model.validate_config(cfg)
+          out=h/'config.blocal-v2.2-readiness-ephemeral.json'
+          out.write_bytes(model.canonical_json_bytes(cfg))
+          print(json.dumps({'ephemeral_config_sha256':hashlib.sha256(out.read_bytes()).hexdigest(),'native_source_sha256':hashes},sort_keys=True,separators=(',',':')))
+          PY
+
+      - name: Static exact audits
+        shell: bash
+        working-directory: CERTIFICATES/prolate/item2_circle/b_tube_v2_1
+        run: |
+          set -euo pipefail
+          python blocal_v22_static_test.py
+          python blocal_v22_symbolic_audit.py
+
+      - name: Run fixed-budget method-selection probe
+        id: probe
+        shell: bash
+        run: |
+          set -uo pipefail
+          set +e
+          timeout 1200s python "$PROBE" | tee /tmp/blocal-v22-method-selection-taylor2.json
+          rc=${PIPESTATUS[0]}
+          echo "probe_rc=$rc" >> "$GITHUB_OUTPUT"
+          if [ "$rc" -eq 0 ]; then echo "probe_state=success" >> "$GITHUB_OUTPUT"; else echo "probe_state=failure" >> "$GITHUB_OUTPUT"; fi
+          exit 0
+
+      - name: Cleanup and provenance guard
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f "$EPHEMERAL_CONFIG"
+          test "$(sha256sum "$BLOCAL_DIR/config.blocal-v2.2-run.json" | awk '{print $1}')" = "$COMMITTED_CONFIG_SHA256"
+          git diff --exit-code -- "$BLOCAL_DIR/config.blocal-v2.2-run.json"
+
+      - name: Publish diagnostic commit status
+        if: always()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PROBE_STATE: ${{ steps.probe.outputs.probe_state }}
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json,os,urllib.request
+          state='success' if os.environ.get('PROBE_STATE')=='success' else 'failure'
+          body=json.dumps({
+            'state':state,
+            'context':'blocal-v22-method-selection-taylor2',
+            'description':'six-condition method-selection diagnostic='+state,
+            'target_url':f"https://github.com/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}"
+          }).encode()
+          req=urllib.request.Request(
+            f"https://api.github.com/repos/{os.environ['GITHUB_REPOSITORY']}/statuses/{os.environ['GITHUB_SHA']}",
+            data=body,method='POST',headers={'Authorization':f"Bearer {os.environ['GH_TOKEN']}",'Accept':'application/vnd.github+json','Content-Type':'application/json'})
+          print(urllib.request.urlopen(req).read().decode())
+          PY
+
+      - name: Verdict
+        if: always()
+        shell: bash
+        env:
+          PROBE_RC: ${{ steps.probe.outputs.probe_rc }}
+        run: |
+          set -euo pipefail
+          test "${PROBE_RC:-1}" -eq 0
