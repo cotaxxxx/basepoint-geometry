@@ -1,4 +1,4 @@
-name: B-LOCAL v2.2 readiness v8 structural-D F probe
+name: B-LOCAL v2.2 readiness v9 R1-V structural F probe
 
 on:
   push:
@@ -48,17 +48,29 @@ jobs:
       - name: Static
         working-directory: CERTIFICATES/prolate/item2_circle/b_tube_v2_1
         run: python blocal_v22_static_test.py
-      - name: Structural-D F probe
+      - name: Add R1 high-phi Vhat structural floor in diagnostic copy
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path("CERTIFICATES/prolate/item2_circle/b_tube_v2_1/diagnostics/blocal_v22_structural_D_probe_v8.py")
+          s=p.read_text()
+          old='''  if cell.region=="R1":\n   thi=p1/c0\n   af=coef/(1+thi*thi)\n   return af,{"A_floor":af,"B_floor":Fraction(0),"V2_floor":Fraction(0),"floor_source":"R1_AHAT"}\n'''
+          new='''  if cell.region=="R1":\n   thi=p1/c0\n   af=coef/(1+thi*thi);vf=Fraction(0);sources=["R1_AHAT"]\n   if p0>=HALF_PI_HI:\n    rlo=Fraction(1)-u1;rho2hi=c1*c1+p1*p1\n    if rlo>0:\n     vf=rlo*rlo/rho2hi;sources.append("V_LARGE_PHI")\n   total=af+vf\n   return total,{"A_floor":af,"B_floor":Fraction(0),"V2_floor":vf,"floor_source":"+".join(sources)}\n'''
+          assert old in s
+          p.write_text(s.replace(old,new))
+          PY
+      - name: R1-V structural F probe
         id: hat
         continue-on-error: true
         shell: bash
         run: |
           set -o pipefail
-          timeout 1200s python "$BLOCAL_DIR/diagnostics/blocal_v22_structural_D_probe_v8.py" | tee /tmp/v8.json
+          timeout 1200s python "$BLOCAL_DIR/diagnostics/blocal_v22_structural_D_probe_v8.py" | tee /tmp/v9.json
       - name: Cleanup
         if: always()
         run: |
           rm -f "$EPHEMERAL_CONFIG"
+          git checkout -- "$BLOCAL_DIR/diagnostics/blocal_v22_structural_D_probe_v8.py"
           test "$(git diff --name-only -- "$BLOCAL_DIR/config.blocal-v2.2-run.json")" = ""
       - name: Publish status
         if: always()
@@ -68,7 +80,7 @@ jobs:
         run: |
           python - <<'PY'
           import json,os,urllib.request
-          ok=os.environ["HAT"]=="success";b=json.dumps({"state":"success" if ok else "failure","context":"blocal-v22-readiness-v8-structural-D-probe","description":"structural_D_v8="+os.environ["HAT"],"target_url":f"https://github.com/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}"}).encode();r=urllib.request.Request(f"https://api.github.com/repos/{os.environ['GITHUB_REPOSITORY']}/statuses/{os.environ['GITHUB_SHA']}",data=b,method="POST",headers={"Authorization":f"Bearer {os.environ['GH_TOKEN']}","Accept":"application/vnd.github+json","Content-Type":"application/json"});print(urllib.request.urlopen(r).read().decode())
+          ok=os.environ["HAT"]=="success";b=json.dumps({"state":"success" if ok else "failure","context":"blocal-v22-readiness-v9-R1V-probe","description":"R1V_v9="+os.environ["HAT"],"target_url":f"https://github.com/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}"}).encode();r=urllib.request.Request(f"https://api.github.com/repos/{os.environ['GITHUB_REPOSITORY']}/statuses/{os.environ['GITHUB_SHA']}",data=b,method="POST",headers={"Authorization":f"Bearer {os.environ['GH_TOKEN']}","Accept":"application/vnd.github+json","Content-Type":"application/json"});print(urllib.request.urlopen(r).read().decode())
           PY
       - name: Verdict
         if: always()
