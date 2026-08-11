@@ -1,4 +1,4 @@
-name: B-LOCAL v2.2 readiness v14 direct-B probe
+name: B-LOCAL v2.2 readiness v15 exact-R1-sector probe
 on:
   push:
     branches: ["agent/blocal-v22-readiness-draft"]
@@ -47,17 +47,44 @@ jobs:
       - name: Static
         working-directory: CERTIFICATES/prolate/item2_circle/b_tube_v2_1
         run: python blocal_v22_static_test.py
-      - name: Direct-B structural F probe
+      - name: Apply exact R1 half-sector diagnostic
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path("CERTIFICATES/prolate/item2_circle/b_tube_v2_1/diagnostics/blocal_v22_direct_B_probe_v14.py")
+          s=p.read_text()
+          # In the R1 structural-floor branch, phi=pi*b exactly.  Use b=1/2,
+          # not mixed lower/upper rational brackets for pi.
+          old='if p1<=HALF_PI_HI:'
+          assert old in s
+          s=s.replace(old,'if cell.b1<=Fraction(1,2):',1)
+          old='if p0>=HALF_PI_HI:'
+          assert old in s
+          s=s.replace(old,'if cell.b0>=Fraction(1,2):',1)
+          # In regular evaluation use the same exact R1 sector test; retain the
+          # old rational safe test for R2.
+          old='if p1<=HALF_PI_HI:'
+          assert old in s
+          s=s.replace(old,'if (cell.region=="R1" and cell.b1<=Fraction(1,2)) or (cell.region=="R2" and p1<=HALF_PI_HI):',1)
+          # A regular R1 cell crossing b=1/2 must be split in b before the
+          # ratio-width heuristic is consulted.
+          needle='''  c0,c1,p0,p1=src(cell,eps_split)\n  if cell.region=="R2" and c0==0 and Fraction(1)-p1*p1/Fraction(6)<=0 and p0<HALF_PI_HI:return B\n'''
+          repl='''  c0,c1,p0,p1=src(cell,eps_split)\n  if cell.region=="R1" and cell.b0<Fraction(1,2)<cell.b1:return B\n  if cell.region=="R2" and c0==0 and Fraction(1)-p1*p1/Fraction(6)<=0 and p0<HALF_PI_HI:return B\n'''
+          assert needle in s
+          p.write_text(s.replace(needle,repl))
+          PY
+      - name: Exact-R1-sector structural F probe
         id: probe
         continue-on-error: true
         shell: bash
         run: |
           set -o pipefail
-          timeout 1200s python "$BLOCAL_DIR/diagnostics/blocal_v22_direct_B_probe_v14.py" | tee /tmp/v14.json
+          timeout 1200s python "$BLOCAL_DIR/diagnostics/blocal_v22_direct_B_probe_v14.py" | tee /tmp/v15.json
       - name: Cleanup
         if: always()
         run: |
           rm -f "$EPHEMERAL_CONFIG"
+          git checkout -- "$BLOCAL_DIR/diagnostics/blocal_v22_direct_B_probe_v14.py"
           test "$(git diff --name-only -- "$BLOCAL_DIR/config.blocal-v2.2-run.json")" = ""
       - name: Publish status
         if: always()
@@ -67,7 +94,7 @@ jobs:
         run: |
           python - <<'PY'
           import json,os,urllib.request
-          ok=os.environ["PROBE"]=="success";body=json.dumps({"state":"success" if ok else "failure","context":"blocal-v22-readiness-v14-direct-B","description":"direct_B_v14="+os.environ["PROBE"],"target_url":f"https://github.com/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}"}).encode();req=urllib.request.Request(f"https://api.github.com/repos/{os.environ['GITHUB_REPOSITORY']}/statuses/{os.environ['GITHUB_SHA']}",data=body,method="POST",headers={"Authorization":f"Bearer {os.environ['GH_TOKEN']}","Accept":"application/vnd.github+json","Content-Type":"application/json"});print(urllib.request.urlopen(req).read().decode())
+          ok=os.environ["PROBE"]=="success";body=json.dumps({"state":"success" if ok else "failure","context":"blocal-v22-readiness-v15-R1-sector","description":"R1_sector_v15="+os.environ["PROBE"],"target_url":f"https://github.com/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}"}).encode();req=urllib.request.Request(f"https://api.github.com/repos/{os.environ['GITHUB_REPOSITORY']}/statuses/{os.environ['GITHUB_SHA']}",data=body,method="POST",headers={"Authorization":f"Bearer {os.environ['GH_TOKEN']}","Accept":"application/vnd.github+json","Content-Type":"application/json"});print(urllib.request.urlopen(req).read().decode())
           PY
       - name: Verdict
         if: always()
