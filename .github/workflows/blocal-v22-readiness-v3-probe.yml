@@ -1,0 +1,391 @@
+name: B-LOCAL v2.2 readiness v3 probe
+
+on:
+  push:
+    branches:
+      - "agent/blocal-v22-readiness-draft"
+    paths:
+      - ".github/workflows/blocal-v22-readiness-v3-probe.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: blocal-v22-readiness-v3-probe-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  probe:
+    if: github.ref_name == 'agent/blocal-v22-readiness-draft'
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    permissions:
+      contents: read
+    env:
+      BLOCAL_DIR: CERTIFICATES/prolate/item2_circle/b_tube_v2_1
+      EPHEMERAL_CONFIG: CERTIFICATES/prolate/item2_circle/b_tube_v2_1/config.blocal-v2.2-readiness-ephemeral.json
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/blocal-v22-readiness-draft
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Guard diagnostic-only authorization
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${GITHUB_REF_NAME}" = "agent/blocal-v22-readiness-draft"
+          test -f "$BLOCAL_DIR/READINESS_DRAFT"
+          grep -qx 'config_materialized=false' "$BLOCAL_DIR/READINESS_DRAFT"
+          grep -qx 'production_authorized=false' "$BLOCAL_DIR/READINESS_DRAFT"
+          grep -qx 'tag_authorized=false' "$BLOCAL_DIR/READINESS_DRAFT"
+
+      - name: Install pinned Arb runtime
+        run: python -m pip install --disable-pip-version-check python-flint==0.9.0
+
+      - name: Materialize ephemeral readiness config only
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from __future__ import annotations
+          import hashlib, json, sys
+          from pathlib import Path
+          here = Path("CERTIFICATES/prolate/item2_circle/b_tube_v2_1")
+          sys.path.insert(0, str(here.resolve()))
+          import blocal_v22_checker_test as ct
+          import blocal_v22_model as model
+          old = json.loads((here / "config.blocal-v2.2-run.json").read_text(encoding="utf-8"))
+          cfg = ct.config()
+          for key in ("stage1_dependency", "kernel", "adapter", "base_v21", "outputs"):
+              cfg[key] = old[key]
+          names = [
+              "blocal_v22_policy.py","blocal_v22_model.py","blocal_v22_boundary.py",
+              "blocal_v22_checker.py","blocal_v22_checker_test.py","blocal_v22_runner.py",
+              "blocal_v22_static_test.py","blocal_v22_symbolic_audit.py","blocal_v22_readiness_test.py",
+          ]
+          prefix = "CERTIFICATES/prolate/item2_circle/b_tube_v2_1/"
+          hashes = {prefix+n: hashlib.sha256((here/n).read_bytes()).hexdigest() for n in names}
+          cfg["implementation"] = {"entrypoint_path":prefix+"blocal_v22_runner.py","sources_sha256":hashes}
+          cfg["checker"] = {"id":model.CHECKER_ID,"path":prefix+"blocal_v22_checker.py","source_sha256":hashes[prefix+"blocal_v22_checker.py"]}
+          cfg["symbolic_audit"] = {"id":model.SYMBOLIC_AUDIT_ID,"path":prefix+"blocal_v22_symbolic_audit.py","source_sha256":hashes[prefix+"blocal_v22_symbolic_audit.py"]}
+          model.validate_config(cfg)
+          out = here / "config.blocal-v2.2-readiness-ephemeral.json"
+          out.write_bytes(model.canonical_json_bytes(cfg))
+          print(json.dumps({"ephemeral_config_sha256":hashlib.sha256(out.read_bytes()).hexdigest(),"source_sha256":hashes,"certificate_evidence":False},sort_keys=True,separators=(",",":")))
+          PY
+
+      - name: Static exact audits
+        working-directory: CERTIFICATES/prolate/item2_circle/b_tube_v2_1
+        run: python blocal_v22_static_test.py
+
+      - name: Build R5-R7 diagnostic probe
+        shell: bash
+        run: |
+          cat > "$RUNNER_TEMP/blocal_v22_v3_probe.py" <<'PY'
+          from __future__ import annotations
+          import collections, heapq, json, sys, time
+          from fractions import Fraction
+          from pathlib import Path
+          from typing import Any
+
+          root = Path.cwd()
+          here = root / "CERTIFICATES/prolate/item2_circle/b_tube_v2_1"
+          sys.path.insert(0, str(here))
+          import blocal_v22_model as model
+          import blocal_v22_policy as policy
+          import blocal_v22_readiness_test as readiness
+
+          config = model.parse_canonical_json((here/"config.blocal-v2.2-readiness-ephemeral.json").read_bytes())
+          model.validate_config(config)
+          from flint import acb, arb, ctx, fmpq
+          ctx.prec = config["precision"]["bits"]
+          route, adapter, kernel = readiness.load(config)
+          s_first = model.fraction_from_dyadic(config["lambda_candidates"][0])
+          lam = model.LAMBDA_PLUS + s_first
+          umax = model.fraction_from_dyadic(config["u_max_candidates"][0])
+
+          def factor_at(q: Fraction, power: int, where: str):
+              qa = route._arb_exact(arb, fmpq, q)
+              sq = qa.sqrt()
+              invq = arb(1) / qa
+              invs = arb(1) / sq
+              if power == 1:
+                  out = invs
+              elif power == 3:
+                  out = invq * invs
+              elif power == 5:
+                  out = invq * invq * invs
+              else:
+                  raise ValueError(power)
+              route._canonical(adapter, out, where)
+              return out
+
+          def q_factor_pair(q_ball: Any, q_lo: Fraction, power: int, where: str):
+              qiv = route._canonical(adapter, q_ball, where+".q")
+              _, q_hi = model.interval_fractions(qiv, where+".q")
+              model.need(q_lo > 0 and q_hi >= q_lo, where+": q endpoints")
+              # q^(-power/2) decreases with q.  Keep the two positive endpoint
+              # factors separate; never union them before multiplication.
+              flo = factor_at(q_hi, power, where+".factor_lo")
+              fhi = factor_at(q_lo, power, where+".factor_hi")
+              return flo, fhi, q_hi
+
+          def scale_pair(value: Any, pair, where: str):
+              flo, fhi = pair
+              a = value * flo
+              b = value * fhi
+              route._canonical(adapter, a, where+".at_lo")
+              route._canonical(adapter, b, where+".at_hi")
+              out = a.union(b)
+              route._canonical(adapter, out, where+".hull")
+              return out
+
+          def regular_eval(quantity, kernel_, adapter_, acb_type, arb_type, fmpq_type,
+                           cell, u0, u1, s0, s1, eps):
+              r=route._r_ball(arb_type,fmpq_type,u0,u1)
+              lam_b=route._lambda_ball(arb_type,fmpq_type,s0,s1)
+              lam_lo=model.LAMBDA_PLUS+s0
+              pi=arb_type.pi();one=arb_type(1);eps_a=route._arb_exact(arb_type,fmpq_type,eps)
+              a=route._arb_interval(arb_type,fmpq_type,cell.a0,cell.a1)
+              b=route._arb_interval(arb_type,fmpq_type,cell.b0,cell.b1)
+              r2_w_lo=None; r2_cos_hi=None
+              if cell.region=="R1":
+                  c=eps_a+(one-eps_a)*a;phi=pi*b;measure=(one-eps_a)*pi
+              elif cell.region=="R2":
+                  c=eps_a*a;phi=eps_a+(pi-eps_a)*b;measure=eps_a*(pi-eps_a)
+                  r2_w_lo,r2_cos_hi=route._r2_w_lower(adapter_,arb_type,fmpq_type,cell,u0,eps)
+              else: raise ValueError("regular region")
+              g=route._geometry(adapter_,arb_type,fmpq_type,r,lam_b,c,phi)
+              qlo=route._regular_q_lo(cell.region,cell,lam_lo,eps,r2_w_lo)
+              p1lo,p1hi,qhi=q_factor_pair(g["q"],qlo,1,f"{cell.region}:{cell.path}:p1")
+              p3lo,p3hi,_=q_factor_pair(g["q"],qlo,3,f"{cell.region}:{cell.path}:p3")
+              gamma=scale_pair(g["L"]*g["W"],(p1lo,p1hi),"gamma")
+              h,h1,h2,gsplits=route._angle_union(kernel_,adapter_,acb_type,arb_type,gamma,False,quantity=="H_U")
+              gamma_r=scale_pair(g["L"]*g["N"],(p3lo,p3hi),"gamma_r")
+              if quantity=="F":
+                  value=-g["U"]*h + g["W"]*h1*gamma_r
+              else:
+                  p5lo,p5hi,_=q_factor_pair(g["q"],qlo,5,f"{cell.region}:{cell.path}:p5")
+                  num=g["Nr"]*g["q"]-arb_type(3)*g["N"]*(r-g["U"])
+                  gamma_rr=scale_pair(g["L"]*num,(p5lo,p5hi),"gamma_rr")
+                  K=-arb_type(2)*g["U"]*h1*gamma_r + g["W"]*(h2*gamma_r*gamma_r+h1*gamma_rr)
+                  value=-K
+              area=route._arb_exact(arb_type,fmpq_type,(cell.a1-cell.a0)*(cell.b1-cell.b0))
+              contribution=value*measure*area
+              route._canonical(adapter_,contribution,"regular contribution")
+              detail={"q_lo":model.rational_json(qlo),"q_hi":model.rational_json(qhi),"r6_endpoint_factors":True,
+                      "gamma_subdivisions":gsplits,"gamma_fallback_used":bool(gsplits)}
+              if cell.region=="R2":
+                  detail["R2_W_LO"]=model.rational_json(r2_w_lo)
+                  detail["R2_COS_PHI_LO_HI"]=model.rational_json(r2_cos_hi)
+              return contribution,detail
+
+          def duffy_eval(quantity, kernel_, adapter_, acb_type, arb_type, fmpq_type,
+                         cell, u0, u1, s0, s1, eps):
+              r=route._r_ball(arb_type,fmpq_type,u0,u1);lam_b=route._lambda_ball(arb_type,fmpq_type,s0,s1)
+              x=route._arb_interval(arb_type,fmpq_type,cell.a0,cell.a1);yd=route._arb_interval(arb_type,fmpq_type,cell.b0,cell.b1)
+              eps_a=route._arb_exact(arb_type,fmpq_type,eps);one=arb_type(1)
+              if cell.region=="T1": c=eps_a*x;phi=eps_a*x*yd;Ahat=(lam_b*lam_b-one)/(one+yd*yd)
+              elif cell.region=="T2": phi=eps_a*x;c=eps_a*x*yd;Ahat=(lam_b*lam_b-one)*yd*yd/(one+yd*yd)
+              else: raise ValueError("Duffy region")
+              S2=one-c*c;S=route._safe_nonnegative_sqrt(adapter_,arb_type,fmpq_type,S2,"Duffy.S");U=S*phi.cos()
+              w2=lam_b*lam_b*S2+c*c;w=route._safe_positive_sqrt(adapter_,arb_type,fmpq_type,w2,Fraction(1),"Duffy.w");L=lam_b/w
+              bh_lo=route._bhat_lower(eps);Bhat=route._arb_interval(arb_type,fmpq_type,bh_lo,Fraction(1));M=U*Ahat+r*Bhat
+              zden=route._z_den_lo(cell.region,cell,u1,s0,eps);z_hi=arb_type(1)/route._arb_exact(arb_type,fmpq_type,zden).sqrt()
+              corner=(cell.a0==0);gy=route._safe_positive_sqrt(adapter_,arb_type,fmpq_type,one+yd*yd,Fraction(1),"Duffy.g");rho=eps_a*x*gy
+              if corner:
+                  yh=arb_type(0).union(arb_type(1));v=arb_type(-1).union(arb_type(1));z=arb_type(0).union(z_hi);gamma=arb_type(0).union(arb_type(1));qhi=None
+              else:
+                  g=route._geometry(adapter_,arb_type,fmpq_type,r,lam_b,c,phi)
+                  rho2_lo=eps*eps*cell.a0*cell.a0*(1+cell.b0*cell.b0);qlo=rho2_lo*zden
+                  p1lo,p1hi,qhi=q_factor_pair(g["q"],qlo,1,f"{cell.region}:{cell.path}:duffy:p1")
+                  yh=scale_pair(g["W"],(p1lo,p1hi),"duffy.yh").max(arb_type(0)).min(arb_type(1))
+                  v=scale_pair(r-U,(p1lo,p1hi),"duffy.v")
+                  z=scale_pair(rho,(p1lo,p1hi),"duffy.z").max(arb_type(0)).min(z_hi)
+                  gamma=(L*yh).max(arb_type(0)).min(arb_type(1))
+              h,h1,h2,gsplits=route._angle_union(kernel_,adapter_,acb_type,arb_type,gamma,corner,quantity=="H_U")
+              if quantity=="F":
+                  JF=rho*(-U*h-L*h1*M*yh*z*z);transformed=eps_a*JF/gy
+              else:
+                  J=L*(arb_type(2)*U*h1*M*z**3 + L*h2*M*M*yh*z**5 + h1*(-Bhat*yh*rho*z**2+arb_type(3)*M*yh*v*z**3))
+                  transformed=-eps_a*J/gy
+              area=route._arb_exact(arb_type,fmpq_type,(cell.a1-cell.a0)*(cell.b1-cell.b0));contribution=transformed*area
+              route._canonical(adapter_,contribution,"Duffy contribution")
+              return contribution,{"Z_DEN_LO":model.rational_json(zden),"r6_endpoint_factors":not corner,
+                                   "gamma_subdivisions":gsplits,"gamma_fallback_used":bool(gsplits),"q_hi":None if qhi is None else model.rational_json(qhi)}
+
+          route._regular_eval = regular_eval
+          route._duffy_eval = duffy_eval
+
+          def probe_enclose_route(quantity, kernel_, adapter_, acb_type, arb_type, fmpq_type,
+                                  cfg, u0, u1, s0, s1, required_sign=None):
+              model.need(required_sign in {None,"POS","NEG","NONZERO"},"probe sign mode")
+              pkey="F_ROUTE" if quantity=="F" else "K_ROUTE";pcfg=cfg["route_policies"][pkey]
+              eps=model.fraction_from_dyadic(cfg["geometry"]["eps"])
+              active={}; heap=[]; total_lo=Fraction(0); total_hi=Fraction(0); evaluations=0; split_reasons={}
+
+              def diagnostic(reason):
+                  counts=collections.Counter(x[0].region for x in active.values())
+                  depths=collections.Counter(x[0].depth for x in active.values())
+                  tops=[]
+                  for path,(cell,ball,detail,iv,lo,hi) in active.items():
+                      tops.append((hi-lo,cell.region,path,cell.depth,lo,hi,detail.get("gamma_fallback_used")))
+                  tops=sorted(tops,reverse=True)[:12]
+                  un=model.outward_dyadic(total_lo,total_hi);norm=model.normalize_interval(un)
+                  return {"reason":reason,"evaluations":evaluations,"active_leaves":len(active),"region_counts":dict(counts),
+                          "depth_counts":dict(depths),"normalized":norm,
+                          "top_widths":[{"width":model.rational_json(w),"region":r,"path":p,"depth":d,
+                                         "lo":model.rational_json(lo),"hi":model.rational_json(hi),"gamma_fallback":gf}
+                                        for w,r,p,d,lo,hi,gf in tops]}
+
+              def add(cell, reason=None):
+                  nonlocal total_lo,total_hi,evaluations
+                  if cell.depth < pcfg["min_depth"]:
+                      split_reasons[cell.path]="MIN_DEPTH"
+                      for ch in route._split(cell): add(ch,"MIN_DEPTH")
+                      return
+                  if evaluations >= pcfg["max_evaluations"]:
+                      raise RuntimeError("PROBE_BUDGET "+json.dumps(diagnostic("MAX_EVALUATIONS"),sort_keys=True,separators=(",",":")))
+                  try:
+                      ball,detail=route._cell_eval(quantity,kernel_,adapter_,acb_type,arb_type,fmpq_type,cell,u0,u1,s0,s1,eps)
+                  except route.SplitRequired as exc:
+                      if cell.depth >= pcfg["max_depth"]:
+                          raise RuntimeError("PROBE_DEPTH "+json.dumps(diagnostic(exc.reason),sort_keys=True,separators=(",",":"))) from exc
+                      split_reasons[cell.path]=exc.reason
+                      for ch in route._split(cell): add(ch,exc.reason)
+                      return
+                  evaluations += 1
+                  iv=route._canonical(adapter_,ball,"probe child");lo,hi=model.interval_fractions(iv,"probe child")
+                  if len(active) >= pcfg["max_children"]:
+                      raise RuntimeError("PROBE_CHILD_BUDGET "+json.dumps(diagnostic("MAX_CHILDREN"),sort_keys=True,separators=(",",":")))
+                  active[cell.path]=(cell,ball,detail,iv,lo,hi);total_lo+=lo;total_hi+=hi
+                  if cell.depth < pcfg["max_depth"]:
+                      heapq.heappush(heap,(-(hi-lo),policy.REGION_ORDER[cell.region],cell.path))
+
+              for cell in route._root_initial(): add(cell)
+
+              def state():
+                  un=model.outward_dyadic(total_lo,total_hi);norm=model.normalize_interval(un);lo,hi=model.interval_fractions(norm,"probe root")
+                  if required_sign is None: ok=True
+                  elif required_sign=="POS": ok=lo>0
+                  elif required_sign=="NEG": ok=hi<0
+                  else: ok=(lo>0 or hi<0)
+                  return ok,un,norm,lo,hi
+
+              while True:
+                  ok,un,norm,lo,hi=state()
+                  if ok: break
+                  chosen=None
+                  while heap:
+                      _,_,path=heapq.heappop(heap)
+                      item=active.get(path)
+                      if item is not None and item[0].depth < pcfg["max_depth"]:
+                          chosen=item;break
+                  if chosen is None:
+                      raise RuntimeError("PROBE_NO_SPLIT "+json.dumps(diagnostic("NO_SPLITTABLE_CELL"),sort_keys=True,separators=(",",":")))
+                  cell,ball,detail,iv,clo,chi=chosen
+                  del active[cell.path];total_lo-=clo;total_hi-=chi
+                  if len(active)+2 > pcfg["max_children"]:
+                      raise RuntimeError("PROBE_CHILD_BUDGET "+json.dumps(diagnostic("MAX_CHILDREN"),sort_keys=True,separators=(",",":")))
+                  split_reasons[cell.path]="PRIORITY_WIDTH"
+                  for ch in route._split(cell): add(ch,"PRIORITY_WIDTH")
+
+              proof={"proof_id":"PROBE-"+model.sha256_bytes(model.canonical_json_bytes({"quantity":quantity,"u":model.interval_json(u0,u1),"s":model.interval_json(s0,s1),"sign":required_sign,"evaluations":evaluations,"normalized":norm})),
+                     "evaluation_count":evaluations,"normalized_enclosure":norm,"required_sign_mode":required_sign,
+                     "active_leaves":len(active),"incremental_exact_sum":True,"priority_queue":True,"certificate_evidence":False}
+              return norm,proof
+
+          route.enclose_route = probe_enclose_route
+
+          def emit(phase, started, payload):
+              print(json.dumps({"phase":phase,"elapsed_seconds":f"{time.perf_counter()-started:.6f}","certificate_evidence":False,**payload},sort_keys=True,separators=(",",":")),flush=True)
+
+          phase=sys.argv[1];started=time.perf_counter();route.validate_helper_lemmas(arb,fmpq,config)
+          if phase=="initial_pos":
+              iv,p=route.enclose_f(kernel,adapter,acb,arb,fmpq,config,1-umax,1-umax,lam,lam,"POS")
+              emit(phase,started,{"enclosure":iv,"evaluation_count":p["evaluation_count"]})
+          elif phase=="l2":
+              iv,p=route.enclose_f(kernel,adapter,acb,arb,fmpq,config,1-umax,1-umax,model.LAMBDA_PLUS-model.S_NEG,lam,"POS")
+              emit(phase,started,{"enclosure":iv,"evaluation_count":p["evaluation_count"]})
+          elif phase=="l3":
+              iv,p=route.enclose_f(kernel,adapter,acb,arb,fmpq,config,Fraction(1),Fraction(1),model.LAMBDA_PLUS,lam,"NEG")
+              emit(phase,started,{"enclosure":iv,"evaluation_count":p["evaluation_count"]})
+          elif phase=="l1":
+              iv,p=route.enclose_hu(kernel,adapter,acb,arb,fmpq,config,Fraction(1,1<<9),Fraction(1,1<<8),-model.S_NEG,s_first,"POS")
+              emit(phase,started,{"enclosure":iv,"evaluation_count":p["evaluation_count"]})
+          elif phase=="jstart":
+              evaluations=[];left,right=1-umax,Fraction(1)
+              def f_at(r,mode,role):
+                  iv,p=route.enclose_f(kernel,adapter,acb,arb,fmpq,config,r,r,lam,lam,mode)
+                  lo,hi=model.interval_fractions(iv,"J probe F");sign="POSITIVE" if lo>0 else "NEGATIVE" if hi<0 else "UNRESOLVED"
+                  evaluations.append({"r":model.rational_json(r),"role":role,"mode":mode,"sign":sign,"enclosure":iv,"evaluation_count":p["evaluation_count"]})
+                  return iv,sign
+              _,sign=f_at(left,"POS","INITIAL_LEFT");model.need(sign=="POSITIVE","J initial POS")
+              found=False
+              for _ in range(config["budgets"]["J_START"]["max_bisections"]):
+                  mid=(left+right)/2;_,sign=f_at(mid,"NONZERO","BISECTION")
+                  if sign=="NEGATIVE": right=mid;found=True;break
+                  if sign=="POSITIVE": left=mid;continue
+                  raise RuntimeError("NONZERO mode returned unresolved")
+              model.need(found and right<1,"J negative endpoint")
+              u0,u1=1-right,1-left
+              hu,hp=route.enclose_hu(kernel,adapter,acb,arb,fmpq,config,u0,u1,s_first,s_first,"POS")
+              D=model.interval_negate(hu);_,dhi=model.interval_fractions(D,"J D");model.need(dhi<0,"J D negative")
+              mid=(left+right)/2;Fm,mp=route.enclose_f(kernel,adapter,acb,arb,fmpq,config,mid,mid,lam,lam,None)
+              qlo,qhi=model.interval_divide_negative_denominator(Fm,D);N=model.outward_dyadic(mid-qhi,mid-qlo);nlo,nhi=model.interval_fractions(N,"J N")
+              model.need(left<nlo<=nhi<right,"J Newton self containment")
+              emit(phase,started,{"bracket":model.interval_json(left,right),"bisection":evaluations,"H_u":hu,"F_r":D,"newton_image":N,"strict_self_containment":True,
+                                  "derivative_evaluations":hp["evaluation_count"],"midpoint_evaluations":mp["evaluation_count"]})
+          else: raise SystemExit(phase)
+          PY
+
+      - name: Probe — J initial POS resolution
+        id: initial
+        continue-on-error: true
+        run: timeout 1200s python "$RUNNER_TEMP/blocal_v22_v3_probe.py" initial_pos
+
+      - name: Probe — L3 R6 endpoint factors
+        id: l3
+        continue-on-error: true
+        run: timeout 1200s python "$RUNNER_TEMP/blocal_v22_v3_probe.py" l3
+
+      - name: Probe — L2 priority incremental
+        id: l2
+        continue-on-error: true
+        run: timeout 1200s python "$RUNNER_TEMP/blocal_v22_v3_probe.py" l2
+
+      - name: Probe — L1 priority incremental
+        id: l1
+        continue-on-error: true
+        run: timeout 1200s python "$RUNNER_TEMP/blocal_v22_v3_probe.py" l1
+
+      - name: Probe — J_START POS/NONZERO/Newton
+        id: jstart
+        continue-on-error: true
+        run: timeout 1200s python "$RUNNER_TEMP/blocal_v22_v3_probe.py" jstart
+
+      - name: Remove ephemeral config and verify committed config unchanged
+        if: always()
+        shell: bash
+        run: |
+          rm -f "$EPHEMERAL_CONFIG"
+          test "$(git diff --name-only -- "$BLOCAL_DIR/config.blocal-v2.2-run.json")" = ""
+
+      - name: Probe verdict
+        if: always()
+        shell: bash
+        run: |
+          printf '%s\n' \
+            "initial=${{ steps.initial.outcome }}" \
+            "l3=${{ steps.l3.outcome }}" \
+            "l2=${{ steps.l2.outcome }}" \
+            "l1=${{ steps.l1.outcome }}" \
+            "jstart=${{ steps.jstart.outcome }}"
+          test "${{ steps.initial.outcome }}" = success
+          test "${{ steps.l3.outcome }}" = success
+          test "${{ steps.l2.outcome }}" = success
+          test "${{ steps.l1.outcome }}" = success
+          test "${{ steps.jstart.outcome }}" = success
