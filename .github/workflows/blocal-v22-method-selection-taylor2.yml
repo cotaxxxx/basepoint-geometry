@@ -12,7 +12,7 @@ permissions:
 env:
   BLOCAL_DIR: CERTIFICATES/prolate/item2_circle/b_tube_v2_1
   EPHEMERAL_CONFIG: CERTIFICATES/prolate/item2_circle/b_tube_v2_1/config.blocal-v2.2-readiness-ephemeral.json
-  PROBE: CERTIFICATES/prolate/item2_circle/b_tube_v2_1/diagnostics/blocal_v22_method_taylor2_probe.py
+  PROBE: CERTIFICATES/prolate/item2_circle/b_tube_v2_1/diagnostics/blocal_v22_method_taylor2_probe_v2.py
 
 jobs:
   method-selection:
