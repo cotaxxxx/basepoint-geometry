@@ -1,0 +1,303 @@
+name: B-LOCAL v2.2 readiness draft
+
+on:
+  push:
+    branches:
+      - "agent/blocal-v22-readiness-draft"
+    paths:
+      - ".github/workflows/blocal-v22-readiness-draft.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: blocal-v22-readiness-draft-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  readiness:
+    if: github.ref_name == 'agent/blocal-v22-readiness-draft'
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    permissions:
+      contents: read
+    env:
+      BLOCAL_DIR: CERTIFICATES/prolate/item2_circle/b_tube_v2_1
+      EPHEMERAL_CONFIG: CERTIFICATES/prolate/item2_circle/b_tube_v2_1/config.blocal-v2.2-readiness-ephemeral.json
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/blocal-v22-readiness-draft
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Guard draft-only authorization
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${GITHUB_REF_NAME}" = "agent/blocal-v22-readiness-draft"
+          test -f "$BLOCAL_DIR/READINESS_DRAFT"
+          grep -qx 'readiness_draft_revision=2' "$BLOCAL_DIR/READINESS_DRAFT"
+          grep -qx 'config_materialized=false' "$BLOCAL_DIR/READINESS_DRAFT"
+          grep -qx 'production_authorized=false' "$BLOCAL_DIR/READINESS_DRAFT"
+          grep -qx 'tag_authorized=false' "$BLOCAL_DIR/READINESS_DRAFT"
+
+      - name: Install pinned Arb runtime
+        run: python -m pip install --disable-pip-version-check python-flint==0.9.0
+
+      - name: Materialize ephemeral readiness config only
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from __future__ import annotations
+          import hashlib, json, sys
+          from pathlib import Path
+
+          here = Path("CERTIFICATES/prolate/item2_circle/b_tube_v2_1")
+          sys.path.insert(0, str(here.resolve()))
+          import blocal_v22_checker_test as ct
+          import blocal_v22_model as model
+
+          old = json.loads((here / "config.blocal-v2.2-run.json").read_text(encoding="utf-8"))
+          cfg = ct.config()
+          cfg["stage1_dependency"] = old["stage1_dependency"]
+          cfg["kernel"] = old["kernel"]
+          cfg["adapter"] = old["adapter"]
+          cfg["base_v21"] = old["base_v21"]
+          cfg["outputs"] = old["outputs"]
+
+          names = [
+              "blocal_v22_policy.py",
+              "blocal_v22_model.py",
+              "blocal_v22_boundary.py",
+              "blocal_v22_checker.py",
+              "blocal_v22_checker_test.py",
+              "blocal_v22_runner.py",
+              "blocal_v22_static_test.py",
+              "blocal_v22_symbolic_audit.py",
+              "blocal_v22_readiness_test.py",
+          ]
+          prefix = "CERTIFICATES/prolate/item2_circle/b_tube_v2_1/"
+          hashes = {prefix + n: hashlib.sha256((here / n).read_bytes()).hexdigest() for n in names}
+          cfg["implementation"] = {
+              "entrypoint_path": prefix + "blocal_v22_runner.py",
+              "sources_sha256": hashes,
+          }
+          cfg["checker"] = {
+              "id": model.CHECKER_ID,
+              "path": prefix + "blocal_v22_checker.py",
+              "source_sha256": hashes[prefix + "blocal_v22_checker.py"],
+          }
+          cfg["symbolic_audit"] = {
+              "id": model.SYMBOLIC_AUDIT_ID,
+              "path": prefix + "blocal_v22_symbolic_audit.py",
+              "source_sha256": hashes[prefix + "blocal_v22_symbolic_audit.py"],
+          }
+          model.validate_config(cfg)
+          out = here / "config.blocal-v2.2-readiness-ephemeral.json"
+          out.write_bytes(model.canonical_json_bytes(cfg))
+          print(json.dumps({"ephemeral_config_sha256": hashlib.sha256(out.read_bytes()).hexdigest(),
+                            "source_sha256": hashes,
+                            "route_policies": cfg["route_policies"],
+                            "geometry": cfg["geometry"],
+                            "certificate_evidence": False},
+                           sort_keys=True, separators=(",", ":")))
+          PY
+
+      - name: Static exact audits
+        id: static
+        working-directory: CERTIFICATES/prolate/item2_circle/b_tube_v2_1
+        run: python blocal_v22_static_test.py
+
+      - name: Build split readiness harness
+        shell: bash
+        run: |
+          cat > "$RUNNER_TEMP/blocal_v22_readiness_phase.py" <<'PY'
+          from __future__ import annotations
+          import json, sys, time
+          from fractions import Fraction
+          from pathlib import Path
+
+          root = Path.cwd()
+          here = root / "CERTIFICATES/prolate/item2_circle/b_tube_v2_1"
+          sys.path.insert(0, str(here))
+          import blocal_v22_model as model
+          import blocal_v22_readiness_test as readiness
+
+          config_path = here / "config.blocal-v2.2-readiness-ephemeral.json"
+          config = model.parse_canonical_json(config_path.read_bytes())
+          model.validate_config(config)
+
+          from flint import acb, arb, ctx, fmpq
+          ctx.prec = config["precision"]["bits"]
+          route, adapter, kernel = readiness.load(config)
+          s_first = model.fraction_from_dyadic(config["lambda_candidates"][0])
+          lam = model.LAMBDA_PLUS + s_first
+          umax = model.fraction_from_dyadic(config["u_max_candidates"][0])
+
+          def emit(phase: str, started: float, payload: dict) -> None:
+              body = {"phase": phase, "elapsed_seconds": f"{time.perf_counter()-started:.6f}",
+                      "certificate_evidence": False, **payload}
+              print(json.dumps(body, sort_keys=True, separators=(",", ":")), flush=True)
+
+          phase = sys.argv[1]
+          started = time.perf_counter()
+          route.validate_helper_lemmas(arb, fmpq, config)
+
+          if phase == "initial_f":
+              iv, proof = route.enclose_f(kernel, adapter, acb, arb, fmpq, config,
+                                           1-umax, 1-umax, lam, lam, None)
+              emit(phase, started, {"enclosure": iv, "proof_id": proof["proof_id"],
+                                    "r": model.rational_json(1-umax),
+                                    "lambda": model.rational_json(lam)})
+
+          elif phase == "l2":
+              iv, proof = route.enclose_f(kernel, adapter, acb, arb, fmpq, config,
+                                           1-umax, 1-umax,
+                                           model.LAMBDA_PLUS-model.S_NEG, lam, "POS")
+              lo, hi = model.interval_fractions(iv, "L2")
+              model.need(lo > 0, "L2 readiness strict positivity")
+              emit(phase, started, {"enclosure": iv, "proof_id": proof["proof_id"],
+                                    "evaluation_count": proof["evaluation_count"]})
+
+          elif phase == "l3":
+              iv, proof = route.enclose_f(kernel, adapter, acb, arb, fmpq, config,
+                                           Fraction(1), Fraction(1),
+                                           model.LAMBDA_PLUS, lam, "NEG")
+              lo, hi = model.interval_fractions(iv, "L3")
+              model.need(hi < 0, "L3 readiness strict negativity")
+              emit(phase, started, {"enclosure": iv, "proof_id": proof["proof_id"],
+                                    "evaluation_count": proof["evaluation_count"]})
+
+          elif phase == "l1_tile":
+              iv, proof = route.enclose_hu(kernel, adapter, acb, arb, fmpq, config,
+                                            Fraction(1,1<<9), Fraction(1,1<<8),
+                                            -model.S_NEG, s_first, "POS")
+              lo, hi = model.interval_fractions(iv, "L1")
+              model.need(lo > 0, "L1 readiness strict positivity")
+              emit(phase, started, {"enclosure": iv, "proof_id": proof["proof_id"],
+                                    "evaluation_count": proof["evaluation_count"]})
+
+          elif phase == "j_start":
+              evaluations = []
+              left, right = 1-umax, Fraction(1)
+
+              def f_at(r: Fraction, role: str):
+                  iv, proof = route.enclose_f(kernel, adapter, acb, arb, fmpq, config,
+                                               r, r, lam, lam, None)
+                  lo, hi = model.interval_fractions(iv, "J F")
+                  sign = "POSITIVE" if lo > 0 else "NEGATIVE" if hi < 0 else "UNRESOLVED"
+                  evaluations.append({"r": model.rational_json(r), "role": role,
+                                      "sign": sign, "enclosure": iv,
+                                      "proof_id": proof["proof_id"],
+                                      "evaluation_count": proof["evaluation_count"]})
+                  return iv, sign
+
+              fleft, sign = f_at(left, "INITIAL_LEFT")
+              model.need(sign == "POSITIVE", "J initial left sign")
+              negative_found = False
+              for _ in range(config["budgets"]["J_START"]["max_bisections"]):
+                  mid = (left + right) / 2
+                  fm, sign = f_at(mid, "BISECTION_MIDPOINT")
+                  if sign == "NEGATIVE":
+                      right = mid
+                      negative_found = True
+                      break
+                  if sign == "POSITIVE":
+                      left = mid
+                      continue
+                  raise RuntimeError("J bisection sign unresolved")
+              model.need(negative_found and right < 1, "J interior negative endpoint")
+
+              u0, u1 = 1-right, 1-left
+              hu, huproof = route.enclose_hu(kernel, adapter, acb, arb, fmpq, config,
+                                              u0, u1, s_first, s_first, "POS")
+              D = model.interval_negate(hu)
+              dlo, dhi = model.interval_fractions(D, "J derivative")
+              model.need(dhi < 0, "J derivative strictly negative")
+
+              mid = (left + right) / 2
+              Fm, fmp = route.enclose_f(kernel, adapter, acb, arb, fmpq, config,
+                                        mid, mid, lam, lam, None)
+              qlo, qhi = model.interval_divide_negative_denominator(Fm, D)
+              quotient = model.outward_dyadic(qlo, qhi)
+              newton = model.outward_dyadic(mid-qhi, mid-qlo)
+              nlo, nhi = model.interval_fractions(newton, "J Newton")
+              model.need(left < nlo <= nhi < right, "J strict Newton self-containment")
+              emit(phase, started, {"bracket": model.interval_json(left, right),
+                                    "bisection": evaluations,
+                                    "H_u": hu, "F_r": D,
+                                    "derivative_proof_id": huproof["proof_id"],
+                                    "midpoint_F": Fm, "midpoint_F_proof_id": fmp["proof_id"],
+                                    "quotient": quotient, "newton_image": newton,
+                                    "strict_self_containment": True})
+          else:
+              raise SystemExit(f"unknown phase: {phase}")
+          PY
+
+      - name: Readiness — J_START initial F point
+        id: initial_f
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          timeout 1200s python "$RUNNER_TEMP/blocal_v22_readiness_phase.py" initial_f | tee readiness-initial-f.jsonl
+
+      - name: Readiness — L2 F-route face
+        id: l2
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          timeout 1200s python "$RUNNER_TEMP/blocal_v22_readiness_phase.py" l2 | tee readiness-l2.jsonl
+
+      - name: Readiness — L3 r=1 F-route face
+        id: l3
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          timeout 1200s python "$RUNNER_TEMP/blocal_v22_readiness_phase.py" l3 | tee readiness-l3.jsonl
+
+      - name: Readiness — L1 K-route tile
+        id: l1
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          timeout 1200s python "$RUNNER_TEMP/blocal_v22_readiness_phase.py" l1_tile | tee readiness-l1.jsonl
+
+      - name: Readiness — J_START bracket derivative negation Newton
+        id: jstart
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          timeout 1200s python "$RUNNER_TEMP/blocal_v22_readiness_phase.py" j_start | tee readiness-jstart.jsonl
+
+      - name: Remove ephemeral config and verify no committed config mutation
+        if: always()
+        shell: bash
+        run: |
+          rm -f "$EPHEMERAL_CONFIG"
+          test "$(git diff --name-only -- "$BLOCAL_DIR/config.blocal-v2.2-run.json")" = ""
+
+      - name: Readiness verdict
+        if: always()
+        shell: bash
+        run: |
+          printf '%s\n' \
+            "static=${{ steps.static.outcome }}" \
+            "initial_f=${{ steps.initial_f.outcome }}" \
+            "l2=${{ steps.l2.outcome }}" \
+            "l3=${{ steps.l3.outcome }}" \
+            "l1=${{ steps.l1.outcome }}" \
+            "jstart=${{ steps.jstart.outcome }}"
+          test "${{ steps.static.outcome }}" = success
+          test "${{ steps.initial_f.outcome }}" = success
+          test "${{ steps.l2.outcome }}" = success
+          test "${{ steps.l3.outcome }}" = success
+          test "${{ steps.l1.outcome }}" = success
+          test "${{ steps.jstart.outcome }}" = success
