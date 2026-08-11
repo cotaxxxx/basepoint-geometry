@@ -1,4 +1,4 @@
-name: B-LOCAL v2.2 readiness v10 R1-B structural F probe
+name: B-LOCAL v2.2 readiness v11 gamma-combined F probe
 
 on:
   push:
@@ -48,7 +48,7 @@ jobs:
       - name: Static
         working-directory: CERTIFICATES/prolate/item2_circle/b_tube_v2_1
         run: python blocal_v22_static_test.py
-      - name: Add R1 Bhat and large-phi Vhat structural floors
+      - name: Apply diagnostic structural floors and gamma-combined bracket
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -57,15 +57,19 @@ jobs:
           old='''  if cell.region=="R1":\n   thi=p1/c0\n   af=coef/(1+thi*thi)\n   return af,{"A_floor":af,"B_floor":Fraction(0),"V2_floor":Fraction(0),"floor_source":"R1_AHAT"}\n'''
           new='''  if cell.region=="R1":\n   tlo=p0/c1;thi=p1/c0\n   af=coef/(1+thi*thi);bf=Fraction(0);vf=Fraction(0);sources=["R1_AHAT"]\n   sinc_lo=Fraction(1)-p1*p1/Fraction(6)\n   if sinc_lo>0 and tlo>0:\n    bf=tlo*tlo*sinc_lo*sinc_lo/(1+thi*thi);sources.append("B_SINC_TAYLOR")\n   if p0>=HALF_PI_HI:\n    rlo=Fraction(1)-u1;rho2hi=c1*c1+p1*p1\n    if rlo>0:\n     vf=rlo*rlo/rho2hi;sources.append("V_LARGE_PHI")\n   total=af+bf+vf\n   return total,{"A_floor":af,"B_floor":bf,"V2_floor":vf,"floor_source":"+".join(sources)}\n'''
           assert old in s
-          p.write_text(s.replace(old,new))
+          s=s.replace(old,new)
+          old2='val=-g["U"]*h-g["L"]*hp*M*y*z*z'
+          new2='val=-g["U"]*h-hp*M*gamma*z*z'
+          assert old2 in s
+          p.write_text(s.replace(old2,new2))
           PY
-      - name: R1-B structural F probe
+      - name: Gamma-combined F probe
         id: hat
         continue-on-error: true
         shell: bash
         run: |
           set -o pipefail
-          timeout 1200s python "$BLOCAL_DIR/diagnostics/blocal_v22_structural_D_probe_v8.py" | tee /tmp/v10.json
+          timeout 1200s python "$BLOCAL_DIR/diagnostics/blocal_v22_structural_D_probe_v8.py" | tee /tmp/v11.json
       - name: Cleanup
         if: always()
         run: |
@@ -79,7 +83,7 @@ jobs:
         run: |
           python - <<'PY'
           import json,os,urllib.request
-          ok=os.environ["HAT"]=="success";b=json.dumps({"state":"success" if ok else "failure","context":"blocal-v22-readiness-v10-R1B-probe","description":"R1B_v10="+os.environ["HAT"],"target_url":f"https://github.com/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}"}).encode();r=urllib.request.Request(f"https://api.github.com/repos/{os.environ['GITHUB_REPOSITORY']}/statuses/{os.environ['GITHUB_SHA']}",data=b,method="POST",headers={"Authorization":f"Bearer {os.environ['GH_TOKEN']}","Accept":"application/vnd.github+json","Content-Type":"application/json"});print(urllib.request.urlopen(r).read().decode())
+          ok=os.environ["HAT"]=="success";b=json.dumps({"state":"success" if ok else "failure","context":"blocal-v22-readiness-v11-gamma-probe","description":"gamma_v11="+os.environ["HAT"],"target_url":f"https://github.com/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}"}).encode();r=urllib.request.Request(f"https://api.github.com/repos/{os.environ['GITHUB_REPOSITORY']}/statuses/{os.environ['GITHUB_SHA']}",data=b,method="POST",headers={"Authorization":f"Bearer {os.environ['GH_TOKEN']}","Accept":"application/vnd.github+json","Content-Type":"application/json"});print(urllib.request.urlopen(r).read().decode())
           PY
       - name: Verdict
         if: always()
