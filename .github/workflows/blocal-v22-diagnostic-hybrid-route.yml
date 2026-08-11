@@ -1,0 +1,106 @@
+name: B-LOCAL v2.2 diagnostic hybrid route
+on:
+  push:
+    branches: ["agent/blocal-v22-readiness-draft"]
+    paths: [".github/workflows/blocal-v22-diagnostic-hybrid-route.yml"]
+  workflow_dispatch:
+
+jobs:
+  hybrid:
+    if: github.ref_name == 'agent/blocal-v22-readiness-draft'
+    strategy:
+      fail-fast: false
+      matrix:
+        threshold: ["1/8", "1/4", "1/2"]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      statuses: write
+    env:
+      BLOCAL_DIR: CERTIFICATES/prolate/item2_circle/b_tube_v2_1
+      EPHEMERAL_CONFIG: CERTIFICATES/prolate/item2_circle/b_tube_v2_1/config.blocal-v2.2-readiness-ephemeral.json
+      HYBRID_THRESHOLD: ${{ matrix.threshold }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/blocal-v22-readiness-draft
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Guard diagnostic only
+        run: |
+          set -euo pipefail
+          grep -qx 'config_materialized=false' "$BLOCAL_DIR/READINESS_DRAFT"
+          grep -qx 'production_authorized=false' "$BLOCAL_DIR/READINESS_DRAFT"
+          grep -qx 'tag_authorized=false' "$BLOCAL_DIR/READINESS_DRAFT"
+      - name: Install Arb
+        run: python -m pip install --disable-pip-version-check python-flint==0.9.0
+      - name: Materialize diagnostic ephemeral config
+        run: |
+          python - <<'PY'
+          import hashlib,json,sys
+          from pathlib import Path
+          h=Path("CERTIFICATES/prolate/item2_circle/b_tube_v2_1");sys.path.insert(0,str(h.resolve()))
+          import blocal_v22_checker_test as ct, blocal_v22_model as m
+          old=json.loads((h/"config.blocal-v2.2-run.json").read_text());c=ct.config()
+          for k in ("stage1_dependency","kernel","adapter","base_v21","outputs"):c[k]=old[k]
+          ns=["blocal_v22_policy.py","blocal_v22_model.py","blocal_v22_boundary.py","blocal_v22_checker.py","blocal_v22_checker_test.py","blocal_v22_runner.py","blocal_v22_static_test.py","blocal_v22_symbolic_audit.py","blocal_v22_readiness_test.py"];p="CERTIFICATES/prolate/item2_circle/b_tube_v2_1/";hs={p+x:hashlib.sha256((h/x).read_bytes()).hexdigest() for x in ns}
+          c["implementation"]={"entrypoint_path":p+"blocal_v22_runner.py","sources_sha256":hs};c["checker"]={"id":m.CHECKER_ID,"path":p+"blocal_v22_checker.py","source_sha256":hs[p+"blocal_v22_checker.py"]};c["symbolic_audit"]={"id":m.SYMBOLIC_AUDIT_ID,"path":p+"blocal_v22_symbolic_audit.py","source_sha256":hs[p+"blocal_v22_symbolic_audit.py"]};m.validate_config(c);(h/"config.blocal-v2.2-readiness-ephemeral.json").write_bytes(m.canonical_json_bytes(c))
+          PY
+      - name: Static
+        working-directory: CERTIFICATES/prolate/item2_circle/b_tube_v2_1
+        run: python blocal_v22_static_test.py
+      - name: Apply v15 hat low-c and native direct high-c hybrid
+        run: |
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          p=Path("CERTIFICATES/prolate/item2_circle/b_tube_v2_1/diagnostics/blocal_v22_direct_B_probe_v14.py");s=p.read_text()
+          # Preserve native direct regular evaluator before diagnostic hat evaluator is defined.
+          needle=' eps_split=model.fraction_from_dyadic(cfg["geometry"]["eps"])\n'
+          assert needle in s;s=s.replace(needle,needle+' native_regular=route._regular_eval\n',1)
+          # Exact R1 pi/2 sectors from v15.
+          s=s.replace('if p1<=HALF_PI_HI:','if cell.b1<=Fraction(1,2):',1);s=s.replace('if p0>=HALF_PI_HI:','if cell.b0>=Fraction(1,2):',1);s=s.replace('if p1<=HALF_PI_HI:','if (cell.region=="R1" and cell.b1<=Fraction(1,2)) or (cell.region=="R2" and p1<=HALF_PI_HI):',1)
+          # Route R1 cells with exact c lower endpoint >= threshold through native direct formula.
+          old=''' def cell_eval(q,*args):\n  cell=args[5]\n  if q=="F" and cell.region in ("R1","R2"):return regular_f(*args)\n  return original_cell(q,*args)\n'''
+          new=''' def cell_eval(q,*args):\n  cell=args[5]\n  if q=="F" and cell.region=="R1":\n   c0,c1,p0,p1=src(cell,eps_split)\n   if c0>=HYBRID_C:return native_regular("F",*args)\n   return regular_f(*args)\n  if q=="F" and cell.region=="R2":return regular_f(*args)\n  return original_cell(q,*args)\n'''
+          assert old in s;s=s.replace(old,new)
+          # Bind diagnostic threshold exactly.
+          num,den=os.environ["HYBRID_THRESHOLD"].split('/')
+          marker=' eps_split=model.fraction_from_dyadic(cfg["geometry"]["eps"])\n native_regular=route._regular_eval\n'
+          assert marker in s;s=s.replace(marker,marker+f' HYBRID_C=Fraction({num},{den})\n',1)
+          # Exact b=1/2 split for R1.
+          needle2='''  c0,c1,p0,p1=src(cell,eps_split)\n  if cell.region=="R2" and c0==0 and Fraction(1)-p1*p1/Fraction(6)<=0 and p0<HALF_PI_HI:return B\n'''
+          repl2='''  c0,c1,p0,p1=src(cell,eps_split)\n  if cell.region=="R1" and cell.b0<Fraction(1,2)<cell.b1:return B\n  if cell.region=="R2" and c0==0 and Fraction(1)-p1*p1/Fraction(6)<=0 and p0<HALF_PI_HI:return B\n'''
+          assert needle2 in s;s=s.replace(needle2,repl2)
+          # Eight geometric c seeds align all candidate thresholds exactly.
+          marker2=' route._split=split\n';inject=''' route._split=split\n def geometric_roots():\n  out=[route.Cell(r,r,0,Fraction(0),Fraction(1),Fraction(0),Fraction(1)) for r in ("T1","T2","R2")]\n  cs=[Fraction(1,256),Fraction(1,128),Fraction(1,64),Fraction(1,32),Fraction(1,16),Fraction(1,8),Fraction(1,4),Fraction(1,2),Fraction(1)]\n  for i,(cl,ch) in enumerate(zip(cs,cs[1:])):\n   al=(cl-Fraction(1,256))/Fraction(255,256);ah=(ch-Fraction(1,256))/Fraction(255,256);out.append(route.Cell("R1",f"R1G{i}",0,al,ah,Fraction(0),Fraction(1)))\n  return out\n route._root_initial=geometric_roots\n''';assert marker2 in s;s=s.replace(marker2,inject,1)
+          # Initial F only.
+          tests='tests=[("initial",1-um,1-um,lam,lam,"POS"),("l2",1-um,1-um,model.LAMBDA_PLUS-model.S_NEG,lam,"POS"),("l3",Fraction(1),Fraction(1),model.LAMBDA_PLUS,lam,"NEG")]';assert tests in s;s=s.replace(tests,'tests=[("initial",1-um,1-um,lam,lam,"POS")]')
+          p.write_text(s)
+          PY
+      - name: Hybrid route diagnostic
+        id: diag
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          timeout 1200s python "$BLOCAL_DIR/diagnostics/blocal_v22_direct_B_probe_v14.py" | tee "/tmp/hybrid-${HYBRID_THRESHOLD//\//_}.json"
+      - name: Cleanup
+        if: always()
+        run: |
+          rm -f "$EPHEMERAL_CONFIG"
+          git checkout -- "$BLOCAL_DIR/diagnostics/blocal_v22_direct_B_probe_v14.py"
+          test "$(git diff --name-only -- "$BLOCAL_DIR/config.blocal-v2.2-run.json")" = ""
+      - name: Publish diagnostic status
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DIAG: ${{ steps.diag.outcome }}
+        run: |
+          python - <<'PY'
+          import json,os,urllib.request
+          t=os.environ["HYBRID_THRESHOLD"].replace('/','_');ok=os.environ["DIAG"]=="success";body=json.dumps({"state":"success" if ok else "failure","context":"blocal-v22-hybrid-"+t,"description":"hybrid_"+t+"="+os.environ["DIAG"],"target_url":f"https://github.com/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}"}).encode();req=urllib.request.Request(f"https://api.github.com/repos/{os.environ['GITHUB_REPOSITORY']}/statuses/{os.environ['GITHUB_SHA']}",data=body,method="POST",headers={"Authorization":f"Bearer {os.environ['GH_TOKEN']}","Accept":"application/vnd.github+json","Content-Type":"application/json"});print(urllib.request.urlopen(req).read().decode())
+          PY
