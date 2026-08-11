@@ -37,23 +37,24 @@ def main()->int:
    thi=p1/c0
    af=coef/(1+thi*thi)
    return af,{"A_floor":af,"B_floor":Fraction(0),"V2_floor":Fraction(0),"floor_source":"R1_AHAT"}
-  # R2 t=c/phi. Ahat lower is positive whenever c0>0.
   tlo=c0/p1;thi=c1/p0
   af=coef*tlo*tlo/(1+thi*thi)
   bf=Fraction(0);vf=Fraction(0);sources=[]
   if af>0:sources.append("A")
-  # sin(x)/x >= 1-x^2/6 for x>=0.  Use only when positive.
   sinc_lo=Fraction(1)-p1*p1/Fraction(6)
   if sinc_lo>0:
    bf=sinc_lo*sinc_lo/(1+thi*thi);sources.append("B_SINC_TAYLOR")
-  # If phi lower is above a rational upper bound for pi/2, cos(phi)<=0,
-  # so U<=0 and |r-U|>=r_lo.  Hence Vhat^2 >= r_lo^2/rho_hi^2.
   if p0>=HALF_PI_HI:
    rlo=Fraction(1)-u1;rho2hi=c1*c1+p1*p1
    if rlo>0:
     vf=rlo*rlo/rho2hi;sources.append("V_LARGE_PHI")
   total=af+bf+vf
-  if total<=0:raise route.SplitRequired("STRUCTURAL_D_FLOOR_UNRESOLVED")
+  if total<=0:
+   raise route.SplitRequired(
+    "STRUCTURAL_D_FLOOR_UNRESOLVED"
+    f":c0={c0}:c1={c1}:p0={p0}:p1={p1}"
+    f":tlo={tlo}:thi={thi}:sinc_lo={sinc_lo}"
+    f":A={af}:B={bf}:V={vf}:half_pi_hi={HALF_PI_HI}")
   return total,{"A_floor":af,"B_floor":bf,"V2_floor":vf,"floor_source":"+".join(sources)}
  def regular_f(kernel_,adapter_,acb_type,arb_type,fmpq_type,cell,u0,u1,s0,s1,eps):
   r=route._r_ball(arb_type,fmpq_type,u0,u1);lam=route._lambda_ball(arb_type,fmpq_type,s0,s1);one=arb_type(1);pi=arb_type.pi();ea=ex(eps);a=iv(cell.a0,cell.a1);b=iv(cell.b0,cell.b1)
