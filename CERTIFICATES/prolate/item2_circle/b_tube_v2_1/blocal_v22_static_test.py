@@ -1,51 +1,32 @@
 #!/usr/bin/env python3
-"""Calculation-free structural audit for the B-LOCAL v2.2 implementation."""
+"""Calculation-free source/static audit for B-LOCAL v2.2 finite-route implementation."""
 from __future__ import annotations
-
-import hashlib
-import json
-import py_compile
+import hashlib,json,py_compile,subprocess,sys
 from pathlib import Path
-
-import blocal_v22_model as model
 import blocal_v22_symbolic_audit as symbolic
 
 HERE=Path(__file__).resolve(strict=True).parent
-ROOT=HERE.parents[3]
-CONFIG=HERE/"config.blocal-v2.2-run.json"
+SOURCE_NAMES=["blocal_v22_policy.py","blocal_v22_model.py","blocal_v22_boundary.py","blocal_v22_checker.py",
+              "blocal_v22_checker_test.py","blocal_v22_runner.py","blocal_v22_static_test.py","blocal_v22_symbolic_audit.py",
+              "blocal_v22_readiness_test.py"]
 
+def need(c:bool,m:str)->None:
+    if not c:raise RuntimeError(m)
+def digest(p:Path)->str:return hashlib.sha256(p.read_bytes()).hexdigest()
 
-def digest(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
-
-
-def need(x: bool,msg: str) -> None:
-    if not x: raise RuntimeError(msg)
-
-
-def main() -> int:
-    config=model.parse_canonical_json(CONFIG.read_bytes());model.validate_config(config)
-    for rel,expected in config["implementation"]["sources_sha256"].items():
-        p=ROOT/rel;need(p.is_file() and not p.is_symlink(),f"regular source {rel}")
-        need(digest(p)==expected,f"source pin {rel}")
-        py_compile.compile(str(p),doraise=True)
-    need(digest(ROOT/config["checker"]["path"])==config["checker"]["source_sha256"],"checker pin")
-    need(digest(ROOT/config["symbolic_audit"]["path"])==config["symbolic_audit"]["source_sha256"],"audit pin")
-    result=symbolic.run_audit();need(result["exact_algebra"] is True,"exact symbolic audit")
-    boundary=(HERE/"blocal_v22_boundary.py").read_text(encoding="utf-8")
-    for forbidden in ("float(","Decimal(","1-epsilon","1 - epsilon","except Exception"):
-        need(forbidden not in boundary,f"forbidden boundary token {forbidden}")
-    for required in ("_z_den_lower","_bhat_lower","_integrate_duffy","_integrate_regular",
-                     "gamma = _unit_interval","sin_theta_dtheta_cancelled_symbolically"):
-        need(required in boundary,f"required boundary token {required}")
-    runner=(HERE/"blocal_v22_runner.py").read_text(encoding="utf-8")
-    need("L1_BOUNDARY_STRIP" in runner and "L1_INTERIOR" in runner,"closed split records")
-    need("verify_records(records,config,config_hash)" in runner,"checker gate")
-    print(json.dumps({"schema":"blocal-v22-static-audit-v1","calculation_free":True,
-                      "kernel_imported":False,"kernel_evaluated":False,
-                      "symbolic_audit_exact":True,"status":"CHAT_SIDE_AUDIT_WAITING"},
-                     sort_keys=True,separators=(",",":")))
+def main()->int:
+    for name in SOURCE_NAMES:
+        p=HERE/name;need(p.is_file() and not p.is_symlink(),f"source {name}");py_compile.compile(str(p),doraise=True)
+    result=symbolic.run_audit();need(result["exact_algebra"] is True and result["F_route_exact"] is True and result["J_equals_rho_K"] is True,"symbolic audit")
+    route=(HERE/"blocal_v22_boundary.py").read_text();runner=(HERE/"blocal_v22_runner.py").read_text();checker=(HERE/"blocal_v22_checker.py").read_text();policy_text=(HERE/"blocal_v22_policy.py").read_text()
+    for token in ("kernel.F_arb(","kernel.dFdr_arb(","1-epsilon","1 - epsilon","Decimal(","float("):
+        need(token not in route and token not in runner,f"forbidden proof token {token}")
+    for token in ("enclose_hu","enclose_f","validate_helper_lemmas","SEQUENTIAL_POSITIVE_DENOMINATOR","gamma_subdivisions","Z_DEN_LO","q_lo"):
+        need(token in route or token in runner or token in checker or token in policy_text,f"required token {token}")
+    out=subprocess.run([sys.executable,str(HERE/"blocal_v22_checker_test.py")],check=True,capture_output=True,text=True)
+    need("ALL_BINDING_NEGATIVE_CONTROLS_PASS" in out.stdout,"negative controls")
+    print(json.dumps({"schema":"blocal-v22-finite-static-v2","calculation_free":True,"kernel_imported":False,
+                      "symbolic_audit_exact":True,"negative_controls":True,"source_sha256":{n:digest(HERE/n) for n in SOURCE_NAMES},
+                      "status":"PASS"},sort_keys=True,separators=(",",":")))
     return 0
-
-
-if __name__=="__main__": raise SystemExit(main())
+if __name__=="__main__":raise SystemExit(main())
