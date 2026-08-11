@@ -1,0 +1,87 @@
+name: B-LOCAL v2.2 readiness v4 hat probe
+
+on:
+  push:
+    branches:
+      - "agent/blocal-v22-readiness-draft"
+    paths:
+      - ".github/workflows/blocal-v22-readiness-v4-hat-probe.yml"
+  workflow_dispatch:
+
+jobs:
+  probe:
+    if: github.ref_name == 'agent/blocal-v22-readiness-draft'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      statuses: write
+    env:
+      BLOCAL_DIR: CERTIFICATES/prolate/item2_circle/b_tube_v2_1
+      EPHEMERAL_CONFIG: CERTIFICATES/prolate/item2_circle/b_tube_v2_1/config.blocal-v2.2-readiness-ephemeral.json
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/blocal-v22-readiness-draft
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Guard diagnostic-only authorization
+        run: |
+          set -euo pipefail
+          test -f "$BLOCAL_DIR/READINESS_DRAFT"
+          grep -qx 'config_materialized=false' "$BLOCAL_DIR/READINESS_DRAFT"
+          grep -qx 'production_authorized=false' "$BLOCAL_DIR/READINESS_DRAFT"
+          grep -qx 'tag_authorized=false' "$BLOCAL_DIR/READINESS_DRAFT"
+      - name: Install pinned Arb runtime
+        run: python -m pip install --disable-pip-version-check python-flint==0.9.0
+      - name: Materialize ephemeral readiness config
+        run: |
+          python - <<'PY'
+          import hashlib,json,sys
+          from pathlib import Path
+          here=Path("CERTIFICATES/prolate/item2_circle/b_tube_v2_1");sys.path.insert(0,str(here.resolve()))
+          import blocal_v22_checker_test as ct
+          import blocal_v22_model as model
+          old=json.loads((here/"config.blocal-v2.2-run.json").read_text())
+          cfg=ct.config()
+          for key in ("stage1_dependency","kernel","adapter","base_v21","outputs"):cfg[key]=old[key]
+          names=["blocal_v22_policy.py","blocal_v22_model.py","blocal_v22_boundary.py","blocal_v22_checker.py","blocal_v22_checker_test.py","blocal_v22_runner.py","blocal_v22_static_test.py","blocal_v22_symbolic_audit.py","blocal_v22_readiness_test.py"]
+          prefix="CERTIFICATES/prolate/item2_circle/b_tube_v2_1/"
+          hashes={prefix+n:hashlib.sha256((here/n).read_bytes()).hexdigest() for n in names}
+          cfg["implementation"]={"entrypoint_path":prefix+"blocal_v22_runner.py","sources_sha256":hashes}
+          cfg["checker"]={"id":model.CHECKER_ID,"path":prefix+"blocal_v22_checker.py","source_sha256":hashes[prefix+"blocal_v22_checker.py"]}
+          cfg["symbolic_audit"]={"id":model.SYMBOLIC_AUDIT_ID,"path":prefix+"blocal_v22_symbolic_audit.py","source_sha256":hashes[prefix+"blocal_v22_symbolic_audit.py"]}
+          model.validate_config(cfg)
+          out=here/"config.blocal-v2.2-readiness-ephemeral.json";out.write_bytes(model.canonical_json_bytes(cfg))
+          print(json.dumps({"config_sha256":hashlib.sha256(out.read_bytes()).hexdigest(),"source_sha256":hashes},sort_keys=True,separators=(",",":")))
+          PY
+      - name: Static exact audits
+        working-directory: CERTIFICATES/prolate/item2_circle/b_tube_v2_1
+        run: python blocal_v22_static_test.py
+      - name: Run regular hat-route probe
+        id: hat
+        continue-on-error: true
+        run: timeout 1200s python "$BLOCAL_DIR/diagnostics/blocal_v22_hat_probe_v4.py" | tee /tmp/blocal-v4.json
+      - name: Remove ephemeral config and verify committed config unchanged
+        if: always()
+        run: |
+          rm -f "$EPHEMERAL_CONFIG"
+          test "$(git diff --name-only -- "$BLOCAL_DIR/config.blocal-v2.2-run.json")" = ""
+      - name: Publish probe status
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HAT: ${{ steps.hat.outcome }}
+        run: |
+          python - <<'PY'
+          import json,os,urllib.request
+          ok=os.environ["HAT"]=="success"
+          body=json.dumps({"state":"success" if ok else "failure","context":"blocal-v22-readiness-v4-hat-probe","description":"hat_probe="+os.environ["HAT"],"target_url":f"https://github.com/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}"}).encode()
+          req=urllib.request.Request(f"https://api.github.com/repos/{os.environ['GITHUB_REPOSITORY']}/statuses/{os.environ['GITHUB_SHA']}",data=body,method="POST",headers={"Authorization":f"Bearer {os.environ['GH_TOKEN']}","Accept":"application/vnd.github+json","Content-Type":"application/json"})
+          print(urllib.request.urlopen(req).read().decode())
+          PY
+      - name: Verdict
+        if: always()
+        run: test "${{ steps.hat.outcome }}" = success
