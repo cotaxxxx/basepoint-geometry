@@ -1,4 +1,4 @@
-name: B-LOCAL v2.2 readiness v16.1 R1 seed-width diagnostic
+name: B-LOCAL v2.2 readiness v17 32-seed R1 probe
 on:
   push:
     branches: ["agent/blocal-v22-readiness-draft"]
@@ -47,7 +47,7 @@ jobs:
       - name: Static
         working-directory: CERTIFICATES/prolate/item2_circle/b_tube_v2_1
         run: python blocal_v22_static_test.py
-      - name: Apply v15 algebra geometric R1 seed and seed aggregation
+      - name: Apply v15 algebra and 32 exact R1 seeds
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -60,22 +60,19 @@ jobs:
           repl='''  c0,c1,p0,p1=src(cell,eps_split)\n  if cell.region=="R1" and cell.b0<Fraction(1,2)<cell.b1:return B\n  if cell.region=="R2" and c0==0 and Fraction(1)-p1*p1/Fraction(6)<=0 and p0<HALF_PI_HI:return B\n'''
           assert needle in s;s=s.replace(needle,repl)
           marker=' route._split=split\n'
-          inject=''' route._split=split\n def geometric_roots():\n  out=[route.Cell(r,r,0,Fraction(0),Fraction(1),Fraction(0),Fraction(1)) for r in ("T1","T2","R2")]\n  cs=[Fraction(1,256),Fraction(1,128),Fraction(1,64),Fraction(1,32),Fraction(1,16),Fraction(1,8),Fraction(1,4),Fraction(1,2),Fraction(1)]\n  for i,(cl,ch) in enumerate(zip(cs,cs[1:])):\n   al=(cl-Fraction(1,256))/Fraction(255,256);ah=(ch-Fraction(1,256))/Fraction(255,256)\n   out.append(route.Cell("R1",f"R1G{i}",0,al,ah,Fraction(0),Fraction(1)))\n  return out\n route._root_initial=geometric_roots\n'''
+          inject=''' route._split=split\n def seeded_roots():\n  out=[route.Cell(r,r,0,Fraction(0),Fraction(1),Fraction(0),Fraction(1)) for r in ("T1","T2","R2")]\n  cs=[Fraction(1,256),Fraction(1,128),Fraction(1,64),Fraction(1,32),Fraction(1,16),Fraction(1,8),Fraction(1,4),Fraction(1,2),Fraction(1)]\n  idx=0\n  for cl,ch in zip(cs,cs[1:]):\n   for j in range(4):\n    x0=cl+(ch-cl)*Fraction(j,4);x1=cl+(ch-cl)*Fraction(j+1,4)\n    al=(x0-Fraction(1,256))/Fraction(255,256);ah=(x1-Fraction(1,256))/Fraction(255,256)\n    out.append(route.Cell("R1",f"R1S{idx:02d}",0,al,ah,Fraction(0),Fraction(1)));idx+=1\n  return out\n route._root_initial=seeded_roots\n'''
           assert marker in s;s=s.replace(marker,inject,1)
-          old='''   return {"evaluations":ev,"normalized":norm,"regions":dict(collections.Counter(v[0].region for v in active.values())),"tops":[{"width":model.rational_json(w),"region":rg,"path":p,"depth":d,"D_floor":df,"floor_source":fs} for w,rg,p,d,df,fs in tops]}\n'''
-          new='''   seed_widths={};seed_counts={}\n   for path,v in active.items():\n    if path.startswith("R1G"):\n     seed=path[:4];seed_widths[seed]=seed_widths.get(seed,Fraction(0))+(v[5]-v[4]);seed_counts[seed]=seed_counts.get(seed,0)+1\n   return {"evaluations":ev,"normalized":norm,"regions":dict(collections.Counter(v[0].region for v in active.values())),"seed_widths":{k:model.rational_json(v) for k,v in sorted(seed_widths.items())},"seed_counts":dict(sorted(seed_counts.items())),"tops":[{"width":model.rational_json(w),"region":rg,"path":p,"depth":d,"D_floor":df,"floor_source":fs} for w,rg,p,d,df,fs in tops]}\n'''
-          assert old in s;s=s.replace(old,new)
           tests='tests=[("initial",1-um,1-um,lam,lam,"POS"),("l2",1-um,1-um,model.LAMBDA_PLUS-model.S_NEG,lam,"POS"),("l3",Fraction(1),Fraction(1),model.LAMBDA_PLUS,lam,"NEG")]'
           assert tests in s;s=s.replace(tests,'tests=[("initial",1-um,1-um,lam,lam,"POS")]')
           p.write_text(s)
           PY
-      - name: R1 seed-width diagnostic
+      - name: 32-seed R1 probe
         id: probe
         continue-on-error: true
         shell: bash
         run: |
           set -o pipefail
-          timeout 1200s python "$BLOCAL_DIR/diagnostics/blocal_v22_direct_B_probe_v14.py" | tee /tmp/v161.json
+          timeout 1200s python "$BLOCAL_DIR/diagnostics/blocal_v22_direct_B_probe_v14.py" | tee /tmp/v17.json
       - name: Cleanup
         if: always()
         run: |
@@ -89,8 +86,8 @@ jobs:
         run: |
           python - <<'PY'
           import json,os,urllib.request
-          body=json.dumps({"state":"success" if os.environ["PROBE"]=="success" else "failure","context":"blocal-v22-readiness-v16.1-seed-width","description":"seed_width="+os.environ["PROBE"],"target_url":f"https://github.com/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}"}).encode();req=urllib.request.Request(f"https://api.github.com/repos/{os.environ['GITHUB_REPOSITORY']}/statuses/{os.environ['GITHUB_SHA']}",data=body,method="POST",headers={"Authorization":f"Bearer {os.environ['GH_TOKEN']}","Accept":"application/vnd.github+json","Content-Type":"application/json"});print(urllib.request.urlopen(req).read().decode())
+          body=json.dumps({"state":"success" if os.environ["PROBE"]=="success" else "failure","context":"blocal-v22-readiness-v17-32seed","description":"R1_32seed="+os.environ["PROBE"],"target_url":f"https://github.com/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}"}).encode();req=urllib.request.Request(f"https://api.github.com/repos/{os.environ['GITHUB_REPOSITORY']}/statuses/{os.environ['GITHUB_SHA']}",data=body,method="POST",headers={"Authorization":f"Bearer {os.environ['GH_TOKEN']}","Accept":"application/vnd.github+json","Content-Type":"application/json"});print(urllib.request.urlopen(req).read().decode())
           PY
-      - name: Diagnostic complete
+      - name: Verdict
         if: always()
-        run: echo "inspect seed width totals"
+        run: test "${{ steps.probe.outcome }}" = success
