@@ -16,6 +16,7 @@ jobs:
     timeout-minutes: 30
     permissions:
       contents: read
+      statuses: write
     env:
       BLOCAL_DIR: CERTIFICATES/prolate/item2_circle/b_tube_v2_1
       EPHEMERAL_CONFIG: CERTIFICATES/prolate/item2_circle/b_tube_v2_1/config.blocal-v2.2-readiness-ephemeral.json
@@ -62,6 +63,7 @@ jobs:
           tests='tests=[("initial",1-um,1-um,lam,lam,"POS"),("l2",1-um,1-um,model.LAMBDA_PLUS-model.S_NEG,lam,"POS"),("l3",Fraction(1),Fraction(1),model.LAMBDA_PLUS,lam,"NEG")]';assert tests in s;s=s.replace(tests,'tests=[("initial",1-um,1-um,lam,lam,"POS")]');p.write_text(s)
           PY
       - name: Diagnostic convergence
+        id: diag
         continue-on-error: true
         shell: bash
         run: |
@@ -73,3 +75,13 @@ jobs:
           rm -f "$EPHEMERAL_CONFIG"
           git checkout -- "$BLOCAL_DIR/diagnostics/blocal_v22_direct_B_probe_v14.py"
           test "$(git diff --name-only -- "$BLOCAL_DIR/config.blocal-v2.2-run.json")" = ""
+      - name: Publish diagnostic status
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DIAG: ${{ steps.diag.outcome }}
+        run: |
+          python - <<'PY'
+          import json,os,urllib.request
+          n=os.environ["DIAG_EVALS"];ok=os.environ["DIAG"]=="success";body=json.dumps({"state":"success" if ok else "failure","context":"blocal-v22-budget-sweep-"+n,"description":"diagnostic_evals_"+n+"="+os.environ["DIAG"],"target_url":f"https://github.com/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}"}).encode();req=urllib.request.Request(f"https://api.github.com/repos/{os.environ['GITHUB_REPOSITORY']}/statuses/{os.environ['GITHUB_SHA']}",data=body,method="POST",headers={"Authorization":f"Bearer {os.environ['GH_TOKEN']}","Accept":"application/vnd.github+json","Content-Type":"application/json"});print(urllib.request.urlopen(req).read().decode())
+          PY
