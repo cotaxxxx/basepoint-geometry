@@ -19,6 +19,7 @@ jobs:
     timeout-minutes: 75
     permissions:
       contents: read
+      statuses: write
     env:
       BLOCAL_DIR: CERTIFICATES/prolate/item2_circle/b_tube_v2_1
       EPHEMERAL_CONFIG: CERTIFICATES/prolate/item2_circle/b_tube_v2_1/config.blocal-v2.2-readiness-ephemeral.json
@@ -127,8 +128,6 @@ jobs:
               qiv = route._canonical(adapter, q_ball, where+".q")
               _, q_hi = model.interval_fractions(qiv, where+".q")
               model.need(q_lo > 0 and q_hi >= q_lo, where+": q endpoints")
-              # q^(-power/2) decreases with q.  Keep the two positive endpoint
-              # factors separate; never union them before multiplication.
               flo = factor_at(q_hi, power, where+".factor_lo")
               fhi = factor_at(q_lo, power, where+".factor_hi")
               return flo, fhi, q_hi
@@ -389,3 +388,28 @@ jobs:
           test "${{ steps.l2.outcome }}" = success
           test "${{ steps.l1.outcome }}" = success
           test "${{ steps.jstart.outcome }}" = success
+
+      - name: Publish probe commit status
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INITIAL: ${{ steps.initial.outcome }}
+          L3: ${{ steps.l3.outcome }}
+          L2: ${{ steps.l2.outcome }}
+          L1: ${{ steps.l1.outcome }}
+          JSTART: ${{ steps.jstart.outcome }}
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json, os, urllib.request
+          parts={k:os.environ[k] for k in ("INITIAL","L3","L2","L1","JSTART")}
+          ok=all(v=="success" for v in parts.values())
+          desc=" ".join(f"{k.lower()}={v}" for k,v in parts.items())
+          body=json.dumps({"state":"success" if ok else "failure","context":"blocal-v22-readiness-v3-probe",
+                           "description":desc[:140],
+                           "target_url":f"https://github.com/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}"}).encode()
+          req=urllib.request.Request(f"https://api.github.com/repos/{os.environ['GITHUB_REPOSITORY']}/statuses/{os.environ['GITHUB_SHA']}",data=body,method="POST",
+                                     headers={"Authorization":f"Bearer {os.environ['GH_TOKEN']}","Accept":"application/vnd.github+json","Content-Type":"application/json"})
+          with urllib.request.urlopen(req) as r:
+              print(r.read().decode())
+          PY
