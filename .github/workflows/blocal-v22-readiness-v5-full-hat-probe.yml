@@ -1,4 +1,4 @@
-name: B-LOCAL v2.2 readiness v12 ratio-split F probe
+name: B-LOCAL v2.2 readiness v12.1 ratio-split F probe
 
 on:
   push:
@@ -60,7 +60,7 @@ jobs:
           assert 'val=-g["U"]*h-g["L"]*hp*M*y*z*z' in s
           s=s.replace('val=-g["U"]*h-g["L"]*hp*M*y*z*z','val=-g["U"]*h-hp*M*gamma*z*z')
           marker=' original=route._cell_eval\n'
-          inject=''' def ratio_t_width(cell):\n  c0,c1,p0,p1=src(cell,eps)\n  if cell.region=="R1":return p1/c0-p0/c1\n  return c1/p0-c0/p1\n def split_ratio(cell):\n  if cell.region not in ("R1","R2"):\n   return route._split(cell)\n  am=(cell.a0+cell.a1)/2;bm=(cell.b0+cell.b1)/2\n  A=[route.Cell(cell.region,cell.path+"0",cell.depth+1,cell.a0,am,cell.b0,cell.b1),route.Cell(cell.region,cell.path+"1",cell.depth+1,am,cell.a1,cell.b0,cell.b1)]\n  B=[route.Cell(cell.region,cell.path+"0",cell.depth+1,cell.a0,cell.a1,cell.b0,bm),route.Cell(cell.region,cell.path+"1",cell.depth+1,cell.a0,cell.a1,bm,cell.b1)]\n  wa=max(ratio_t_width(x) for x in A);wb=max(ratio_t_width(x) for x in B)\n  return A if wa<=wb else B\n original_split=route._split\n route._split=lambda cell: split_ratio(cell) if cell.region in ("R1","R2") else original_split(cell)\n'''
+          inject=''' eps_split=model.fraction_from_dyadic(cfg["geometry"]["eps"])\n def ratio_t_width(cell):\n  c0,c1,p0,p1=src(cell,eps_split)\n  if cell.region=="R1":return p1/c0-p0/c1\n  return c1/p0-c0/p1\n def split_ratio(cell):\n  am=(cell.a0+cell.a1)/2;bm=(cell.b0+cell.b1)/2\n  A=[route.Cell(cell.region,cell.path+"0",cell.depth+1,cell.a0,am,cell.b0,cell.b1),route.Cell(cell.region,cell.path+"1",cell.depth+1,am,cell.a1,cell.b0,cell.b1)]\n  B=[route.Cell(cell.region,cell.path+"0",cell.depth+1,cell.a0,cell.a1,cell.b0,bm),route.Cell(cell.region,cell.path+"1",cell.depth+1,cell.a0,cell.a1,bm,cell.b1)]\n  wa=max(ratio_t_width(x) for x in A);wb=max(ratio_t_width(x) for x in B)\n  return A if wa<=wb else B\n original_split=route._split\n route._split=lambda cell: split_ratio(cell) if cell.region in ("R1","R2") else original_split(cell)\n'''
           assert marker in s;s=s.replace(marker,inject+marker)
           p.write_text(s)
           PY
@@ -70,7 +70,7 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          timeout 1200s python "$BLOCAL_DIR/diagnostics/blocal_v22_structural_D_probe_v8.py" | tee /tmp/v12.json
+          timeout 1200s python "$BLOCAL_DIR/diagnostics/blocal_v22_structural_D_probe_v8.py" | tee /tmp/v121.json
       - name: Cleanup
         if: always()
         run: |
@@ -84,7 +84,7 @@ jobs:
         run: |
           python - <<'PY'
           import json,os,urllib.request
-          ok=os.environ["HAT"]=="success";b=json.dumps({"state":"success" if ok else "failure","context":"blocal-v22-readiness-v12-ratio-split","description":"ratio_split_v12="+os.environ["HAT"],"target_url":f"https://github.com/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}"}).encode();r=urllib.request.Request(f"https://api.github.com/repos/{os.environ['GITHUB_REPOSITORY']}/statuses/{os.environ['GITHUB_SHA']}",data=b,method="POST",headers={"Authorization":f"Bearer {os.environ['GH_TOKEN']}","Accept":"application/vnd.github+json","Content-Type":"application/json"});print(urllib.request.urlopen(r).read().decode())
+          ok=os.environ["HAT"]=="success";b=json.dumps({"state":"success" if ok else "failure","context":"blocal-v22-readiness-v12.1-ratio-split","description":"ratio_split_v12.1="+os.environ["HAT"],"target_url":f"https://github.com/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}"}).encode();r=urllib.request.Request(f"https://api.github.com/repos/{os.environ['GITHUB_REPOSITORY']}/statuses/{os.environ['GITHUB_SHA']}",data=b,method="POST",headers={"Authorization":f"Bearer {os.environ['GH_TOKEN']}","Accept":"application/vnd.github+json","Content-Type":"application/json"});print(urllib.request.urlopen(r).read().decode())
           PY
       - name: Verdict
         if: always()
