@@ -1,0 +1,75 @@
+name: B-LOCAL v2.2 readiness v5 full-hat probe
+
+on:
+  push:
+    branches: ["agent/blocal-v22-readiness-draft"]
+    paths: [".github/workflows/blocal-v22-readiness-v5-full-hat-probe.yml"]
+  workflow_dispatch:
+
+jobs:
+  probe:
+    if: github.ref_name == 'agent/blocal-v22-readiness-draft'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      statuses: write
+    env:
+      BLOCAL_DIR: CERTIFICATES/prolate/item2_circle/b_tube_v2_1
+      EPHEMERAL_CONFIG: CERTIFICATES/prolate/item2_circle/b_tube_v2_1/config.blocal-v2.2-readiness-ephemeral.json
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/blocal-v22-readiness-draft
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Guard
+        run: |
+          set -euo pipefail
+          grep -qx 'config_materialized=false' "$BLOCAL_DIR/READINESS_DRAFT"
+          grep -qx 'production_authorized=false' "$BLOCAL_DIR/READINESS_DRAFT"
+          grep -qx 'tag_authorized=false' "$BLOCAL_DIR/READINESS_DRAFT"
+      - name: Install Arb
+        run: python -m pip install --disable-pip-version-check python-flint==0.9.0
+      - name: Ephemeral config
+        run: |
+          python - <<'PY'
+          import hashlib,json,sys
+          from pathlib import Path
+          h=Path("CERTIFICATES/prolate/item2_circle/b_tube_v2_1");sys.path.insert(0,str(h.resolve()))
+          import blocal_v22_checker_test as ct, blocal_v22_model as m
+          old=json.loads((h/"config.blocal-v2.2-run.json").read_text());c=ct.config()
+          for k in ("stage1_dependency","kernel","adapter","base_v21","outputs"):c[k]=old[k]
+          ns=["blocal_v22_policy.py","blocal_v22_model.py","blocal_v22_boundary.py","blocal_v22_checker.py","blocal_v22_checker_test.py","blocal_v22_runner.py","blocal_v22_static_test.py","blocal_v22_symbolic_audit.py","blocal_v22_readiness_test.py"];p="CERTIFICATES/prolate/item2_circle/b_tube_v2_1/";hs={p+n:hashlib.sha256((h/n).read_bytes()).hexdigest() for n in ns}
+          c["implementation"]={"entrypoint_path":p+"blocal_v22_runner.py","sources_sha256":hs};c["checker"]={"id":m.CHECKER_ID,"path":p+"blocal_v22_checker.py","source_sha256":hs[p+"blocal_v22_checker.py"]};c["symbolic_audit"]={"id":m.SYMBOLIC_AUDIT_ID,"path":p+"blocal_v22_symbolic_audit.py","source_sha256":hs[p+"blocal_v22_symbolic_audit.py"]};m.validate_config(c);(h/"config.blocal-v2.2-readiness-ephemeral.json").write_bytes(m.canonical_json_bytes(c))
+          PY
+      - name: Static
+        working-directory: CERTIFICATES/prolate/item2_circle/b_tube_v2_1
+        run: python blocal_v22_static_test.py
+      - name: Full-hat probe
+        id: hat
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          timeout 1200s python "$BLOCAL_DIR/diagnostics/blocal_v22_full_hat_probe_v5.py" | tee /tmp/v5.json
+      - name: Cleanup
+        if: always()
+        run: |
+          rm -f "$EPHEMERAL_CONFIG"
+          test "$(git diff --name-only -- "$BLOCAL_DIR/config.blocal-v2.2-run.json")" = ""
+      - name: Publish status
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HAT: ${{ steps.hat.outcome }}
+        run: |
+          python - <<'PY'
+          import json,os,urllib.request
+          ok=os.environ["HAT"]=="success";b=json.dumps({"state":"success" if ok else "failure","context":"blocal-v22-readiness-v5-full-hat-probe","description":"full_hat="+os.environ["HAT"],"target_url":f"https://github.com/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}"}).encode();r=urllib.request.Request(f"https://api.github.com/repos/{os.environ['GITHUB_REPOSITORY']}/statuses/{os.environ['GITHUB_SHA']}",data=b,method="POST",headers={"Authorization":f"Bearer {os.environ['GH_TOKEN']}","Accept":"application/vnd.github+json","Content-Type":"application/json"});print(urllib.request.urlopen(r).read().decode())
+          PY
+      - name: Verdict
+        if: always()
+        run: test "${{ steps.hat.outcome }}" = success
