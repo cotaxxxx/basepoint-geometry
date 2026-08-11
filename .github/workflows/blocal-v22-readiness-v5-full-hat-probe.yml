@@ -1,4 +1,4 @@
-name: B-LOCAL v2.2 readiness v12.1 ratio-split F probe
+name: B-LOCAL v2.2 readiness v13 floor-aware ratio F probe
 
 on:
   push:
@@ -48,7 +48,7 @@ jobs:
       - name: Static
         working-directory: CERTIFICATES/prolate/item2_circle/b_tube_v2_1
         run: python blocal_v22_static_test.py
-      - name: Apply structural floors gamma bracket and ratio-aware split
+      - name: Apply structural floors gamma bracket and floor-aware ratio split
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -60,22 +60,23 @@ jobs:
           assert 'val=-g["U"]*h-g["L"]*hp*M*y*z*z' in s
           s=s.replace('val=-g["U"]*h-g["L"]*hp*M*y*z*z','val=-g["U"]*h-hp*M*gamma*z*z')
           marker=' original=route._cell_eval\n'
-          inject=''' eps_split=model.fraction_from_dyadic(cfg["geometry"]["eps"])\n def ratio_t_width(cell):\n  c0,c1,p0,p1=src(cell,eps_split)\n  if cell.region=="R1":return p1/c0-p0/c1\n  return c1/p0-c0/p1\n def split_ratio(cell):\n  am=(cell.a0+cell.a1)/2;bm=(cell.b0+cell.b1)/2\n  A=[route.Cell(cell.region,cell.path+"0",cell.depth+1,cell.a0,am,cell.b0,cell.b1),route.Cell(cell.region,cell.path+"1",cell.depth+1,am,cell.a1,cell.b0,cell.b1)]\n  B=[route.Cell(cell.region,cell.path+"0",cell.depth+1,cell.a0,cell.a1,cell.b0,bm),route.Cell(cell.region,cell.path+"1",cell.depth+1,cell.a0,cell.a1,bm,cell.b1)]\n  wa=max(ratio_t_width(x) for x in A);wb=max(ratio_t_width(x) for x in B)\n  return A if wa<=wb else B\n original_split=route._split\n route._split=lambda cell: split_ratio(cell) if cell.region in ("R1","R2") else original_split(cell)\n'''
+          inject=''' eps_split=model.fraction_from_dyadic(cfg["geometry"]["eps"])\n def ratio_t_width(cell):\n  c0,c1,p0,p1=src(cell,eps_split)\n  if cell.region=="R1":return p1/c0-p0/c1\n  return c1/p0-c0/p1\n def split_ratio(cell):\n  am=(cell.a0+cell.a1)/2;bm=(cell.b0+cell.b1)/2\n  A=[route.Cell(cell.region,cell.path+"0",cell.depth+1,cell.a0,am,cell.b0,cell.b1),route.Cell(cell.region,cell.path+"1",cell.depth+1,am,cell.a1,cell.b0,cell.b1)]\n  B=[route.Cell(cell.region,cell.path+"0",cell.depth+1,cell.a0,cell.a1,cell.b0,bm),route.Cell(cell.region,cell.path+"1",cell.depth+1,cell.a0,cell.a1,bm,cell.b1)]\n  c0,c1,p0,p1=src(cell,eps_split)\n  if cell.region=="R2" and c0==0:\n   sinc_lo=Fraction(1)-p1*p1/Fraction(6)\n   if sinc_lo<=0 and p0<HALF_PI_HI:\n    return B\n  wa=max(ratio_t_width(x) for x in A);wb=max(ratio_t_width(x) for x in B)\n  return A if wa<=wb else B\n original_split=route._split\n route._split=lambda cell: split_ratio(cell) if cell.region in ("R1","R2") else original_split(cell)\n'''
           assert marker in s;s=s.replace(marker,inject+marker)
           p.write_text(s)
           PY
-      - name: Ratio-aware F probe
+      - name: Floor-aware ratio F probe
         id: hat
         continue-on-error: true
         shell: bash
         run: |
           set -o pipefail
-          timeout 1200s python "$BLOCAL_DIR/diagnostics/blocal_v22_structural_D_probe_v8.py" | tee /tmp/v121.json
+          timeout 1200s python "$BLOCAL_DIR/diagnostics/blocal_v22_structural_D_probe_v8.py" | tee /tmp/v13.json
       - name: Cleanup
         if: always()
         run: |
           rm -f "$EPHEMERAL_CONFIG"
           git checkout -- "$BLOCAL_DIR/diagnostics/blocal_v22_structural_D_probe_v8.py"
+          test "$(git diff --name-only -- "$BLOCAL_DIR/config.blocal-v2.2-run.json")" = ""
       - name: Publish status
         if: always()
         env:
@@ -84,7 +85,7 @@ jobs:
         run: |
           python - <<'PY'
           import json,os,urllib.request
-          ok=os.environ["HAT"]=="success";b=json.dumps({"state":"success" if ok else "failure","context":"blocal-v22-readiness-v12.1-ratio-split","description":"ratio_split_v12.1="+os.environ["HAT"],"target_url":f"https://github.com/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}"}).encode();r=urllib.request.Request(f"https://api.github.com/repos/{os.environ['GITHUB_REPOSITORY']}/statuses/{os.environ['GITHUB_SHA']}",data=b,method="POST",headers={"Authorization":f"Bearer {os.environ['GH_TOKEN']}","Accept":"application/vnd.github+json","Content-Type":"application/json"});print(urllib.request.urlopen(r).read().decode())
+          ok=os.environ["HAT"]=="success";b=json.dumps({"state":"success" if ok else "failure","context":"blocal-v22-readiness-v13-floor-aware-ratio","description":"floor_aware_v13="+os.environ["HAT"],"target_url":f"https://github.com/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}"}).encode();r=urllib.request.Request(f"https://api.github.com/repos/{os.environ['GITHUB_REPOSITORY']}/statuses/{os.environ['GITHUB_SHA']}",data=b,method="POST",headers={"Authorization":f"Bearer {os.environ['GH_TOKEN']}","Accept":"application/vnd.github+json","Content-Type":"application/json"});print(urllib.request.urlopen(r).read().decode())
           PY
       - name: Verdict
         if: always()
