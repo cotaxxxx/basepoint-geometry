@@ -1,0 +1,89 @@
+name: B-LOCAL v2.2 diagnostic depth sweep
+on:
+  push:
+    branches: ["agent/blocal-v22-readiness-draft"]
+    paths: [".github/workflows/blocal-v22-diagnostic-depth-sweep.yml"]
+  workflow_dispatch:
+
+jobs:
+  sweep:
+    if: github.ref_name == 'agent/blocal-v22-readiness-draft'
+    strategy:
+      fail-fast: false
+      matrix:
+        depth: [14, 16]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      statuses: write
+    env:
+      BLOCAL_DIR: CERTIFICATES/prolate/item2_circle/b_tube_v2_1
+      EPHEMERAL_CONFIG: CERTIFICATES/prolate/item2_circle/b_tube_v2_1/config.blocal-v2.2-readiness-ephemeral.json
+      DIAG_DEPTH: ${{ matrix.depth }}
+      DIAG_EVALS: "96000"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/blocal-v22-readiness-draft
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Guard diagnostic only
+        run: |
+          set -euo pipefail
+          grep -qx 'config_materialized=false' "$BLOCAL_DIR/READINESS_DRAFT"
+          grep -qx 'production_authorized=false' "$BLOCAL_DIR/READINESS_DRAFT"
+          grep -qx 'tag_authorized=false' "$BLOCAL_DIR/READINESS_DRAFT"
+      - name: Install Arb
+        run: python -m pip install --disable-pip-version-check python-flint==0.9.0
+      - name: Materialize diagnostic ephemeral config
+        run: |
+          python - <<'PY'
+          import hashlib,json,os,sys
+          from pathlib import Path
+          h=Path("CERTIFICATES/prolate/item2_circle/b_tube_v2_1");sys.path.insert(0,str(h.resolve()))
+          import blocal_v22_checker_test as ct, blocal_v22_model as m
+          old=json.loads((h/"config.blocal-v2.2-run.json").read_text());c=ct.config();n=int(os.environ["DIAG_EVALS"]);d=int(os.environ["DIAG_DEPTH"])
+          for k in ("stage1_dependency","kernel","adapter","base_v21","outputs"):c[k]=old[k]
+          for key in ("F_ROUTE","K_ROUTE"):
+              c["route_policies"][key]["max_evaluations"]=n
+              c["route_policies"][key]["max_children"]=n
+              c["route_policies"][key]["max_depth"]=d
+          ns=["blocal_v22_policy.py","blocal_v22_model.py","blocal_v22_boundary.py","blocal_v22_checker.py","blocal_v22_checker_test.py","blocal_v22_runner.py","blocal_v22_static_test.py","blocal_v22_symbolic_audit.py","blocal_v22_readiness_test.py"];p="CERTIFICATES/prolate/item2_circle/b_tube_v2_1/";hs={p+x:hashlib.sha256((h/x).read_bytes()).hexdigest() for x in ns}
+          c["implementation"]={"entrypoint_path":p+"blocal_v22_runner.py","sources_sha256":hs};c["checker"]={"id":m.CHECKER_ID,"path":p+"blocal_v22_checker.py","source_sha256":hs[p+"blocal_v22_checker.py"]};c["symbolic_audit"]={"id":m.SYMBOLIC_AUDIT_ID,"path":p+"blocal_v22_symbolic_audit.py","source_sha256":hs[p+"blocal_v22_symbolic_audit.py"]};m.validate_config(c);(h/"config.blocal-v2.2-readiness-ephemeral.json").write_bytes(m.canonical_json_bytes(c));print(json.dumps({"diagnostic_only":True,"max_evaluations":n,"max_children":n,"max_depth":d}))
+          PY
+      - name: Apply v15 algebra and 32 exact R1 seeds
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path("CERTIFICATES/prolate/item2_circle/b_tube_v2_1/diagnostics/blocal_v22_direct_B_probe_v14.py");s=p.read_text()
+          s=s.replace('if p1<=HALF_PI_HI:','if cell.b1<=Fraction(1,2):',1);s=s.replace('if p0>=HALF_PI_HI:','if cell.b0>=Fraction(1,2):',1);s=s.replace('if p1<=HALF_PI_HI:','if (cell.region=="R1" and cell.b1<=Fraction(1,2)) or (cell.region=="R2" and p1<=HALF_PI_HI):',1)
+          needle='''  c0,c1,p0,p1=src(cell,eps_split)\n  if cell.region=="R2" and c0==0 and Fraction(1)-p1*p1/Fraction(6)<=0 and p0<HALF_PI_HI:return B\n''';repl='''  c0,c1,p0,p1=src(cell,eps_split)\n  if cell.region=="R1" and cell.b0<Fraction(1,2)<cell.b1:return B\n  if cell.region=="R2" and c0==0 and Fraction(1)-p1*p1/Fraction(6)<=0 and p0<HALF_PI_HI:return B\n''';assert needle in s;s=s.replace(needle,repl)
+          marker=' route._split=split\n';inject=''' route._split=split\n def seeded_roots():\n  out=[route.Cell(r,r,0,Fraction(0),Fraction(1),Fraction(0),Fraction(1)) for r in ("T1","T2","R2")]\n  cs=[Fraction(1,256),Fraction(1,128),Fraction(1,64),Fraction(1,32),Fraction(1,16),Fraction(1,8),Fraction(1,4),Fraction(1,2),Fraction(1)]\n  idx=0\n  for cl,ch in zip(cs,cs[1:]):\n   for j in range(4):\n    x0=cl+(ch-cl)*Fraction(j,4);x1=cl+(ch-cl)*Fraction(j+1,4);al=(x0-Fraction(1,256))/Fraction(255,256);ah=(x1-Fraction(1,256))/Fraction(255,256);out.append(route.Cell("R1",f"R1S{idx:02d}",0,al,ah,Fraction(0),Fraction(1)));idx+=1\n  return out\n route._root_initial=seeded_roots\n''';assert marker in s;s=s.replace(marker,inject,1)
+          tests='tests=[("initial",1-um,1-um,lam,lam,"POS"),("l2",1-um,1-um,model.LAMBDA_PLUS-model.S_NEG,lam,"POS"),("l3",Fraction(1),Fraction(1),model.LAMBDA_PLUS,lam,"NEG")]';assert tests in s;s=s.replace(tests,'tests=[("initial",1-um,1-um,lam,lam,"POS")]');p.write_text(s)
+          PY
+      - name: Diagnostic depth convergence
+        id: diag
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          timeout 1200s python "$BLOCAL_DIR/diagnostics/blocal_v22_direct_B_probe_v14.py" | tee "/tmp/depth-${DIAG_DEPTH}.json"
+      - name: Cleanup
+        if: always()
+        run: |
+          rm -f "$EPHEMERAL_CONFIG"
+          git checkout -- "$BLOCAL_DIR/diagnostics/blocal_v22_direct_B_probe_v14.py"
+          test "$(git diff --name-only -- "$BLOCAL_DIR/config.blocal-v2.2-run.json")" = ""
+      - name: Publish diagnostic status
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DIAG: ${{ steps.diag.outcome }}
+        run: |
+          python - <<'PY'
+          import json,os,urllib.request
+          d=os.environ["DIAG_DEPTH"];ok=os.environ["DIAG"]=="success";body=json.dumps({"state":"success" if ok else "failure","context":"blocal-v22-depth-sweep-"+d,"description":"diagnostic_depth_"+d+"="+os.environ["DIAG"],"target_url":f"https://github.com/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}"}).encode();req=urllib.request.Request(f"https://api.github.com/repos/{os.environ['GITHUB_REPOSITORY']}/statuses/{os.environ['GITHUB_SHA']}",data=body,method="POST",headers={"Authorization":f"Bearer {os.environ['GH_TOKEN']}","Accept":"application/vnd.github+json","Content-Type":"application/json"});print(urllib.request.urlopen(req).read().decode())
+          PY
