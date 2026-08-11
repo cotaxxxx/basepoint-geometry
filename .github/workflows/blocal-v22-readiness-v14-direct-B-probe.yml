@@ -1,4 +1,4 @@
-name: B-LOCAL v2.2 readiness v15.1 dominant-child diagnostic
+name: B-LOCAL v2.2 readiness v16 geometric-R1 seed probe
 on:
   push:
     branches: ["agent/blocal-v22-readiness-draft"]
@@ -47,7 +47,7 @@ jobs:
       - name: Static
         working-directory: CERTIFICATES/prolate/item2_circle/b_tube_v2_1
         run: python blocal_v22_static_test.py
-      - name: Apply exact R1 sectors and dominant-child instrumentation
+      - name: Apply v15 algebra and geometric R1 seed
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -59,21 +59,23 @@ jobs:
           needle='''  c0,c1,p0,p1=src(cell,eps_split)\n  if cell.region=="R2" and c0==0 and Fraction(1)-p1*p1/Fraction(6)<=0 and p0<HALF_PI_HI:return B\n'''
           repl='''  c0,c1,p0,p1=src(cell,eps_split)\n  if cell.region=="R1" and cell.b0<Fraction(1,2)<cell.b1:return B\n  if cell.region=="R2" and c0==0 and Fraction(1)-p1*p1/Fraction(6)<=0 and p0<HALF_PI_HI:return B\n'''
           assert needle in s;s=s.replace(needle,repl)
-          old='''  val=-g["U"]*h-hp*M*gamma*z*z\n  out=val*measure*ex((cell.a1-cell.a0)*(cell.b1-cell.b0));can(out,"out")\n  return out,{"v14":True,"D_floor":model.rational_json(Dlo),"floor_source":fd["floor_source"],"gamma_fallback_used":bool(gs)}\n'''
-          new='''  term1=-g["U"]*h;term2=-hp*M*gamma*z*z;val=term1+term2\n  out=val*measure*ex((cell.a1-cell.a0)*(cell.b1-cell.b0));can(out,"out")\n  if cell.path=="R1000000010000":\n   def jj(ball,name):\n    a0,a1=model.interval_fractions(can(ball,"DOM."+name),"DOM."+name);return {"lo":model.rational_json(a0),"hi":model.rational_json(a1),"width":model.rational_json(a1-a0)}\n   print(json.dumps({"DOMINANT_CHILD":True,"path":cell.path,"box":{"a0":model.rational_json(cell.a0),"a1":model.rational_json(cell.a1),"b0":model.rational_json(cell.b0),"b1":model.rational_json(cell.b1)},"source":{"c0":model.rational_json(c0),"c1":model.rational_json(c1),"p0":model.rational_json(p0),"p1":model.rational_json(p1)},"D_floor":model.rational_json(Dlo),"D_hi":model.rational_json(Dhi),"floor_source":fd["floor_source"],"U":jj(g["U"],"U"),"Ahat":jj(A,"Ahat"),"Bhat":jj(B,"Bhat"),"M":jj(M,"M"),"z":jj(z,"z"),"y":jj(y,"y"),"gamma":jj(gamma,"gamma"),"h":jj(h,"h"),"h1":jj(hp,"h1"),"term1":jj(term1,"term1"),"term2":jj(term2,"term2"),"value":jj(val,"value"),"contribution":jj(out,"contribution"),"gamma_fallback":bool(gs)},sort_keys=True,separators=(",",":")),flush=True)\n  return out,{"v14":True,"D_floor":model.rational_json(Dlo),"floor_source":fd["floor_source"],"gamma_fallback_used":bool(gs)}\n'''
-          assert old in s;s=s.replace(old,new)
-          # Only initial phase is needed for the decomposition.
-          start='tests=[("initial",1-um,1-um,lam,lam,"POS"),("l2",1-um,1-um,model.LAMBDA_PLUS-model.S_NEG,lam,"POS"),("l3",Fraction(1),Fraction(1),model.LAMBDA_PLUS,lam,"NEG")]'
-          assert start in s;s=s.replace(start,'tests=[("initial",1-um,1-um,lam,lam,"POS")]')
+          # Replace one R1 root by 8 exact geometric c bands.  c=eps+(1-eps)a,
+          # so a=(c-eps)/(1-eps); all thresholds are exact rationals.
+          marker=' route._split=split\n'
+          inject=''' route._split=split\n original_roots=route._root_initial\n def geometric_roots():\n  out=[route.Cell(r,r,0,Fraction(0),Fraction(1),Fraction(0),Fraction(1)) for r in ("T1","T2","R2")]\n  cs=[Fraction(1,256),Fraction(1,128),Fraction(1,64),Fraction(1,32),Fraction(1,16),Fraction(1,8),Fraction(1,4),Fraction(1,2),Fraction(1)]\n  for i,(cl,ch) in enumerate(zip(cs,cs[1:])):\n   al=(cl-Fraction(1,256))/(Fraction(255,256));ah=(ch-Fraction(1,256))/(Fraction(255,256))\n   out.append(route.Cell("R1",f"R1G{i}",0,al,ah,Fraction(0),Fraction(1)))\n  return out\n route._root_initial=geometric_roots\n'''
+          assert marker in s;s=s.replace(marker,inject,1)
+          # Initial point only for this partition experiment.
+          tests='tests=[("initial",1-um,1-um,lam,lam,"POS"),("l2",1-um,1-um,model.LAMBDA_PLUS-model.S_NEG,lam,"POS"),("l3",Fraction(1),Fraction(1),model.LAMBDA_PLUS,lam,"NEG")]'
+          assert tests in s;s=s.replace(tests,'tests=[("initial",1-um,1-um,lam,lam,"POS")]')
           p.write_text(s)
           PY
-      - name: Dominant-child diagnostic
+      - name: Geometric-R1 seed probe
         id: probe
         continue-on-error: true
         shell: bash
         run: |
           set -o pipefail
-          timeout 1200s python "$BLOCAL_DIR/diagnostics/blocal_v22_direct_B_probe_v14.py" | tee /tmp/v151.json
+          timeout 1200s python "$BLOCAL_DIR/diagnostics/blocal_v22_direct_B_probe_v14.py" | tee /tmp/v16.json
       - name: Cleanup
         if: always()
         run: |
@@ -88,8 +90,8 @@ jobs:
         run: |
           python - <<'PY'
           import json,os,urllib.request
-          body=json.dumps({"state":"failure" if os.environ["PROBE"]!="success" else "success","context":"blocal-v22-readiness-v15.1-dominant-child","description":"dominant_child="+os.environ["PROBE"],"target_url":f"https://github.com/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}"}).encode();req=urllib.request.Request(f"https://api.github.com/repos/{os.environ['GITHUB_REPOSITORY']}/statuses/{os.environ['GITHUB_SHA']}",data=body,method="POST",headers={"Authorization":f"Bearer {os.environ['GH_TOKEN']}","Accept":"application/vnd.github+json","Content-Type":"application/json"});print(urllib.request.urlopen(req).read().decode())
+          body=json.dumps({"state":"success" if os.environ["PROBE"]=="success" else "failure","context":"blocal-v22-readiness-v16-geometric-R1","description":"geometric_R1="+os.environ["PROBE"],"target_url":f"https://github.com/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}"}).encode();req=urllib.request.Request(f"https://api.github.com/repos/{os.environ['GITHUB_REPOSITORY']}/statuses/{os.environ['GITHUB_SHA']}",data=body,method="POST",headers={"Authorization":f"Bearer {os.environ['GH_TOKEN']}","Accept":"application/vnd.github+json","Content-Type":"application/json"});print(urllib.request.urlopen(req).read().decode())
           PY
-      - name: Diagnostic complete
+      - name: Verdict
         if: always()
-        run: echo "inspect dominant child decomposition"
+        run: test "${{ steps.probe.outcome }}" = success
