@@ -1,0 +1,9 @@
+B-LOCAL v2.2 READINESS DRAFT
+base_commit=f21704b2cbd2954acb492ec2a58dbb0765773f1f
+source_count=9
+config_materialized=false
+certificate_evidence=false
+production_authorized=false
+workflow_change_authorized=false
+tag_authorized=false
+purpose=chat-side production-shaped readiness at fixed eps=2^-8 before source freeze
