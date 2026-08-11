@@ -67,8 +67,8 @@ def main() -> int:
         need(token in route, f"required route token {token}")
 
     for token in (
-        "EXACT_ENDPOINT_RECIPROCAL", "ENDPOINT_SAFE_SQRT",
-        "GAMMA_CHILD_OR_EXACT_TWO_BIN_FALLBACK",
+        "EXACT_ENDPOINT_RECIPROCAL", "NONNEGATIVE_UPPER_ENDPOINT_SQRT",
+        "CHILD_GAMMA_OR_TWO_BIN_FALLBACK_ALL_CELLS",
         "PER_CHILD_Q_LO_WITH_R2_W",
     ):
         need(token in policy_text, f"required policy token {token}")
