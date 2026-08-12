@@ -12,7 +12,7 @@ permissions:
 env:
   BLOCAL_DIR: CERTIFICATES/prolate/item2_circle/b_tube_v2_1
   EPHEMERAL_CONFIG: CERTIFICATES/prolate/item2_circle/b_tube_v2_1/config.blocal-v2.2-readiness-ephemeral.json
-  PROBE: CERTIFICATES/prolate/item2_circle/b_tube_v2_1/diagnostics/blocal_v22_method_taylor2_probe_v2.py
+  PROBE: CERTIFICATES/prolate/item2_circle/b_tube_v2_1/diagnostics/blocal_v22_method_taylor2_probe_v3.py\n  FULL_RECORD: /tmp/blocal-v22-method-selection-taylor2-full-v3.json\n  FULL_RECORD_GZ: /tmp/blocal-v22-method-selection-taylor2-full-v3.json.gz
 
 jobs:
   method-selection:
@@ -93,11 +93,46 @@ jobs:
         run: |
           set -uo pipefail
           set +e
-          timeout 1200s python "$PROBE" | tee /tmp/blocal-v22-method-selection-taylor2.json
+          BLOCAL_V22_FULL_RECORD="$FULL_RECORD" timeout 1200s python "$PROBE" | tee /tmp/blocal-v22-method-selection-taylor2-summary-v3.json
           rc=${PIPESTATUS[0]}
           echo "probe_rc=$rc" >> "$GITHUB_OUTPUT"
           if [ "$rc" -eq 0 ]; then echo "probe_state=success" >> "$GITHUB_OUTPUT"; else echo "probe_state=failure" >> "$GITHUB_OUTPUT"; fi
           exit 0
+
+      - name: Compress full section 6.5 record
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s "$FULL_RECORD"
+          gzip -9 -c "$FULL_RECORD" > "$FULL_RECORD_GZ"
+          python - <<'PY'
+          import gzip,hashlib,json,os
+          from pathlib import Path
+          p=Path(os.environ['FULL_RECORD'])
+          g=Path(os.environ['FULL_RECORD_GZ'])
+          record=json.loads(p.read_bytes())
+          print(json.dumps({
+            'schema':'BLOCAL_V22_SECTION_6_5_ARTIFACT_SUMMARY_V3',
+            'full_record_bytes':p.stat().st_size,
+            'full_record_sha256':hashlib.sha256(p.read_bytes()).hexdigest(),
+            'gzip_bytes':g.stat().st_size,
+            'gzip_sha256':hashlib.sha256(g.read_bytes()).hexdigest(),
+            'gamma_partition_registry_count':record['record_normalization']['gamma_partition_registry_count'],
+            'all_six_conditions_pass':record.get('all_six_conditions_pass'),
+            'method_selection_gate':record.get('method_selection_gate'),
+            'total_elapsed_seconds':record.get('total_elapsed_seconds'),
+          },sort_keys=True,separators=(',',':')))
+          PY
+
+      - name: Upload full section 6.5 record
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: blocal-v22-method-selection-section-6-5-v3
+          path: /tmp/blocal-v22-method-selection-taylor2-full-v3.json.gz
+          if-no-files-found: error
+          retention-days: 30
 
       - name: Cleanup and provenance guard
         if: always()
