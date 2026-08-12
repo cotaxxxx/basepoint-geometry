@@ -12,7 +12,9 @@ permissions:
 env:
   BLOCAL_DIR: CERTIFICATES/prolate/item2_circle/b_tube_v2_1
   EPHEMERAL_CONFIG: CERTIFICATES/prolate/item2_circle/b_tube_v2_1/config.blocal-v2.2-readiness-ephemeral.json
-  PROBE: CERTIFICATES/prolate/item2_circle/b_tube_v2_1/diagnostics/blocal_v22_method_taylor2_probe_v3.py\n  FULL_RECORD: /tmp/blocal-v22-method-selection-taylor2-full-v3.json\n  FULL_RECORD_GZ: /tmp/blocal-v22-method-selection-taylor2-full-v3.json.gz
+  PROBE: CERTIFICATES/prolate/item2_circle/b_tube_v2_1/diagnostics/blocal_v22_method_taylor2_probe_v3.py
+  FULL_RECORD: /tmp/blocal-v22-method-selection-taylor2-full-v3.json
+  FULL_RECORD_GZ: /tmp/blocal-v22-method-selection-taylor2-full-v3.json.gz
 
 jobs:
   method-selection:
