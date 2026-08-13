@@ -1,4 +1,5 @@
 name: B-LOCAL v2.2 v5 L3 lambda ladder diagnostic
+# One-shot materialized-config ladder trigger: 2026-08-14.
 
 on:
   workflow_dispatch:
