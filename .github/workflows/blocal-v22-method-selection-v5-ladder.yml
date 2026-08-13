@@ -1,0 +1,229 @@
+name: B-LOCAL v2.2 v5 L3 lambda ladder diagnostic
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  SOURCE_SHA: e72e2ba262996e31c99bb3e92156c153e4f5b59e
+  V5_SHA256: 7b4f9b394caeafd4edce4d549819f98178b7e107e96370031e92ba9f2a1331ce
+  SPEC_SHA256: 42a9b79865a4f5f4388542cc9a52720513b1e9196debdd882f7c1a8f9b1e0cb6
+  CONFIG_SHA256: fec14e9911102f6d2c1d6d389a21865e16ffcdb91aa08adb69f13da45d3717d6
+  BLOCAL_DIR: CERTIFICATES/prolate/item2_circle/b_tube_v2_1
+  DIAG_DIR: CERTIFICATES/prolate/item2_circle/b_tube_v2_1/diagnostics
+  CI_WALL_TIMEOUT_SECONDS: '1200'
+
+jobs:
+  ladder-shard:
+    strategy:
+      fail-fast: false
+      matrix:
+        candidate_index: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: e72e2ba262996e31c99bb3e92156c153e4f5b59e
+          persist-credentials: false
+          fetch-depth: 1
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.13'
+
+      - name: Install pinned Arb runtime
+        run: python -m pip install --disable-pip-version-check python-flint==0.9.0
+
+      - name: Run one committed-budget L3 candidate
+        shell: bash
+        env:
+          CANDIDATE_INDEX: ${{ matrix.candidate_index }}
+        run: |
+          set -euo pipefail
+          timeout "${CI_WALL_TIMEOUT_SECONDS}s" python - <<'PY'
+          import gzip,hashlib,heapq,json,os,platform,subprocess,sys,time
+          from fractions import Fraction
+          from pathlib import Path
+
+          root=Path.cwd();bd=root/os.environ['BLOCAL_DIR'];dd=root/os.environ['DIAG_DIR']
+          sys.path.insert(0,str(dd));sys.path.insert(0,str(bd))
+          source=subprocess.run(['git','rev-parse','HEAD'],check=True,capture_output=True,text=True).stdout.strip()
+          expected={
+            'checkout_sha':os.environ['SOURCE_SHA'],
+            'v5_sha256':os.environ['V5_SHA256'],
+            'spec_sha256':os.environ['SPEC_SHA256'],
+            'config_sha256':os.environ['CONFIG_SHA256'],
+          }
+          paths={'v5':dd/'blocal_v22_method_taylor2_probe_v5.py',
+                 'spec':dd/'BLOCAL_V22_METHOD_SELECTION_V5_SPEC.md',
+                 'config':bd/'config.blocal-v2.2-run.json'}
+          actual={'checkout_sha':source,
+                  'v5_sha256':hashlib.sha256(paths['v5'].read_bytes()).hexdigest(),
+                  'spec_sha256':hashlib.sha256(paths['spec'].read_bytes()).hexdigest(),
+                  'config_sha256':hashlib.sha256(paths['config'].read_bytes()).hexdigest()}
+          index=int(os.environ['CANDIDATE_INDEX']);k=24-index;s=Fraction(1,1<<k)
+          started_utc=time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime());started=time.perf_counter()
+          record={'schema':'BLOCAL_V22_V5_L3_LADDER_SHARD_V1','candidate_index':index,
+                  'lambda_increment':{'numerator':s.numerator,'denominator':s.denominator,'power':-k},
+                  'expected_provenance':expected,'actual_provenance':actual,
+                  'mathematical_budget':{'node':'L3','max_depth':22,'max_evaluations':12000,'max_tiles':8000,
+                                         'budget_scope':'PER_CANDIDATE_PER_NODE'},
+                  'ci_wall_timeout_seconds':int(os.environ['CI_WALL_TIMEOUT_SECONDS']),
+                  'started_at_utc':started_utc,'certificate_evidence':False}
+          try:
+            if actual!=expected:raise RuntimeError('PINNED_PROVENANCE_MISMATCH')
+            import blocal_v22_method_taylor2_probe_v5 as v5
+            base=v5.base;v2=v5.v4.v3.v2
+            cfg=base.model.parse_canonical_json(paths['config'].read_bytes());base.model.validate_config(cfg)
+            from flint import acb,arb,ctx,fmpq
+            import flint
+            ctx.prec=cfg['precision']['bits'];base.CONFIG=cfg;base.acb=acb;base.arb=arb;base.fmpq=fmpq
+            base.route,base.adapter,base.kernel=base.readiness.load(cfg)
+            base.angle4_union=v2.angle4_union;base.geometry_jet=v5.geometry_jet;base.eval_cell=v5.eval_cell
+            trace=v2.new_trace();v2._TRACE=trace
+            eps=base.model.fraction_from_dyadic(cfg['geometry']['eps']);active={};heap=[]
+            SL=Fraction(0);SH=Fraction(0);attempts=0;evaluations=0;splits=0;maxdepth=0
+            reason=None;enclosure=None;complete=False
+            class Stop(Exception):pass
+            def stop(x):
+              nonlocal_dummy=None
+              raise Stop(x)
+            def add(cell):
+              global attempts,evaluations,splits,maxdepth,SL,SH
+              if attempts>=12000:stop('MAX_EVALUATIONS')
+              attempts+=1;maxdepth=max(maxdepth,cell.depth)
+              try:value,detail=base.eval_cell('F',cell,Fraction(0),Fraction(0),Fraction(0),s,eps)
+              except base.route.SplitRequired as exc:
+                if cell.depth>=22:stop('MAX_DEPTH:'+exc.reason)
+                splits+=1
+                for child in base.split_cell(cell):add(child)
+                return
+              evaluations+=1;iv=base.can(value,'L3 child');lo,hi=base.model.interval_fractions(iv,'L3 child')
+              active[cell.path]=(cell,lo,hi,detail);SL+=lo;SH+=hi
+              if cell.depth<22:heapq.heappush(heap,(-(hi-lo),base.ORDER[cell.region],cell.path))
+              if len(active)>8000:stop('MAX_TILES')
+            try:
+              for cell in base.roots():add(cell)
+              while True:
+                enclosure=base.model.normalize_interval(base.model.outward_dyadic(SL,SH))
+                lo,hi=base.model.interval_fractions(enclosure,'L3 aggregate')
+                complete=base.cover_ok(active)
+                if complete and hi<0:verdict='ACCEPTED';reason='STRICT_NEG_CERTIFIED';break
+                if complete and lo>0:verdict='REJECTED';reason='STRICT_POS_CERTIFIED';break
+                chosen=None
+                while heap:
+                  _,_,path=heapq.heappop(heap)
+                  if path in active and active[path][0].depth<22:chosen=active[path];break
+                if chosen is None:stop('NO_SPLITTABLE_CELL')
+                cell,lo,hi,_=chosen;del active[cell.path];SL-=lo;SH-=hi;splits+=1
+                for child in base.split_cell(cell):add(child)
+            except Stop as exc:
+              verdict='INDETERMINATE';reason=str(exc)
+              if active:
+                enclosure=base.model.normalize_interval(base.model.outward_dyadic(SL,SH))
+                complete=base.cover_ok(active)
+            finally:v2._TRACE=None
+            record.update({'verdict':verdict,'reason':reason,'enclosure':enclosure,
+                           'cell_evaluation_attempts':attempts,'cell_evaluations':evaluations,
+                           'leaves':len(active),'splits':splits,'max_depth_reached':maxdepth,
+                           'complete_closed_cover':complete,
+                           'runtime':{'python':sys.version.split()[0],'python_flint':flint.__version__,'platform':platform.platform()},
+                           'v5_floor_registry':{x:v5._REGISTRY[x] for x in sorted(v5._REGISTRY)},
+                           'v5_floor_counters':v5._STATS,
+                           'gamma_fallback_record_semantics':'counted when route angle_union returns gamma subdivisions; not the historical clamp-degeneration label',
+                           'duffy_s2_structural_semantics':'zero denotes no positive structural floor; fallback is the existing nonnegative helper'})
+          except Exception as exc:
+            record.update({'verdict':'INFRASTRUCTURE_FAILURE','reason':type(exc).__name__+':'+str(exc),
+                           'enclosure':None,'cell_evaluation_attempts':None,'cell_evaluations':None,
+                           'leaves':None,'splits':None,'max_depth_reached':None,'complete_closed_cover':False})
+          record['elapsed_seconds']=f'{time.perf_counter()-started:.6f}'
+          record['finished_at_utc']=time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime())
+          payload=json.dumps(record,sort_keys=True,separators=(',',':')).encode()+b'\n'
+          out=Path(f'/tmp/blocal-v22-v5-l3-candidate-{index:02d}.json');out.write_bytes(payload)
+          with gzip.open(str(out)+'.gz','wb',compresslevel=9) as fh:fh.write(payload)
+          print(json.dumps({'candidate_index':index,'verdict':record['verdict'],'reason':record['reason'],
+                            'record_bytes':len(payload),'record_sha256':hashlib.sha256(payload).hexdigest(),
+                            'elapsed_seconds':record['elapsed_seconds']},sort_keys=True,separators=(',',':')))
+          PY
+
+      - name: Upload shard record
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: blocal-v22-v5-l3-candidate-${{ matrix.candidate_index }}
+          path: /tmp/blocal-v22-v5-l3-candidate-*.json.gz
+          if-no-files-found: error
+          retention-days: 30
+
+  aggregate:
+    if: always()
+    needs: ladder-shard
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        continue-on-error: true
+        with:
+          pattern: blocal-v22-v5-l3-candidate-*
+          path: /tmp/blocal-v22-v5-l3-shards
+          merge-multiple: true
+
+      - name: Validate and aggregate all 21 shards
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import gzip,hashlib,json,os
+          from pathlib import Path
+          root=Path('/tmp/blocal-v22-v5-l3-shards');rows=[];errors=[]
+          files=sorted(root.glob('blocal-v22-v5-l3-candidate-*.json.gz')) if root.exists() else []
+          for i in range(21):
+            matches=[p for p in files if p.name==f'blocal-v22-v5-l3-candidate-{i:02d}.json.gz']
+            if len(matches)!=1:errors.append({'candidate_index':i,'reason':f'ARTIFACT_COUNT_{len(matches)}'});continue
+            try:row=json.loads(gzip.decompress(matches[0].read_bytes()))
+            except Exception as exc:errors.append({'candidate_index':i,'reason':'UNREADABLE:'+type(exc).__name__});continue
+            if row.get('candidate_index')!=i:errors.append({'candidate_index':i,'reason':'INDEX_MISMATCH'});continue
+            actual=row.get('actual_provenance');expected=row.get('expected_provenance')
+            if actual!=expected:errors.append({'candidate_index':i,'reason':'PROVENANCE_MISMATCH'});continue
+            if row.get('verdict') not in {'ACCEPTED','INDETERMINATE','REJECTED','INFRASTRUCTURE_FAILURE'}:
+              errors.append({'candidate_index':i,'reason':'VERDICT_INVALID'});continue
+            rows.append(row)
+          selected=None
+          if errors or len(rows)!=21:status='INFRASTRUCTURE_FAILURE'
+          else:
+            selected=next((r for r in rows if r['verdict']=='ACCEPTED'),None)
+            status='ACCEPTED' if selected else ('INFRASTRUCTURE_FAILURE' if any(r['verdict']=='INFRASTRUCTURE_FAILURE' for r in rows) else 'NO_CANDIDATE_CERTIFIED')
+          summary=[]
+          for row in sorted(rows,key=lambda x:x['candidate_index']):
+            label=row['verdict']
+            if label=='ACCEPTED':label='ACCEPTED_SELECTED' if selected is row else 'ACCEPTED_NOT_SELECTED'
+            summary.append({'candidate_index':row['candidate_index'],'lambda_increment':row['lambda_increment'],
+                            'verdict':row['verdict'],'aggregate_classification':label,'reason':row['reason'],
+                            'enclosure':row['enclosure'],'cell_evaluations':row['cell_evaluations'],
+                            'leaves':row['leaves'],'splits':row['splits'],'max_depth_reached':row['max_depth_reached'],
+                            'elapsed_seconds':row['elapsed_seconds'],'complete_closed_cover':row['complete_closed_cover']})
+          out={'schema':'BLOCAL_V22_V5_L3_LADDER_AGGREGATE_V1','status':status,
+               'canonical_order':'candidate_index_0_to_20_equals_2^-24_to_2^-4',
+               'selection_rule':'first_ACCEPTED_in_canonical_order; preceding_INDETERMINATE_does_not_block',
+               'expected_shards':21,'validated_shards':len(rows),'errors':errors,'candidates':summary,
+               'selected_candidate_index':None if selected is None else selected['candidate_index'],
+               'lambda_start_increment':None if selected is None else selected['lambda_increment'],
+               'conditions_5_and_6_authorized_by_result':status=='ACCEPTED','certificate_evidence':False}
+          payload=json.dumps(out,sort_keys=True,separators=(',',':')).encode()+b'\n'
+          Path('/tmp/blocal-v22-v5-l3-ladder-aggregate.json').write_bytes(payload)
+          with gzip.open('/tmp/blocal-v22-v5-l3-ladder-aggregate.json.gz','wb',compresslevel=9) as fh:fh.write(payload)
+          print(json.dumps({'status':status,'selected_candidate_index':out['selected_candidate_index'],
+                            'validated_shards':len(rows),'errors':errors,'record_bytes':len(payload),
+                            'record_sha256':hashlib.sha256(payload).hexdigest()},sort_keys=True,separators=(',',':')))
+          PY
+
+      - name: Upload aggregate record
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: blocal-v22-v5-l3-ladder-aggregate
+          path: /tmp/blocal-v22-v5-l3-ladder-aggregate.json.gz
+          if-no-files-found: error
+          retention-days: 30
