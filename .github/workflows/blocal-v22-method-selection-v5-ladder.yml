@@ -7,9 +7,10 @@ permissions:
   contents: read
 
 env:
-  SOURCE_SHA: e72e2ba262996e31c99bb3e92156c153e4f5b59e
+  SOURCE_SHA: 2a25bc9d675dc84626457b7ee2c628f46c340a6a
   V5_SHA256: 7b4f9b394caeafd4edce4d549819f98178b7e107e96370031e92ba9f2a1331ce
   SPEC_SHA256: 42a9b79865a4f5f4388542cc9a52720513b1e9196debdd882f7c1a8f9b1e0cb6
+  ADDENDUM_SHA256: fd715ae122fcdb763c92582ca4c098d4316a761940902fed06c48b9362b45949
   CONFIG_SHA256: fec14e9911102f6d2c1d6d389a21865e16ffcdb91aa08adb69f13da45d3717d6
   BLOCAL_DIR: CERTIFICATES/prolate/item2_circle/b_tube_v2_1
   DIAG_DIR: CERTIFICATES/prolate/item2_circle/b_tube_v2_1/diagnostics
@@ -26,7 +27,7 @@ jobs:
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
-          ref: e72e2ba262996e31c99bb3e92156c153e4f5b59e
+          ref: 2a25bc9d675dc84626457b7ee2c628f46c340a6a
           persist-credentials: false
           fetch-depth: 1
 
@@ -55,21 +56,25 @@ jobs:
             'checkout_sha':os.environ['SOURCE_SHA'],
             'v5_sha256':os.environ['V5_SHA256'],
             'spec_sha256':os.environ['SPEC_SHA256'],
+            'addendum_sha256':os.environ['ADDENDUM_SHA256'],
             'config_sha256':os.environ['CONFIG_SHA256'],
           }
           paths={'v5':dd/'blocal_v22_method_taylor2_probe_v5.py',
                  'spec':dd/'BLOCAL_V22_METHOD_SELECTION_V5_SPEC.md',
+                 'addendum':dd/'BLOCAL_V22_METHOD_SELECTION_V5_CONFIG_PROVENANCE_ADDENDUM.md',
                  'config':bd/'config.blocal-v2.2-run.json'}
           actual={'checkout_sha':source,
                   'v5_sha256':hashlib.sha256(paths['v5'].read_bytes()).hexdigest(),
                   'spec_sha256':hashlib.sha256(paths['spec'].read_bytes()).hexdigest(),
+                  'addendum_sha256':hashlib.sha256(paths['addendum'].read_bytes()).hexdigest(),
                   'config_sha256':hashlib.sha256(paths['config'].read_bytes()).hexdigest()}
           index=int(os.environ['CANDIDATE_INDEX']);k=24-index;s=Fraction(1,1<<k)
           started_utc=time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime());started=time.perf_counter()
-          record={'schema':'BLOCAL_V22_V5_L3_LADDER_SHARD_V1','candidate_index':index,
+          record={'schema':'BLOCAL_V22_V5_L3_LADDER_SHARD_V2','candidate_index':index,
                   'lambda_increment':{'numerator':s.numerator,'denominator':s.denominator,'power':-k},
                   'expected_provenance':expected,'actual_provenance':actual,
-                  'mathematical_budget':{'node':'L3','max_depth':22,'max_evaluations':12000,'max_tiles':8000,
+                  'materialized_ephemeral_config_sha256':None,'materialization_inputs':None,
+                  'ephemeral_diagnostic_budget':{'node':'L3','max_depth':22,'max_evaluations':12000,'max_tiles':8000,
                                          'budget_scope':'PER_CANDIDATE_PER_NODE'},
                   'evaluation_budget_accounting':{'counter':'cell_evaluation_attempts',
                     'relation_to_committed_runner':'CONSERVATIVE; counts SplitRequired attempts whereas committed _certify_outer counts successful evaluations'},
@@ -79,7 +84,24 @@ jobs:
             if actual!=expected:raise RuntimeError('PINNED_PROVENANCE_MISMATCH')
             import blocal_v22_method_taylor2_probe_v5 as v5
             base=v5.base;v2=v5.v4.v3.v2
-            cfg=base.model.parse_canonical_json(paths['config'].read_bytes());base.model.validate_config(cfg)
+            import blocal_v22_checker_test as ct
+            committed=json.loads(paths['config'].read_bytes())
+            cfg=ct.config()
+            for key in ('stage1_dependency','kernel','adapter','base_v21','outputs'):cfg[key]=committed[key]
+            names=['blocal_v22_policy.py','blocal_v22_model.py','blocal_v22_boundary.py','blocal_v22_checker.py','blocal_v22_checker_test.py','blocal_v22_runner.py','blocal_v22_static_test.py','blocal_v22_symbolic_audit.py','blocal_v22_readiness_test.py']
+            prefix='CERTIFICATES/prolate/item2_circle/b_tube_v2_1/'
+            native_hashes={prefix+n:hashlib.sha256((bd/n).read_bytes()).hexdigest() for n in names}
+            cfg['implementation']={'entrypoint_path':prefix+'blocal_v22_runner.py','sources_sha256':native_hashes}
+            cfg['checker']={'id':base.model.CHECKER_ID,'path':prefix+'blocal_v22_checker.py','source_sha256':native_hashes[prefix+'blocal_v22_checker.py']}
+            cfg['symbolic_audit']={'id':base.model.SYMBOLIC_AUDIT_ID,'path':prefix+'blocal_v22_symbolic_audit.py','source_sha256':native_hashes[prefix+'blocal_v22_symbolic_audit.py']}
+            base.model.validate_config(cfg)
+            materialized_bytes=base.model.canonical_json_bytes(cfg)
+            materialized_sha=hashlib.sha256(materialized_bytes).hexdigest()
+            materialization_inputs={'checker_test_sha256':native_hashes[prefix+'blocal_v22_checker_test.py'],
+                                    'model_sha256':native_hashes[prefix+'blocal_v22_model.py'],
+                                    'native_nine_sha256':native_hashes}
+            record['materialized_ephemeral_config_sha256']=materialized_sha
+            record['materialization_inputs']=materialization_inputs
             from flint import acb,arb,ctx,fmpq
             import flint
             ctx.prec=cfg['precision']['bits'];base.CONFIG=cfg;base.acb=acb;base.arb=arb;base.fmpq=fmpq
@@ -192,6 +214,10 @@ jobs:
             if row.get('verdict') not in {'ACCEPTED','INDETERMINATE','REJECTED','INFRASTRUCTURE_FAILURE'}:
               errors.append({'candidate_index':i,'reason':'VERDICT_INVALID'});continue
             rows.append(row)
+          materialized={r.get('materialized_ephemeral_config_sha256') for r in rows}
+          inputs={json.dumps(r.get('materialization_inputs'),sort_keys=True,separators=(',',':')) for r in rows}
+          if len(materialized)!=1 or None in materialized:errors.append({'candidate_index':None,'reason':'MATERIALIZED_CONFIG_SHA_MISMATCH_OR_MISSING'})
+          if len(inputs)!=1 or 'null' in inputs:errors.append({'candidate_index':None,'reason':'MATERIALIZATION_INPUTS_MISMATCH_OR_MISSING'})
           selected=None
           if errors or len(rows)!=21:status='INFRASTRUCTURE_FAILURE'
           elif any(r['verdict']=='INFRASTRUCTURE_FAILURE' for r in rows):status='INFRASTRUCTURE_FAILURE'
@@ -211,11 +237,13 @@ jobs:
                             'enclosure':row['enclosure'],'cell_evaluations':row['cell_evaluations'],
                             'leaves':row['leaves'],'splits':row['splits'],'max_depth_reached':row['max_depth_reached'],
                             'elapsed_seconds':row['elapsed_seconds'],'complete_closed_cover':row['complete_closed_cover']})
-          out={'schema':'BLOCAL_V22_V5_L3_LADDER_AGGREGATE_V1','status':status,
+          out={'schema':'BLOCAL_V22_V5_L3_LADDER_AGGREGATE_V2','status':status,
                'canonical_order':'candidate_index_0_to_20_equals_2^-24_to_2^-4',
                'selection_rule':'first_ACCEPTED_in_canonical_order; preceding_INDETERMINATE_does_not_block',
                'selection_precondition':'every preceding candidate is validly INDETERMINATE or REJECTED; otherwise INFRASTRUCTURE_FAILURE',
                'expected_shards':21,'validated_shards':len(rows),'errors':errors,'candidates':summary,
+               'materialized_ephemeral_config_sha256':None if len(materialized)!=1 else next(iter(materialized)),
+               'materialization_inputs':None if len(inputs)!=1 else json.loads(next(iter(inputs))),
                'selected_candidate_index':None if selected is None else selected['candidate_index'],
                'lambda_start_increment':None if selected is None else selected['lambda_increment'],
                'conditions_5_and_6_authorized_by_result':status=='ACCEPTED','certificate_evidence':False}
