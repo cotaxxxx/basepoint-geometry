@@ -1,11 +1,6 @@
 name: B-LOCAL v2.2 v5 L3 lambda ladder diagnostic
-# One-shot materialized-config ladder trigger: 2026-08-14.
-
 on:
   workflow_dispatch:
-  push:
-    branches: [agent/blocal-v22-method-selection-taylor2]
-    paths: ['.github/workflows/blocal-v22-method-selection-v5-ladder.yml']
 
 permissions:
   contents: read
