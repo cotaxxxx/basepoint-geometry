@@ -71,6 +71,8 @@ jobs:
                   'expected_provenance':expected,'actual_provenance':actual,
                   'mathematical_budget':{'node':'L3','max_depth':22,'max_evaluations':12000,'max_tiles':8000,
                                          'budget_scope':'PER_CANDIDATE_PER_NODE'},
+                  'evaluation_budget_accounting':{'counter':'cell_evaluation_attempts',
+                    'relation_to_committed_runner':'CONSERVATIVE; counts SplitRequired attempts whereas committed _certify_outer counts successful evaluations'},
                   'ci_wall_timeout_seconds':int(os.environ['CI_WALL_TIMEOUT_SECONDS']),
                   'started_at_utc':started_utc,'certificate_evidence':False}
           try:
@@ -95,7 +97,7 @@ jobs:
               global attempts,evaluations,splits,maxdepth,SL,SH
               if attempts>=12000:stop('MAX_EVALUATIONS')
               attempts+=1;maxdepth=max(maxdepth,cell.depth)
-              try:value,detail=base.eval_cell('F',cell,Fraction(0),Fraction(0),Fraction(0),s,eps)
+              try:value,detail=base.eval_cell('F',cell,Fraction(0),Fraction(0),s,s,eps)
               except base.route.SplitRequired as exc:
                 if cell.depth>=22:stop('MAX_DEPTH:'+exc.reason)
                 splits+=1
@@ -192,9 +194,14 @@ jobs:
             rows.append(row)
           selected=None
           if errors or len(rows)!=21:status='INFRASTRUCTURE_FAILURE'
+          elif any(r['verdict']=='INFRASTRUCTURE_FAILURE' for r in rows):status='INFRASTRUCTURE_FAILURE'
           else:
-            selected=next((r for r in rows if r['verdict']=='ACCEPTED'),None)
-            status='ACCEPTED' if selected else ('INFRASTRUCTURE_FAILURE' if any(r['verdict']=='INFRASTRUCTURE_FAILURE' for r in rows) else 'NO_CANDIDATE_CERTIFIED')
+            candidate=next((r for r in rows if r['verdict']=='ACCEPTED'),None)
+            preceding=[] if candidate is None else [r for r in rows if r['candidate_index']<candidate['candidate_index']]
+            preceding_valid=all(r['verdict'] in {'INDETERMINATE','REJECTED'} for r in preceding)
+            if candidate is not None and preceding_valid:selected=candidate;status='ACCEPTED'
+            elif candidate is not None:status='INFRASTRUCTURE_FAILURE';errors.append({'candidate_index':candidate['candidate_index'],'reason':'PRECEDING_CANDIDATE_NOT_VALIDLY_CLASSIFIED'})
+            else:status='NO_CANDIDATE_CERTIFIED'
           summary=[]
           for row in sorted(rows,key=lambda x:x['candidate_index']):
             label=row['verdict']
@@ -207,6 +214,7 @@ jobs:
           out={'schema':'BLOCAL_V22_V5_L3_LADDER_AGGREGATE_V1','status':status,
                'canonical_order':'candidate_index_0_to_20_equals_2^-24_to_2^-4',
                'selection_rule':'first_ACCEPTED_in_canonical_order; preceding_INDETERMINATE_does_not_block',
+               'selection_precondition':'every preceding candidate is validly INDETERMINATE or REJECTED; otherwise INFRASTRUCTURE_FAILURE',
                'expected_shards':21,'validated_shards':len(rows),'errors':errors,'candidates':summary,
                'selected_candidate_index':None if selected is None else selected['candidate_index'],
                'lambda_start_increment':None if selected is None else selected['lambda_increment'],
