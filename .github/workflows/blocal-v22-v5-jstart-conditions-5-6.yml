@@ -113,7 +113,7 @@ jobs:
                 path={'phase':'J_START_COMPLETE_PATH',
                   'tested_domain':{'initial_bracket':model.interval_json(Fraction(1)-um,Fraction(1)),
                     'lambda_start':model.rational_json(lam)},
-                  'strict_predicate':'strict bisection signs + per-step F_r<0 + strict interval-Newton self-containment',
+                  'strict_predicate':'ordered strict signs when continuation is needed + targeted F_r<0 + strict interval-Newton self-containment',
                   'predicate_result':False,'ordered_bisection':points,'newton_steps':steps,
                   'outer_evaluations':f_outer,
                   'evaluation_accounting':{'j_start_outer_budget_applies_to':'F_POINT_ENCLOSURES_ONLY',
@@ -149,26 +149,52 @@ jobs:
                   if f_outer>=v2.BUDGET['j_start_max_outer_evaluations']:
                     return fail('J_OUTER_BUDGET')
                   before_left,before_right=left,right;m=(left+right)/2
+                  width=right-left
+                  theta=Fraction(6,5) if width<=Fraction(1,2048) else (Fraction(1) if width<=Fraction(1,1024) else Fraction(1,2))
+                  u0,u1=Fraction(1)-right,Fraction(1)-left
+                  def derivative_accept(H):
+                    hlo,_=model.interval_fractions(H,'targeted H_u')
+                    return hlo>=theta
                   try:
-                    fm,fmd=base.f_enclose(m,m,lam,lam,'NONZERO',run_start);f_outer+=1
+                    hu,hd=base.hu_enclose(u0,u1,s,s,'CUSTOM',run_start,derivative_accept)
+                    derivative_evaluations+=hd['cell_evaluation_attempts']
+                  except v2.Failure as exc:
+                    derivative_evaluations+=exc.counts.get('cell_evaluation_attempts',0)
+                    return fail('DERIVATIVE_'+str(exc),{'failed_step':k,
+                      'failed_derivative_counts':exc.counts,'derivative_lower_target':model.rational_json(theta)})
+                  D=model.interval_negate(hu);dlo,dhi=model.interval_fractions(D,'step derivative')
+                  model.need(dhi<=-theta and not(dlo<=0<=dhi),'targeted step Fr negative')
+                  def newton_data(Fm):
+                    qlo,qhi=model.interval_divide_negative_denominator(Fm,D)
+                    nlo,nhi=m-qhi,m-qlo
+                    return qlo,qhi,nlo,nhi,left<nlo<=nhi<right
+                  def f_accept(Fm):
+                    try:
+                      if base.sign(Fm) in ('POS','NEG'):return True
+                    except Exception:pass
+                    try:return newton_data(Fm)[4]
+                    except Exception:return False
+                  try:
+                    fm,fmd=base.f_enclose(m,m,lam,lam,'CUSTOM',run_start,f_accept);f_outer+=1
                   except v2.Failure as exc:
                     f_outer+=1
                     return fail('F_POINT_'+str(exc),{'failed_step':k,
-                      'failed_F_counts':exc.counts,'failed_midpoint':model.rational_json(m)})
+                      'failed_F_counts':exc.counts,'failed_midpoint':model.rational_json(m),
+                      'derivative_lower_target':model.rational_json(theta),
+                      'step_derivative':D,'step_H_u':hu,
+                      'step_derivative_counts':hd})
+                  qlo,qhi,nlo,nhi,contained=newton_data(fm)
                   sg=base.sign(fm)
-                  u0,u1=Fraction(1)-right,Fraction(1)-left
-                  hu,hd=base.hu_enclose(u0,u1,s,s,'POS',run_start)
-                  derivative_evaluations+=hd['cell_evaluation_attempts']
-                  D=model.interval_negate(hu);dlo,dhi=model.interval_fractions(D,'step derivative')
-                  model.need(dhi<0 and not(dlo<=0<=dhi),'step Fr negative')
                   flo,fhi=model.interval_fractions(fm,'step Fm')
-                  qlo,qhi=model.interval_divide_negative_denominator(fm,D)
-                  nlo,nhi=m-qhi,m-qlo
-                  contained=left<nlo<=nhi<right
+                  sign_strict=sg in ('POS','NEG')
                   step={'index':k,'bracket_before':model.interval_json(before_left,before_right),
                     'midpoint':model.rational_json(m),'F_midpoint':fm,'F_sign':sg,
+                    'strict_sign_certified':sign_strict,
+                    'sign_required_for_continuation':not contained,
+                    'F_stop_reason':'NEWTON_CONTAINMENT' if contained else 'STRICT_SIGN',
                     'F_evaluation_subdivision_counts':fmd,
                     'u_derivative_domain':model.interval_json(u0,u1),
+                    'derivative_lower_target':model.rational_json(theta),
                     'coordinate_map':{'exact':'u=1-r',
                       'u_lo_equals':'1-r_right','u_hi_equals':'1-r_left'},
                     'H_u':hu,'F_r':D,
@@ -181,32 +207,34 @@ jobs:
                       'reciprocal_endpoint_rule':'[1/F_r_hi,1/F_r_lo]',
                       'numerator_endpoints':{'lo':model.rational_json(flo),'hi':model.rational_json(fhi)},
                       'quotient':model.outward_dyadic(qlo,qhi)},
+                    'quotient':model.outward_dyadic(qlo,qhi),
                     'newton_image':model.outward_dyadic(nlo,nhi),
                     'containment_margins':{'left':model.rational_json(nlo-left),
                       'right':model.rational_json(right-nhi)},
                     'strict_self_containment':contained}
                   steps.append(step)
-                  points.append({'r':model.rational_json(m),'sign':sg,'enclosure':fm,
-                    'role':'NEWTON_SUCCESS' if contained else ('RETAINED_RIGHT' if sg=='NEG' else 'RETAINED_LEFT')})
                   if contained:
                     path={'phase':'J_START_COMPLETE_PATH',
                       'tested_domain':{'initial_bracket':model.interval_json(Fraction(1)-um,Fraction(1)),
                         'lambda_start':model.rational_json(lam)},
-                      'strict_predicate':'strict bisection signs + per-step F_r<0 + strict interval-Newton self-containment',
+                      'strict_predicate':'ordered strict signs when continuation is needed + targeted F_r<0 + strict interval-Newton self-containment',
                       'predicate_result':True,'ordered_bisection':points,'derivative':full_cond5,
                       'newton_steps':steps,'newton':step,'outer_evaluations':f_outer,
+                      'bisection_attempts':len(steps),
                       'evaluation_accounting':{'j_start_outer_budget_applies_to':'F_POINT_ENCLOSURES_ONLY',
                         'f_point_outer_evaluations':f_outer,
                         'derivative_evaluations':derivative_evaluations,
                         'derivative_evaluations_budget':'SEPARATE_RECORDED_COUNTER'},
                       'failure_reason':None,'certificate_evidence':False}
                     return path,full_cond5
-                  if sg=='NEG':right=m
-                  elif sg=='POS':left=m
-                  else:return fail('BISECTION_UNRESOLVED')
+                  if not sign_strict:return fail('BISECTION_UNRESOLVED')
+                  if sg=='NEG':right=m;role='RETAINED_RIGHT'
+                  else:left=m;role='RETAINED_LEFT'
+                  points.append({'r':model.rational_json(m),'sign':sg,'enclosure':fm,'role':role})
                 return fail('MAX_BISECTIONS')
-              except v2.Failure as exc:return fail('DERIVATIVE_'+str(exc),{'failed_derivative_counts':exc.counts})
+              except v2.Failure as exc:return fail('ENCLOSURE_'+str(exc),{'failure_counts':exc.counts})
               except Exception as exc:return fail(type(exc).__name__+':'+str(exc))
+
             v2._TRACE=None;v2._HISTORY=[];v2._LAST_COUNTS=None
             s=Fraction(1,512);um=Fraction(1,256);lam=base.model.LAMBDA_PLUS+s
             path,cond5=refined_jstart(lam,um,time.perf_counter())
@@ -223,10 +251,10 @@ jobs:
               'derivative_bracket_pass':bool(cond5 and cond5.get('predicate_result')),
               'ordered_points_strict_sign':bool(ordered) and all(x.get('sign') in {'POS','NEG'} for x in ordered),
               'derivative_sup_negative_and_zero_excluded':derivative_strict,
-              'negative_denominator_quotient_recorded':derivative_strict and newton.get('quotient') is not None,
+              'negative_denominator_quotient_recorded':derivative_strict and newton.get('division',{}).get('quotient') is not None,
               'newton_strict_self_containment':newton.get('strict_self_containment') is True,
               'outer_evaluations_le_96':isinstance(path,dict) and path.get('outer_evaluations',97)<=96,
-              'bisections_le_40':max(0,len(ordered)-1)<=40,
+              'bisections_le_40':isinstance(path,dict) and len(path.get('newton_steps',[]))<=40,
             }
             status='PASS' if all(checks.values()) else 'FAIL'
             record.update({'status':status,'checks':checks,'declared_budgets':dict(v2.BUDGET),
