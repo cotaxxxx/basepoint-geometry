@@ -1,10 +1,6 @@
 name: B-LOCAL v2.2 v5 J_START conditions 5-6 diagnostic
-# Authorized corrected derivative-ladder run
 
 on:
-  push:
-    branches: [agent/blocal-v22-method-selection-taylor2]
-    paths: ['.github/workflows/blocal-v22-v5-jstart-conditions-5-6.yml']
   workflow_dispatch:
 
 permissions:
