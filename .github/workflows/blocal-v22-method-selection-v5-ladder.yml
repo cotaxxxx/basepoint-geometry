@@ -70,7 +70,7 @@ jobs:
                   'addendum_sha256':hashlib.sha256(paths['addendum'].read_bytes()).hexdigest(),
                   'config_sha256':hashlib.sha256(paths['config'].read_bytes()).hexdigest()}
           index=int(os.environ['CANDIDATE_INDEX']);k=24-index;s=Fraction(1,1<<k)
-          started_utc=time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime());started=time.perf_counter()
+          started_utc=time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime());started=time.perf_counter();deadline_started=time.monotonic()
           record={'schema':'BLOCAL_V22_V5_L3_LADDER_SHARD_V2','candidate_index':index,
                   'lambda_increment':{'numerator':s.numerator,'denominator':s.denominator,'power':-k},
                   'expected_provenance':expected,'actual_provenance':actual,
@@ -119,7 +119,7 @@ jobs:
               raise Stop(x)
             def add(cell):
               global attempts,evaluations,splits,maxdepth,SL,SH
-              if time.perf_counter()-started>int(os.environ['SOFT_DEADLINE_SECONDS']):stop('WALL_SOFT_LIMIT')
+              if time.monotonic()-deadline_started>int(os.environ['SOFT_DEADLINE_SECONDS']):stop('WALL_SOFT_LIMIT')
               if attempts>=12000:stop('MAX_EVALUATIONS')
               attempts+=1;maxdepth=max(maxdepth,cell.depth)
               try:value,detail=base.eval_cell('F',cell,Fraction(0),Fraction(0),s,s,eps)
@@ -135,7 +135,7 @@ jobs:
             try:
               for cell in base.roots():add(cell)
               while True:
-                if time.perf_counter()-started>int(os.environ['SOFT_DEADLINE_SECONDS']):stop('WALL_SOFT_LIMIT')
+                if time.monotonic()-deadline_started>int(os.environ['SOFT_DEADLINE_SECONDS']):stop('WALL_SOFT_LIMIT')
                 enclosure=base.model.normalize_interval(base.model.outward_dyadic(SL,SH))
                 lo,hi=base.model.interval_fractions(enclosure,'L3 aggregate')
                 complete=base.cover_ok(active)
