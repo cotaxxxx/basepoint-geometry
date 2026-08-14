@@ -70,7 +70,7 @@ jobs:
                   'addendum_sha256':hashlib.sha256(paths['addendum'].read_bytes()).hexdigest(),
                   'config_sha256':hashlib.sha256(paths['config'].read_bytes()).hexdigest()}
           index=int(os.environ['CANDIDATE_INDEX']);k=24-index;s=Fraction(1,1<<k)
-          started_utc=time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime());started=time.perf_counter();deadline_started=time.monotonic()
+          started_utc=time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime());started=time.perf_counter()
           record={'schema':'BLOCAL_V22_V5_L3_LADDER_SHARD_V2','candidate_index':index,
                   'lambda_increment':{'numerator':s.numerator,'denominator':s.denominator,'power':-k},
                   'expected_provenance':expected,'actual_provenance':actual,
@@ -108,57 +108,40 @@ jobs:
             import flint
             ctx.prec=cfg['precision']['bits'];base.CONFIG=cfg;base.acb=acb;base.arb=arb;base.fmpq=fmpq
             base.route,base.adapter,base.kernel=base.readiness.load(cfg)
+            v2.BUDGET=dict(v2.BUDGET)
+            v2.BUDGET.update({'max_cell_evaluations_per_enclosure':12000,'max_depth':22,
+                              'max_active_cells':8000,
+                              'max_total_wall_seconds':int(os.environ['SOFT_DEADLINE_SECONDS'])})
+            base.BUDGET=v2.BUDGET
             base.angle4_union=v2.angle4_union;base.geometry_jet=v5.geometry_jet;base.eval_cell=v5.eval_cell
-            trace=v2.new_trace();v2._TRACE=trace
-            eps=base.model.fraction_from_dyadic(cfg['geometry']['eps']);active={};heap=[]
-            SL=Fraction(0);SH=Fraction(0);attempts=0;evaluations=0;splits=0;maxdepth=0
-            reason=None;enclosure=None;complete=False
-            class Stop(Exception):pass
-            def stop(x):
-              nonlocal_dummy=None
-              raise Stop(x)
-            def add(cell):
-              global attempts,evaluations,splits,maxdepth,SL,SH
-              if time.monotonic()-deadline_started>int(os.environ['SOFT_DEADLINE_SECONDS']):stop('WALL_SOFT_LIMIT')
-              if attempts>=12000:stop('MAX_EVALUATIONS')
-              attempts+=1;maxdepth=max(maxdepth,cell.depth)
-              try:value,detail=base.eval_cell('F',cell,Fraction(0),Fraction(0),s,s,eps)
-              except base.route.SplitRequired as exc:
-                if cell.depth>=22:stop('MAX_DEPTH:'+exc.reason)
-                splits+=1
-                for child in base.split_cell(cell):add(child)
-                return
-              evaluations+=1;iv=base.can(value,'L3 child');lo,hi=base.model.interval_fractions(iv,'L3 child')
-              active[cell.path]=(cell,lo,hi,detail);SL+=lo;SH+=hi
-              if cell.depth<22:heapq.heappush(heap,(-(hi-lo),base.ORDER[cell.region],cell.path))
-              if len(active)>8000:stop('MAX_TILES')
+            base.enclose=v2.enclose
+            v2._TRACE=None;v2._HISTORY=[];v2._LAST_COUNTS=None
+            lam=base.model.LAMBDA_PLUS+s;start=time.perf_counter()
+            detail={};enclosure=None;verdict=None;reason=None
             try:
-              for cell in base.roots():add(cell)
-              while True:
-                if time.monotonic()-deadline_started>int(os.environ['SOFT_DEADLINE_SECONDS']):stop('WALL_SOFT_LIMIT')
-                enclosure=base.model.normalize_interval(base.model.outward_dyadic(SL,SH))
-                lo,hi=base.model.interval_fractions(enclosure,'L3 aggregate')
-                complete=base.cover_ok(active)
-                if complete and hi<0:verdict='ACCEPTED';reason='STRICT_NEG_CERTIFIED';break
-                if complete and lo>0:verdict='REJECTED';reason='STRICT_POS_CERTIFIED';break
-                chosen=None
-                while heap:
-                  _,_,path=heapq.heappop(heap)
-                  if path in active and active[path][0].depth<22:chosen=active[path];break
-                if chosen is None:stop('NO_SPLITTABLE_CELL')
-                cell,lo,hi,_=chosen;del active[cell.path];SL-=lo;SH-=hi;splits+=1
-                for child in base.split_cell(cell):add(child)
-            except Stop as exc:
-              verdict='INDETERMINATE';reason=str(exc)
-              if active:
-                enclosure=base.model.normalize_interval(base.model.outward_dyadic(SL,SH))
-                complete=base.cover_ok(active)
-            finally:v2._TRACE=None
+              enclosure,detail=base.f_enclose(Fraction(1),Fraction(1),lam,lam,'NEG',start)
+              verdict='ACCEPTED';reason='STRICT_NEG_CERTIFIED'
+            except v2.Failure as exc:
+              detail=exc.counts if isinstance(exc.counts,dict) else {}
+              raw=str(exc)
+              if raw=='CELL_EVALUATION_BUDGET':reason='MAX_EVALUATIONS'
+              elif raw=='TOTAL_WALL_TIME_BUDGET':reason='WALL_SOFT_LIMIT'
+              elif raw.startswith('DEPTH:'):reason='MAX_DEPTH:'+raw[len('DEPTH:'):]
+              elif raw=='ACTIVE_CELL_BUDGET':reason='MAX_TILES'
+              elif raw=='PREDICATE_UNRESOLVED_AT_DEPTH_LIMIT':reason='NO_SPLITTABLE_CELL'
+              else:reason='AUDITED_ENCLOSE_FAILURE:'+raw
+              verdict='INDETERMINATE'
+            finally:
+              v2._TRACE=None
             record.update({'verdict':verdict,'reason':reason,
                            'stop_reason':reason if verdict=='INDETERMINATE' else None,'enclosure':enclosure,
-                           'cell_evaluation_attempts':attempts,'cell_evaluations':evaluations,
-                           'leaves':len(active),'splits':splits,'max_depth_reached':maxdepth,
-                           'complete_closed_cover':complete,
+                           'cell_evaluation_attempts':detail.get('cell_evaluation_attempts'),
+                           'cell_evaluations':detail.get('cell_evaluations'),
+                           'leaves':detail.get('active_leaves'),
+                           'splits':detail.get('spatial_split_count'),
+                           'max_depth_reached':detail.get('max_spatial_depth_used'),
+                           'complete_closed_cover':bool(detail.get('complete_closed_cover',False)),
+                           'audited_enclose_route':'base.f_enclose(1,1,lambda,lambda,NEG,start)',
                            'runtime':{'python':sys.version.split()[0],'python_flint':flint.__version__,'platform':platform.platform()},
                            'v5_floor_registry':{x:v5._REGISTRY[x] for x in sorted(v5._REGISTRY)},
                            'v5_floor_counters':v5._STATS,
