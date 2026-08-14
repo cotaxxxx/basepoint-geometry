@@ -1,37 +1,85 @@
-name: B-LOCAL v2.2 v5 J_START conditions 5-6 diagnostic
+name: B-LOCAL v2.2 method-selection Taylor2 diagnostic
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - agent/blocal-v22-method-selection-taylor2
 
 permissions:
   contents: read
+  statuses: write
 
 env:
-  SOURCE_SHA: 2a25bc9d675dc84626457b7ee2c628f46c340a6a
-  V5_SHA256: 7b4f9b394caeafd4edce4d549819f98178b7e107e96370031e92ba9f2a1331ce
-  CONFIG_SHA256: fec14e9911102f6d2c1d6d389a21865e16ffcdb91aa08adb69f13da45d3717d6
   BLOCAL_DIR: CERTIFICATES/prolate/item2_circle/b_tube_v2_1
-  DIAG_DIR: CERTIFICATES/prolate/item2_circle/b_tube_v2_1/diagnostics
-  RECORD: /tmp/blocal-v22-v5-jstart-s9-u8.json
-  RECORD_GZ: /tmp/blocal-v22-v5-jstart-s9-u8.json.gz
+  EPHEMERAL_CONFIG: CERTIFICATES/prolate/item2_circle/b_tube_v2_1/config.blocal-v2.2-readiness-ephemeral.json
+  PROBE: CERTIFICATES/prolate/item2_circle/b_tube_v2_1/diagnostics/blocal_v22_method_taylor2_probe_v4.py
+  FULL_RECORD: /tmp/blocal-v22-method-selection-taylor2-full-v3.json
+  FULL_RECORD_GZ: /tmp/blocal-v22-method-selection-taylor2-full-v3.json.gz
 
 jobs:
-  jstart:
+  method-selection:
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/checkout@v4
         with:
-          ref: 2a25bc9d675dc84626457b7ee2c628f46c340a6a
+          ref: agent/blocal-v22-method-selection-taylor2
           persist-credentials: false
           fetch-depth: 1
 
-      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.13'
 
+      - name: Guard diagnostic-only authorization
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -qx 'config_materialized=false' "$BLOCAL_DIR/READINESS_DRAFT"
+          grep -qx 'production_authorized=false' "$BLOCAL_DIR/READINESS_DRAFT"
+          grep -qx 'tag_authorized=false' "$BLOCAL_DIR/READINESS_DRAFT"
+          echo "COMMITTED_CONFIG_SHA256=$(sha256sum "$BLOCAL_DIR/config.blocal-v2.2-run.json" | awk '{print $1}')" >> "$GITHUB_ENV"
+
       - name: Install pinned Arb runtime
         run: python -m pip install --disable-pip-version-check python-flint==0.9.0
+
+      - name: Runtime version record
+        shell: bash
+        run: |
+          set -euo pipefail
+          python --version
+          python - <<'PY'
+          import importlib.metadata, platform
+          print('python-flint='+importlib.metadata.version('python-flint'))
+          print('platform='+platform.platform())
+          PY
+
+      - name: Materialize diagnostic ephemeral config
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import hashlib,json,sys
+          from pathlib import Path
+          h=Path('CERTIFICATES/prolate/item2_circle/b_tube_v2_1')
+          sys.path.insert(0,str(h.resolve()))
+          import blocal_v22_checker_test as ct
+          import blocal_v22_model as model
+          old=json.loads((h/'config.blocal-v2.2-run.json').read_text())
+          cfg=ct.config()
+          for key in ('stage1_dependency','kernel','adapter','base_v21','outputs'):
+              cfg[key]=old[key]
+          names=['blocal_v22_policy.py','blocal_v22_model.py','blocal_v22_boundary.py','blocal_v22_checker.py','blocal_v22_checker_test.py','blocal_v22_runner.py','blocal_v22_static_test.py','blocal_v22_symbolic_audit.py','blocal_v22_readiness_test.py']
+          prefix='CERTIFICATES/prolate/item2_circle/b_tube_v2_1/'
+          hashes={prefix+n:hashlib.sha256((h/n).read_bytes()).hexdigest() for n in names}
+          cfg['implementation']={'entrypoint_path':prefix+'blocal_v22_runner.py','sources_sha256':hashes}
+          cfg['checker']={'id':model.CHECKER_ID,'path':prefix+'blocal_v22_checker.py','source_sha256':hashes[prefix+'blocal_v22_checker.py']}
+          cfg['symbolic_audit']={'id':model.SYMBOLIC_AUDIT_ID,'path':prefix+'blocal_v22_symbolic_audit.py','source_sha256':hashes[prefix+'blocal_v22_symbolic_audit.py']}
+          model.validate_config(cfg)
+          out=h/'config.blocal-v2.2-readiness-ephemeral.json'
+          out.write_bytes(model.canonical_json_bytes(cfg))
+          print(json.dumps({'ephemeral_config_sha256':hashlib.sha256(out.read_bytes()).hexdigest(),'native_source_sha256':hashes},sort_keys=True,separators=(',',':')))
+          PY
 
       - name: Static exact audits
         shell: bash
@@ -41,105 +89,90 @@ jobs:
           python blocal_v22_static_test.py
           python blocal_v22_symbolic_audit.py
 
-      - name: Run v5 J_START conditions 5 and 6
+      - name: Run fixed-budget method-selection probe
+        id: probe
+        shell: bash
+        run: |
+          set -uo pipefail
+          set +e
+          BLOCAL_V22_FULL_RECORD="$FULL_RECORD" timeout 1200s python "$PROBE" | tee /tmp/blocal-v22-method-selection-taylor2-summary-v3.json
+          rc=${PIPESTATUS[0]}
+          echo "probe_rc=$rc" >> "$GITHUB_OUTPUT"
+          if [ "$rc" -eq 0 ]; then echo "probe_state=success" >> "$GITHUB_OUTPUT"; else echo "probe_state=failure" >> "$GITHUB_OUTPUT"; fi
+          exit 0
+
+      - name: Compress full section 6.5 record
+        if: always()
         shell: bash
         run: |
           set -euo pipefail
-          timeout 1200s python - <<'PY'
-          import gzip,hashlib,json,os,platform,subprocess,sys,time
-          from fractions import Fraction
+          test -s "$FULL_RECORD"
+          gzip -9 -c "$FULL_RECORD" > "$FULL_RECORD_GZ"
+          python - <<'PY'
+          import gzip,hashlib,json,os
           from pathlib import Path
-
-          root=Path.cwd();bd=root/os.environ['BLOCAL_DIR'];dd=root/os.environ['DIAG_DIR']
-          sys.path.insert(0,str(dd));sys.path.insert(0,str(bd))
-          source=subprocess.run(['git','rev-parse','HEAD'],check=True,capture_output=True,text=True).stdout.strip()
-          paths={'v5':dd/'blocal_v22_method_taylor2_probe_v5.py',
-                 'config':bd/'config.blocal-v2.2-run.json'}
-          actual={'checkout_sha':source,
-                  'v5_sha256':hashlib.sha256(paths['v5'].read_bytes()).hexdigest(),
-                  'config_sha256':hashlib.sha256(paths['config'].read_bytes()).hexdigest()}
-          expected={'checkout_sha':os.environ['SOURCE_SHA'],
-                    'v5_sha256':os.environ['V5_SHA256'],
-                    'config_sha256':os.environ['CONFIG_SHA256']}
-          started=time.perf_counter()
-          record={'schema':'BLOCAL_V22_V5_JSTART_S9_U8_V1',
-                  'expected_provenance':expected,'actual_provenance':actual,
-                  'lambda_increment':{'numerator':1,'denominator':512,'power':-9},
-                  'u_max':{'numerator':1,'denominator':256,'power':-8},
-                  'materialized_ephemeral_config_sha256':None,
-                  'materialization_inputs':None,'certificate_evidence':False}
-          try:
-            if actual!=expected:raise RuntimeError('PINNED_PROVENANCE_MISMATCH')
-            import blocal_v22_method_taylor2_probe_v5 as v5
-            base=v5.base;v2=v5.v4.v3.v2;v3=v5.v4.v3
-            import blocal_v22_checker_test as ct
-            committed=json.loads(paths['config'].read_bytes())
-            cfg=ct.config()
-            for key in ('stage1_dependency','kernel','adapter','base_v21','outputs'):cfg[key]=committed[key]
-            names=['blocal_v22_policy.py','blocal_v22_model.py','blocal_v22_boundary.py','blocal_v22_checker.py','blocal_v22_checker_test.py','blocal_v22_runner.py','blocal_v22_static_test.py','blocal_v22_symbolic_audit.py','blocal_v22_readiness_test.py']
-            prefix='CERTIFICATES/prolate/item2_circle/b_tube_v2_1/'
-            native_hashes={prefix+n:hashlib.sha256((bd/n).read_bytes()).hexdigest() for n in names}
-            cfg['implementation']={'entrypoint_path':prefix+'blocal_v22_runner.py','sources_sha256':native_hashes}
-            cfg['checker']={'id':base.model.CHECKER_ID,'path':prefix+'blocal_v22_checker.py','source_sha256':native_hashes[prefix+'blocal_v22_checker.py']}
-            cfg['symbolic_audit']={'id':base.model.SYMBOLIC_AUDIT_ID,'path':prefix+'blocal_v22_symbolic_audit.py','source_sha256':native_hashes[prefix+'blocal_v22_symbolic_audit.py']}
-            base.model.validate_config(cfg)
-            materialized=base.model.canonical_json_bytes(cfg)
-            record['materialized_ephemeral_config_sha256']=hashlib.sha256(materialized).hexdigest()
-            record['materialization_inputs']={'checker_test_sha256':native_hashes[prefix+'blocal_v22_checker_test.py'],
-              'model_sha256':native_hashes[prefix+'blocal_v22_model.py'],'native_nine_sha256':native_hashes}
-
-            from flint import acb,arb,ctx,fmpq
-            import flint
-            ctx.prec=cfg['precision']['bits'];base.CONFIG=cfg;base.acb=acb;base.arb=arb;base.fmpq=fmpq
-            base.route,base.adapter,base.kernel=base.readiness.load(cfg)
-            v2.BUDGET=dict(v2.BUDGET);v2.BUDGET['max_depth']=16;base.BUDGET=v2.BUDGET
-            base.angle4_union=v2.angle4_union;base.geometry_jet=v5.geometry_jet;base.eval_cell=v5.eval_cell
-            base.enclose=v2.enclose;base.jstart=v2.jstart
-            v2._TRACE=None;v2._HISTORY=[];v2._LAST_COUNTS=None
-            s=Fraction(1,512);um=Fraction(1,256);lam=base.model.LAMBDA_PLUS+s
-            path,cond5=base.jstart(lam,um,time.perf_counter(),None)
-            path=v3.compact(path);cond5=v3.compact(cond5)
-            ordered=path.get('ordered_bisection',[]) if isinstance(path,dict) else []
-            derivative=None if cond5 is None else cond5.get('final_enclosure')
-            derivative_strict=False
-            if derivative is not None:
-              dlo,dhi=base.model.interval_fractions(derivative,'record derivative')
-              derivative_strict=dhi<0 and not (dlo<=0<=dhi)
-            newton=path.get('newton',{}) if isinstance(path,dict) else {}
-            checks={
-              'complete_path_pass':bool(path and path.get('predicate_result')),
-              'derivative_bracket_pass':bool(cond5 and cond5.get('predicate_result')),
-              'ordered_points_strict_sign':bool(ordered) and all(x.get('sign') in {'POS','NEG'} for x in ordered),
-              'derivative_sup_negative_and_zero_excluded':derivative_strict,
-              'negative_denominator_quotient_recorded':derivative_strict and newton.get('quotient') is not None,
-              'newton_strict_self_containment':newton.get('strict_self_containment') is True,
-              'outer_evaluations_le_96':isinstance(path,dict) and path.get('outer_evaluations',97)<=96,
-              'bisections_le_40':max(0,len(ordered)-1)<=40,
-            }
-            status='PASS' if all(checks.values()) else 'FAIL'
-            record.update({'status':status,'checks':checks,'declared_budgets':dict(v2.BUDGET),
-              'lambda_start':base.model.rational_json(lam),'jstart_complete_path':path,
-              'jstart_derivative_bracket':cond5,
-              'runtime':{'python':sys.version.split()[0],'python_flint':flint.__version__,'platform':platform.platform()},
-              'v5_floor_registry':{x:v5._REGISTRY[x] for x in sorted(v5._REGISTRY)},
-              'v5_floor_counters':v5._STATS})
-          except Exception as exc:
-            record.update({'status':'INFRASTRUCTURE_FAILURE','reason':type(exc).__name__+':'+str(exc)})
-          record['elapsed_seconds']=f'{time.perf_counter()-started:.6f}'
-          payload=json.dumps(record,sort_keys=True,separators=(',',':')).encode()+b'\n'
-          out=Path(os.environ['RECORD']);out.write_bytes(payload)
-          with gzip.open(os.environ['RECORD_GZ'],'wb',compresslevel=9) as fh:fh.write(payload)
-          print(json.dumps({'status':record['status'],'checks':record.get('checks'),
-            'record_bytes':len(payload),'record_sha256':hashlib.sha256(payload).hexdigest(),
-            'elapsed_seconds':record['elapsed_seconds']},sort_keys=True,separators=(',',':')))
-          if record['status']!='PASS':raise SystemExit(1)
+          p=Path(os.environ['FULL_RECORD'])
+          g=Path(os.environ['FULL_RECORD_GZ'])
+          record=json.loads(p.read_bytes())
+          print(json.dumps({
+            'schema':'BLOCAL_V22_SECTION_6_5_ARTIFACT_SUMMARY_V3',
+            'full_record_bytes':p.stat().st_size,
+            'full_record_sha256':hashlib.sha256(p.read_bytes()).hexdigest(),
+            'gzip_bytes':g.stat().st_size,
+            'gzip_sha256':hashlib.sha256(g.read_bytes()).hexdigest(),
+            'gamma_partition_registry_count':record['record_normalization']['gamma_partition_registry_count'],
+            'all_six_conditions_pass':record.get('all_six_conditions_pass'),
+            'method_selection_gate':record.get('method_selection_gate'),
+            'total_elapsed_seconds':record.get('total_elapsed_seconds'),
+          },sort_keys=True,separators=(',',':')))
           PY
 
-      - name: Upload J_START record
+      - name: Upload full section 6.5 record
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: blocal-v22-v5-jstart-s9-u8
-          path: /tmp/blocal-v22-v5-jstart-s9-u8.json.gz
+          name: blocal-v22-method-selection-section-6-5-v3
+          path: /tmp/blocal-v22-method-selection-taylor2-full-v3.json.gz
           if-no-files-found: error
           retention-days: 30
+
+      - name: Cleanup and provenance guard
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f "$EPHEMERAL_CONFIG"
+          test "$(sha256sum "$BLOCAL_DIR/config.blocal-v2.2-run.json" | awk '{print $1}')" = "$COMMITTED_CONFIG_SHA256"
+          git diff --exit-code -- "$BLOCAL_DIR/config.blocal-v2.2-run.json"
+
+      - name: Publish diagnostic commit status
+        if: always()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PROBE_STATE: ${{ steps.probe.outputs.probe_state }}
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json,os,urllib.request
+          state='success' if os.environ.get('PROBE_STATE')=='success' else 'failure'
+          body=json.dumps({
+            'state':state,
+            'context':'blocal-v22-method-selection-taylor2',
+            'description':'six-condition method-selection diagnostic='+state,
+            'target_url':f"https://github.com/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}"
+          }).encode()
+          req=urllib.request.Request(
+            f"https://api.github.com/repos/{os.environ['GITHUB_REPOSITORY']}/statuses/{os.environ['GITHUB_SHA']}",
+            data=body,method='POST',headers={'Authorization':f"Bearer {os.environ['GH_TOKEN']}",'Accept':'application/vnd.github+json','Content-Type':'application/json'})
+          print(urllib.request.urlopen(req).read().decode())
+          PY
+
+      - name: Verdict
+        if: always()
+        shell: bash
+        env:
+          PROBE_RC: ${{ steps.probe.outputs.probe_rc }}
+        run: |
+          set -euo pipefail
+          test "${PROBE_RC:-1}" -eq 0
