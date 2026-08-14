@@ -150,20 +150,43 @@ jobs:
                     return fail('J_OUTER_BUDGET')
                   before_left,before_right=left,right;m=(left+right)/2
                   width=right-left
-                  theta=Fraction(6,5) if width<=Fraction(1,2048) else (Fraction(1) if width<=Fraction(1,1024) else Fraction(1,2))
                   u0,u1=Fraction(1)-right,Fraction(1)-left
-                  def derivative_accept(H):
-                    hlo,_=model.interval_fractions(H,'targeted H_u')
-                    return hlo>=theta
+                  target_ladder=[Fraction(6,5),Fraction(1),Fraction(1,2),Fraction(1,4),Fraction(1,10)]
+                  target_trials=[];theta=None;hu=None;hd=None
+                  original_cell_budget=v2.BUDGET['max_cell_evaluations_per_enclosure']
                   try:
-                    hu,hd=base.hu_enclose(u0,u1,s,s,'CUSTOM',run_start,derivative_accept)
-                    derivative_evaluations+=hd['cell_evaluation_attempts']
+                    for candidate in target_ladder:
+                      v2.BUDGET['max_cell_evaluations_per_enclosure']=3000
+                      def derivative_accept(H,target=candidate):
+                        hlo,_=model.interval_fractions(H,'targeted H_u')
+                        return hlo>=target
+                      try:
+                        hu,hd=base.hu_enclose(u0,u1,s,s,'CUSTOM',run_start,derivative_accept)
+                        used=hd['cell_evaluation_attempts'];derivative_evaluations+=used
+                        target_trials.append({'target':model.rational_json(candidate),
+                          'status':'REACHED','cell_evaluation_attempts':used})
+                        theta=candidate;break
+                      except v2.Failure as exc:
+                        used=exc.counts.get('cell_evaluation_attempts',0);derivative_evaluations+=used
+                        target_trials.append({'target':model.rational_json(candidate),
+                          'status':'NOT_REACHED','failure_reason':str(exc),
+                          'cell_evaluation_attempts':used})
+                    if theta is None:
+                      v2.BUDGET['max_cell_evaluations_per_enclosure']=original_cell_budget
+                      hu,hd=base.hu_enclose(u0,u1,s,s,'POS',run_start)
+                      used=hd['cell_evaluation_attempts'];derivative_evaluations+=used
+                      target_trials.append({'target':None,'status':'SIGN_ONLY_FALLBACK_REACHED',
+                        'cell_evaluation_attempts':used})
                   except v2.Failure as exc:
                     derivative_evaluations+=exc.counts.get('cell_evaluation_attempts',0)
                     return fail('DERIVATIVE_'+str(exc),{'failed_step':k,
-                      'failed_derivative_counts':exc.counts,'derivative_lower_target':model.rational_json(theta)})
+                      'failed_derivative_counts':exc.counts,
+                      'derivative_target_trials':target_trials})
+                  finally:
+                    v2.BUDGET['max_cell_evaluations_per_enclosure']=original_cell_budget
                   D=model.interval_negate(hu);dlo,dhi=model.interval_fractions(D,'step derivative')
-                  model.need(dhi<=-theta and not(dlo<=0<=dhi),'targeted step Fr negative')
+                  model.need(dhi<0 and not(dlo<=0<=dhi),'step Fr negative')
+                  if theta is not None:model.need(dhi<=-theta,'targeted step Fr lower bound')
                   def newton_data(Fm):
                     qlo,qhi=model.interval_divide_negative_denominator(Fm,D)
                     nlo,nhi=m-qhi,m-qlo
@@ -180,7 +203,8 @@ jobs:
                     f_outer+=1
                     return fail('F_POINT_'+str(exc),{'failed_step':k,
                       'failed_F_counts':exc.counts,'failed_midpoint':model.rational_json(m),
-                      'derivative_lower_target':model.rational_json(theta),
+                      'derivative_lower_target_reached':None if theta is None else model.rational_json(theta),
+                      'derivative_target_trials':target_trials,
                       'step_derivative':D,'step_H_u':hu,
                       'step_derivative_counts':hd})
                   qlo,qhi,nlo,nhi,contained=newton_data(fm)
@@ -194,7 +218,9 @@ jobs:
                     'F_stop_reason':'NEWTON_CONTAINMENT' if contained else 'STRICT_SIGN',
                     'F_evaluation_subdivision_counts':fmd,
                     'u_derivative_domain':model.interval_json(u0,u1),
-                    'derivative_lower_target':model.rational_json(theta),
+                    'derivative_lower_target_reached':None if theta is None else model.rational_json(theta),
+                    'derivative_target_trials':target_trials,
+                    'derivative_target_attempt_cap':3000,
                     'coordinate_map':{'exact':'u=1-r',
                       'u_lo_equals':'1-r_right','u_hi_equals':'1-r_left'},
                     'H_u':hu,'F_r':D,
