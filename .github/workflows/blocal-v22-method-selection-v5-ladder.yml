@@ -14,7 +14,8 @@ env:
   CONFIG_SHA256: fec14e9911102f6d2c1d6d389a21865e16ffcdb91aa08adb69f13da45d3717d6
   BLOCAL_DIR: CERTIFICATES/prolate/item2_circle/b_tube_v2_1
   DIAG_DIR: CERTIFICATES/prolate/item2_circle/b_tube_v2_1/diagnostics
-  CI_WALL_TIMEOUT_SECONDS: '2100'
+  SOFT_DEADLINE_SECONDS: '3000'
+  CI_WALL_TIMEOUT_SECONDS: '3300'
 
 jobs:
   ladder-shard:
@@ -23,7 +24,7 @@ jobs:
       matrix:
         candidate_index: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
@@ -78,6 +79,7 @@ jobs:
                                          'budget_scope':'PER_CANDIDATE_PER_NODE'},
                   'evaluation_budget_accounting':{'counter':'cell_evaluation_attempts',
                     'relation_to_committed_runner':'CONSERVATIVE; counts SplitRequired attempts whereas committed _certify_outer counts successful evaluations'},
+                  'soft_deadline_seconds':int(os.environ['SOFT_DEADLINE_SECONDS']),
                   'ci_wall_timeout_seconds':int(os.environ['CI_WALL_TIMEOUT_SECONDS']),
                   'started_at_utc':started_utc,'certificate_evidence':False}
           try:
@@ -117,6 +119,7 @@ jobs:
               raise Stop(x)
             def add(cell):
               global attempts,evaluations,splits,maxdepth,SL,SH
+              if time.perf_counter()-started>int(os.environ['SOFT_DEADLINE_SECONDS']):stop('WALL_SOFT_LIMIT')
               if attempts>=12000:stop('MAX_EVALUATIONS')
               attempts+=1;maxdepth=max(maxdepth,cell.depth)
               try:value,detail=base.eval_cell('F',cell,Fraction(0),Fraction(0),s,s,eps)
@@ -132,6 +135,7 @@ jobs:
             try:
               for cell in base.roots():add(cell)
               while True:
+                if time.perf_counter()-started>int(os.environ['SOFT_DEADLINE_SECONDS']):stop('WALL_SOFT_LIMIT')
                 enclosure=base.model.normalize_interval(base.model.outward_dyadic(SL,SH))
                 lo,hi=base.model.interval_fractions(enclosure,'L3 aggregate')
                 complete=base.cover_ok(active)
@@ -150,7 +154,8 @@ jobs:
                 enclosure=base.model.normalize_interval(base.model.outward_dyadic(SL,SH))
                 complete=base.cover_ok(active)
             finally:v2._TRACE=None
-            record.update({'verdict':verdict,'reason':reason,'enclosure':enclosure,
+            record.update({'verdict':verdict,'reason':reason,
+                           'stop_reason':reason if verdict=='INDETERMINATE' else None,'enclosure':enclosure,
                            'cell_evaluation_attempts':attempts,'cell_evaluations':evaluations,
                            'leaves':len(active),'splits':splits,'max_depth_reached':maxdepth,
                            'complete_closed_cover':complete,
@@ -161,6 +166,7 @@ jobs:
                            'duffy_s2_structural_semantics':'zero denotes no positive structural floor; fallback is the existing nonnegative helper'})
           except Exception as exc:
             record.update({'verdict':'INFRASTRUCTURE_FAILURE','reason':type(exc).__name__+':'+str(exc),
+                           'stop_reason':None,
                            'enclosure':None,'cell_evaluation_attempts':None,'cell_evaluations':None,
                            'leaves':None,'splits':None,'max_depth_reached':None,'complete_closed_cover':False})
           record['elapsed_seconds']=f'{time.perf_counter()-started:.6f}'
@@ -218,6 +224,8 @@ jobs:
           inputs={json.dumps(r.get('materialization_inputs'),sort_keys=True,separators=(',',':')) for r in rows}
           if len(materialized)!=1 or None in materialized:errors.append({'candidate_index':None,'reason':'MATERIALIZED_CONFIG_SHA_MISMATCH_OR_MISSING'})
           if len(inputs)!=1 or 'null' in inputs:errors.append({'candidate_index':None,'reason':'MATERIALIZATION_INPUTS_MISMATCH_OR_MISSING'})
+          wall_soft_limit_candidates=sorted(r['candidate_index'] for r in rows if r.get('stop_reason')=='WALL_SOFT_LIMIT')
+          budget_faithful=None if errors or len(rows)!=21 else not bool(wall_soft_limit_candidates)
           selected=None
           if errors or len(rows)!=21:status='INFRASTRUCTURE_FAILURE'
           elif any(r['verdict']=='INFRASTRUCTURE_FAILURE' for r in rows):status='INFRASTRUCTURE_FAILURE'
@@ -234,6 +242,7 @@ jobs:
             if label=='ACCEPTED':label='ACCEPTED_SELECTED' if selected is row else 'ACCEPTED_NOT_SELECTED'
             summary.append({'candidate_index':row['candidate_index'],'lambda_increment':row['lambda_increment'],
                             'verdict':row['verdict'],'aggregate_classification':label,'reason':row['reason'],
+                            'stop_reason':row.get('stop_reason'),
                             'enclosure':row['enclosure'],'cell_evaluations':row['cell_evaluations'],
                             'leaves':row['leaves'],'splits':row['splits'],'max_depth_reached':row['max_depth_reached'],
                             'elapsed_seconds':row['elapsed_seconds'],'complete_closed_cover':row['complete_closed_cover']})
@@ -246,6 +255,7 @@ jobs:
                'materialization_inputs':None if len(inputs)!=1 else json.loads(next(iter(inputs))),
                'selected_candidate_index':None if selected is None else selected['candidate_index'],
                'lambda_start_increment':None if selected is None else selected['lambda_increment'],
+               'budget_faithful':budget_faithful,'wall_soft_limit_candidates':wall_soft_limit_candidates,
                'conditions_5_and_6_authorized_by_result':status=='ACCEPTED','certificate_evidence':False}
           payload=json.dumps(out,sort_keys=True,separators=(',',':')).encode()+b'\n'
           Path('/tmp/blocal-v22-v5-l3-ladder-aggregate.json').write_bytes(payload)
