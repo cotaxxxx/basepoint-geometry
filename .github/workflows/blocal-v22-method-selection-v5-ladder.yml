@@ -1,4 +1,5 @@
 name: B-LOCAL v2.2 v5 L3 lambda ladder diagnostic
+# Trigger audit: authorized v5 ladder execution
 
 on:
   push:
