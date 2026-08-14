@@ -1,6 +1,9 @@
 name: B-LOCAL v2.2 v5 L3 lambda ladder diagnostic
 
 on:
+  push:
+    branches:
+      - agent/blocal-v22-method-selection-taylor2
   workflow_dispatch:
 
 permissions:
