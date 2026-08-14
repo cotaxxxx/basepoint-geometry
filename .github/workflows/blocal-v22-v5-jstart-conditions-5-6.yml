@@ -95,9 +95,121 @@ jobs:
             v2.BUDGET=dict(v2.BUDGET);v2.BUDGET['max_depth']=16;base.BUDGET=v2.BUDGET
             base.angle4_union=v2.angle4_union;base.geometry_jet=v5.geometry_jet;base.eval_cell=v5.eval_cell
             base.enclose=v2.enclose;base.jstart=v2.jstart
+            floor_site_counts={}
+            _effective=v5.effective
+            def tracked_effective(site,structural,x,w,region,scope,cell):
+              out=_effective(site,structural,x,w,region,scope,cell)
+              source=v5._REGISTRY[out[1]]['selected_source']
+              z=floor_site_counts.setdefault(site,{'calls':0,'natural':0,'structural':0})
+              z['calls']+=1;z[source]+=1
+              return out
+            v5.effective=tracked_effective
+
+            def refined_jstart(lam,um,run_start):
+              model=base.model;left=Fraction(1)-um;right=Fraction(1)
+              points=[];steps=[];f_outer=0;derivative_evaluations=0
+              full_cond5=None
+              def fail(reason,extra=None):
+                path={'phase':'J_START_COMPLETE_PATH',
+                  'tested_domain':{'initial_bracket':model.interval_json(Fraction(1)-um,Fraction(1)),
+                    'lambda_start':model.rational_json(lam)},
+                  'strict_predicate':'strict bisection signs + per-step F_r<0 + strict interval-Newton self-containment',
+                  'predicate_result':False,'ordered_bisection':points,'newton_steps':steps,
+                  'outer_evaluations':f_outer,
+                  'evaluation_accounting':{'j_start_outer_budget_applies_to':'F_POINT_ENCLOSURES_ONLY',
+                    'f_point_outer_evaluations':f_outer,'derivative_evaluations':derivative_evaluations,
+                    'derivative_evaluations_budget':'SEPARATE_RECORDED_COUNTER'},
+                  'failure_reason':reason,'certificate_evidence':False}
+                if extra:path.update(extra)
+                return path,full_cond5
+              try:
+                fleft,fd=base.f_enclose(left,left,lam,lam,'POS',run_start);f_outer+=1
+                points.append({'r':model.rational_json(left),'sign':'POS','enclosure':fleft,
+                  'role':'INITIAL_LEFT','evaluation_subdivision_counts':fd})
+                s=lam-model.LAMBDA_PLUS
+                hu_full,hd_full=base.hu_enclose(Fraction(0),um,s,s,'POS',run_start)
+                derivative_evaluations+=hd_full['cell_evaluation_attempts']
+                Dfull=model.interval_negate(hu_full)
+                dlo,dhi=model.interval_fractions(Dfull,'full derivative')
+                model.need(dhi<0 and not(dlo<=0<=dhi),'full Fr negative')
+                full_cond5={'phase':'J_START_DERIVATIVE_BRACKET',
+                  'tested_domain':{'r_interval':model.interval_json(Fraction(1)-um,Fraction(1)),
+                    'u_interval':model.interval_json(Fraction(0),um),
+                    'lambda_start':model.rational_json(lam)},
+                  'coordinate_map':{'exact':'u=1-r','r_left_maps_to_u_right':True,
+                    'r_right_maps_to_u_left':True},
+                  'H_u':hu_full,'final_enclosure':Dfull,
+                  'endpoint_transform':{'exact_relation':'F_r=-H_u',
+                    'rule':'[H_lo,H_hi] maps to [-H_hi,-H_lo]','label_only':False},
+                  'strict_predicate':'0 notin F_r and sup(F_r)<0','predicate_result':True,
+                  'evaluation_subdivision_counts':hd_full,
+                  'derivative_evaluations':hd_full['cell_evaluation_attempts'],
+                  'failure_reason':None,'certificate_evidence':False}
+                for k in range(v2.BUDGET['j_start_max_bisections']):
+                  if f_outer>=v2.BUDGET['j_start_max_outer_evaluations']:
+                    return fail('J_OUTER_BUDGET')
+                  before_left,before_right=left,right;m=(left+right)/2
+                  try:
+                    fm,fmd=base.f_enclose(m,m,lam,lam,'NONZERO',run_start);f_outer+=1
+                  except v2.Failure as exc:
+                    f_outer+=1
+                    return fail('F_POINT_'+str(exc),{'failed_step':k,
+                      'failed_F_counts':exc.counts,'failed_midpoint':model.rational_json(m)})
+                  sg=base.sign(fm)
+                  u0,u1=Fraction(1)-right,Fraction(1)-left
+                  hu,hd=base.hu_enclose(u0,u1,s,s,'POS',run_start)
+                  derivative_evaluations+=hd['cell_evaluation_attempts']
+                  D=model.interval_negate(hu);dlo,dhi=model.interval_fractions(D,'step derivative')
+                  model.need(dhi<0 and not(dlo<=0<=dhi),'step Fr negative')
+                  flo,fhi=model.interval_fractions(fm,'step Fm')
+                  qlo,qhi=model.interval_divide_negative_denominator(fm,D)
+                  nlo,nhi=m-qhi,m-qlo
+                  contained=left<nlo<=nhi<right
+                  step={'index':k,'bracket_before':model.interval_json(before_left,before_right),
+                    'midpoint':model.rational_json(m),'F_midpoint':fm,'F_sign':sg,
+                    'F_evaluation_subdivision_counts':fmd,
+                    'u_derivative_domain':model.interval_json(u0,u1),
+                    'coordinate_map':{'exact':'u=1-r',
+                      'u_lo_equals':'1-r_right','u_hi_equals':'1-r_left'},
+                    'H_u':hu,'F_r':D,
+                    'endpoint_transform':{'exact_relation':'F_r=-H_u',
+                      'rule':'[H_lo,H_hi] maps to [-H_hi,-H_lo]','label_only':False},
+                    'derivative_evaluation_subdivision_counts':hd,
+                    'division':{'operation':'F(midpoint)/F_r(X)',
+                      'negative_denominator_preserved':True,
+                      'denominator_endpoints':{'lo':model.rational_json(dlo),'hi':model.rational_json(dhi)},
+                      'reciprocal_endpoint_rule':'[1/F_r_hi,1/F_r_lo]',
+                      'numerator_endpoints':{'lo':model.rational_json(flo),'hi':model.rational_json(fhi)},
+                      'quotient':model.outward_dyadic(qlo,qhi)},
+                    'newton_image':model.outward_dyadic(nlo,nhi),
+                    'containment_margins':{'left':model.rational_json(nlo-left),
+                      'right':model.rational_json(right-nhi)},
+                    'strict_self_containment':contained}
+                  steps.append(step)
+                  points.append({'r':model.rational_json(m),'sign':sg,'enclosure':fm,
+                    'role':'NEWTON_SUCCESS' if contained else ('RETAINED_RIGHT' if sg=='NEG' else 'RETAINED_LEFT')})
+                  if contained:
+                    path={'phase':'J_START_COMPLETE_PATH',
+                      'tested_domain':{'initial_bracket':model.interval_json(Fraction(1)-um,Fraction(1)),
+                        'lambda_start':model.rational_json(lam)},
+                      'strict_predicate':'strict bisection signs + per-step F_r<0 + strict interval-Newton self-containment',
+                      'predicate_result':True,'ordered_bisection':points,'derivative':full_cond5,
+                      'newton_steps':steps,'newton':step,'outer_evaluations':f_outer,
+                      'evaluation_accounting':{'j_start_outer_budget_applies_to':'F_POINT_ENCLOSURES_ONLY',
+                        'f_point_outer_evaluations':f_outer,
+                        'derivative_evaluations':derivative_evaluations,
+                        'derivative_evaluations_budget':'SEPARATE_RECORDED_COUNTER'},
+                      'failure_reason':None,'certificate_evidence':False}
+                    return path,full_cond5
+                  if sg=='NEG':right=m
+                  elif sg=='POS':left=m
+                  else:return fail('BISECTION_UNRESOLVED')
+                return fail('MAX_BISECTIONS')
+              except v2.Failure as exc:return fail('DERIVATIVE_'+str(exc),{'failed_derivative_counts':exc.counts})
+              except Exception as exc:return fail(type(exc).__name__+':'+str(exc))
             v2._TRACE=None;v2._HISTORY=[];v2._LAST_COUNTS=None
             s=Fraction(1,512);um=Fraction(1,256);lam=base.model.LAMBDA_PLUS+s
-            path,cond5=base.jstart(lam,um,time.perf_counter(),None)
+            path,cond5=refined_jstart(lam,um,time.perf_counter())
             path=v3.compact(path);cond5=v3.compact(cond5)
             ordered=path.get('ordered_bisection',[]) if isinstance(path,dict) else []
             derivative=None if cond5 is None else cond5.get('final_enclosure')
@@ -121,7 +233,13 @@ jobs:
               'lambda_start':base.model.rational_json(lam),'jstart_complete_path':path,
               'jstart_derivative_bracket':cond5,
               'runtime':{'python':sys.version.split()[0],'python_flint':flint.__version__,'platform':platform.platform()},
-              'v5_floor_registry':{x:v5._REGISTRY[x] for x in sorted(v5._REGISTRY)},
+              'v5_floor_registry_bounded':(lambda items:{
+                'unique_count':len(items),
+                'total_use_count':v5._STATS['effective_floor_calls'],
+                'canonical_sha256':hashlib.sha256(json.dumps({k:v5._REGISTRY[k] for k in sorted(v5._REGISTRY)},sort_keys=True,separators=(',',':')).encode()).hexdigest(),
+                'retained_limit':64,'retained':{k:v5._REGISTRY[k] for k in sorted(v5._REGISTRY)[:64]},
+                'truncated':len(items)>64,'omitted_count':max(0,len(items)-64),
+                'per_site':{k:floor_site_counts[k] for k in sorted(floor_site_counts)}})(sorted(v5._REGISTRY)),
               'v5_floor_counters':v5._STATS})
           except Exception as exc:
             record.update({'status':'INFRASTRUCTURE_FAILURE','reason':type(exc).__name__+':'+str(exc)})
