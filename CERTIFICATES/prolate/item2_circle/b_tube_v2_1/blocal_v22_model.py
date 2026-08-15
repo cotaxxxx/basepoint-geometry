@@ -164,4 +164,6 @@ def validate_config(config: dict[str, Any]) -> None:
         "revision":"f305adaca6aeaf533472fa919d8a333537ba4954e4e4c842a57e0deca0c1265f",
         "f4":"c9cf94295fb53fa5e4446a19d3711de5b78924d22f16a3d93756d73fd475b115",
         "f5":"cf64fcfee14e73e3784c6b4af1027b53e7d24cf605631ec396fcf28a3dbe9e41",
+        "method_selection_addendum":"7fafe5f465f9f38e61831b804a4bc95090af41b8fe31347897e7b2f40bf3d316",
+        "c1_floor_spec":"8492755d298ace4c09f5118993eb2f2fa968d55ae5d04b81ff20c2c856fc90d3",
     }, "design contract hashes")

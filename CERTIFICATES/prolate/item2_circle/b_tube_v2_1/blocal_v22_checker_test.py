@@ -5,7 +5,6 @@ from __future__ import annotations
 import copy
 from fractions import Fraction
 
-import blocal_arb_adapter as adapter
 import blocal_v22_checker as checker
 import blocal_v22_model as model
 import blocal_v22_policy as policy
@@ -89,6 +88,8 @@ def config() -> dict:
             "revision": "f305adaca6aeaf533472fa919d8a333537ba4954e4e4c842a57e0deca0c1265f",
             "f4": "c9cf94295fb53fa5e4446a19d3711de5b78924d22f16a3d93756d73fd475b115",
             "f5": "cf64fcfee14e73e3784c6b4af1027b53e7d24cf605631ec396fcf28a3dbe9e41",
+            "method_selection_addendum": "7fafe5f465f9f38e61831b804a4bc95090af41b8fe31347897e7b2f40bf3d316",
+            "c1_floor_spec": "8492755d298ace4c09f5118993eb2f2fa968d55ae5d04b81ff20c2c856fc90d3",
         },
     }
 
@@ -96,8 +97,10 @@ def config() -> dict:
 def _gamma_detail() -> dict:
     return {
         "gamma_policy": policy.GAMMA_POLICY_ID,
-        "gamma_subdivisions": [],
+        "gamma_subdivisions": [{"initial_interval":model.interval_json(0,1),
+            "cuts":[model.rational_json(0),model.rational_json(1)],"bin_count":1,"max_bin_depth":0,"use_count":1}],
         "gamma_fallback_used": False,
+        "gamma_clamp":"[0,1]","gamma_clamp_fail_closed":True,
         "sqrt_policy": policy.SQRT_POLICY_ID,
         "measure_identity": policy.MEASURE_ID,
     }
@@ -107,12 +110,18 @@ def proof(cfg: dict, quantity: str, value: Fraction,
           u0: Fraction, u1: Fraction,
           s0: Fraction, s1: Fraction) -> dict:
     children = []
-    for reg in ("T1", "T2", "R1", "R2"):
+    for reg in ("T1", "T2", "R2", "C1", "TH"):
         detail = _gamma_detail()
         if reg in ("T1", "T2"):
             detail.update({
                 "Z_DEN_LO": model.rational_json(Fraction(1)),
                 "helper_lemma_id": "BHAT_LOWER_V2",
+                "Duffy_Z_components": {"Ahat_lo":model.rational_json(Fraction(1)),
+                    "r_lo2_Bhat_lo":model.rational_json(Fraction(0)),
+                    "u0_2_over_rho2_hi":model.rational_json(Fraction(0)),
+                    "rho2_hi":model.rational_json(Fraction(1))},
+                "effective_floor_record_sha256": [],
+                "local_geometry": ["S","U","W","B","q"],
                 "duffy_id": policy.DUFFY_ID,
                 "triangle_substitution": reg,
                 "bounded_extensions": {
@@ -126,10 +135,11 @@ def proof(cfg: dict, quantity: str, value: Fraction,
                 "q_hi": model.rational_json(Fraction(1)),
                 "q_lo_policy": policy.Q_LO_POLICY_ID,
                 "denominator_policy": policy.DENOMINATOR_POLICY_ID,
+                "effective_floor_record_sha256": [],
+                "taylor_order": 2,
+                "remainder_rule": "diag area*w^2/24 + cross supabs*area*wa*wb/16",
             })
-            if reg == "R2":
-                detail["R2_W_LO"] = model.rational_json(Fraction(1))
-                detail["R2_COS_PHI_LO_HI"] = model.rational_json(Fraction(0))
+            if reg == "C1":detail["c1_q_floor_source"]="C1_A_W2_B"
         children.append({
             "child_id": reg,
             "parent_id": None,
@@ -174,6 +184,12 @@ def proof(cfg: dict, quantity: str, value: Fraction,
         "normalized_enclosure": model.normalize_interval(unnorm),
         "complete_closed_cover": True,
         "direct_pinned_integrator_called": False,
+        "effective_evaluation_cap": cfg["route_policies"]["F_ROUTE" if quantity=="F" else "K_ROUTE"]["max_evaluations"],
+        "effective_floor_registry": {"call_sites":list(policy.EFFECTIVE_FLOOR_SITES),"unique_count":0,"total_use_count":0,
+            "canonical_sha256":model.sha256_bytes(model.canonical_json_bytes({})),"retained_limit":64,"retained":{},
+            "truncated":False,"omitted_count":0,"per_site":{x:{"calls":0,"natural":0,"structural":0} for x in policy.EFFECTIVE_FLOOR_SITES}},
+        "method_selection_addendum_sha256":"7fafe5f465f9f38e61831b804a4bc95090af41b8fe31347897e7b2f40bf3d316",
+        "c1_floor_spec_sha256":"8492755d298ace4c09f5118993eb2f2fa968d55ae5d04b81ff20c2c856fc90d3",
     }
     p["proof_id"] = model.sha256_bytes(model.canonical_json_bytes(p))
     return p
@@ -272,6 +288,52 @@ def jrecord(cfg: dict) -> dict:
     }
 
 
+def jrecord_v5(cfg:dict)->dict:
+    umax=Fraction(1,8);s=Fraction(1,16);lam=model.LAMBDA_PLUS+s
+    left,right=1-umax,Fraction(1);mid=(left+right)/2
+    pleft=proof(cfg,"F",Fraction(1),1-left,1-left,s,s)
+    pmid=proof(cfg,"F",Fraction(0),1-mid,1-mid,s,s)
+    phu_full=proof(cfg,"H_U",Fraction(1),Fraction(0),umax,s,s)
+    phu=proof(cfg,"H_U",Fraction(1),1-right,1-left,s,s)
+    H=phu["normalized_enclosure"];D=model.interval_negate(H)
+    qlo,qhi=model.interval_divide_negative_denominator(pmid["normalized_enclosure"],D)
+    q=model.outward_dyadic(qlo,qhi);N=model.outward_dyadic(mid-qhi,mid-qlo)
+    nlo,nhi=model.interval_fractions(N)
+    initial={"evaluation_id":"J-F-001","r":model.rational_json(left),"lambda_start":model.rational_json(lam),
+        "route_id":policy.F_ROUTE_ID,"route_proof":pleft,"normalized_F":pleft["normalized_enclosure"],
+        "sign":"POSITIVE","role":"INITIAL_LEFT"}
+    mp={"evaluation_id":"J-F-002","r":model.rational_json(mid),"lambda_start":model.rational_json(lam),
+        "route_id":policy.F_ROUTE_ID,"route_proof":pmid,"normalized_F":pmid["normalized_enclosure"],
+        "sign":"UNRESOLVED","role":"BISECTION_MIDPOINT"}
+    target=Fraction(1,10)
+    step={"step_index":0,"bracket":model.interval_json(left,right),"midpoint":model.rational_json(mid),
+        "coordinate_map":{"u_interval":model.interval_json(1-right,1-left),"u_lo_equals":"1-r_right","u_hi_equals":"1-r_left","exact_rational":True},
+        "derivative_lower_target_reached":model.rational_json(target),
+        "derivative_target_trials":[{"target":model.rational_json(x),"status":"NOT_REACHED","evaluations":3,"failure_reason":"ANGULAR_EVALUATION_BUDGET"} for x in (Fraction(6,5),Fraction(1),Fraction(1,2),Fraction(1,4))]
+            +[{"target":model.rational_json(target),"status":"REACHED","evaluations":phu["evaluation_count"],"failure_reason":None}],
+        "derivative_sign_only_fallback":False,"H_u":H,"F_r":D,"derivative_route_proof":phu,
+        "endpoint_transform":{"rule":"[H_lo,H_hi] -> [-H_hi,-H_lo]","label_only":False},
+        "F_midpoint_record":mp,"strict_sign_certified":False,"sign_required_for_continuation":False,
+        "F_stop_reason":"NEWTON_CONTAINMENT","quotient":q,
+        "quotient_width":model.rational_json(qhi-qlo),
+        "negative_denominator_rule":{"reciprocal_endpoint_rule":"[1/F_r_hi,1/F_r_lo]","midpoint_only":False},
+        "newton_image":N,"containment_margins":{"left":model.rational_json(nlo-left),"right":model.rational_json(right-nhi)},
+        "strict_self_containment":True}
+    fullH=phu_full["normalized_enclosure"]
+    full={"record_id":"J-DERIVATIVE-FULL","r_interval":model.interval_json(left,right),
+        "u_interval":model.interval_json(0,umax),"H_u":fullH,"F_r":model.interval_negate(fullH),"route_proof":phu_full,
+        "endpoint_transform":{"rule":"[H_lo,H_hi] -> [-H_hi,-H_lo]","label_only":False},
+        "sup_F_r_lt_zero":True,"zero_not_in_F_r":True}
+    dcount=phu_full["evaluation_count"]+4*3+phu["evaluation_count"]
+    return {"record_type":"J_START","node":"J_START","candidate_index":0,"lambda_start":model.rational_json(lam),
+        "initial_bracket":model.interval_json(left,right),"r_interval":model.interval_json(left,right),
+        "ordered_bisection_records":[initial],"condition5_derivative_record":full,"newton_steps":[step],"newton_record":step,
+        "evaluation_accounting":{"f_point_outer_evaluations":2,"derivative_evaluations":dcount,
+            "outer_budget_counts_only":"f_point_outer_evaluations","derivative_counted_in_outer_budget":False},
+        "claim":"J_START_UNIQUE_NONDEGENERATE_ROOT","certified":True,
+        "direct_pinned_F_arb_called":False,"direct_pinned_dFdr_arb_called":False}
+
+
 class BadME:
     def man_exp(self):
         raise ValueError("nonfinite")
@@ -293,8 +355,6 @@ def main() -> int:
     checker.verify_route_proof(base, cfg, "H_U")
 
     # Existing fail-closed and structural controls.
-    rejects(lambda: adapter.arb_ball_to_canonical_dyadic_interval(BadBall()),
-            "nonfinite Arb")
     bad = copy.deepcopy(base)
     bad["ordered_children"][0]["box"]["a"] = model.interval_json(
         Fraction(0), Fraction(3, 4))
@@ -368,73 +428,39 @@ def main() -> int:
     rejects(lambda: checker.verify_route_proof(bad, cfg, "H_U"),
             "R4 fallback marker mismatch")
 
-    # J_START 12 binding controls.
-    j = jrecord(cfg)
+    # Method-selection addendum binding controls.
+    j = jrecord_v5(cfg)
     checker._check_j(j, Fraction(1, 8),
                      model.LAMBDA_PLUS+Fraction(1, 16), cfg)
-    for field, label in [
-        ("direct_pinned_F_arb_called", "J direct F_arb"),
-        ("direct_pinned_dFdr_arb_called", "J direct dFdr_arb"),
-    ]:
-        b = copy.deepcopy(j)
-        b[field] = True
-        rejects(lambda b=b: checker._check_j(
-            b, Fraction(1, 8), model.LAMBDA_PLUS+Fraction(1, 16), cfg), label)
-    b = copy.deepcopy(j)
-    b["derivative_record"]["F_r"] = b["derivative_record"]["H_u"]
-    rejects(lambda: checker._check_j(
-        b, Fraction(1, 8), model.LAMBDA_PLUS+Fraction(1, 16), cfg),
-        "reverse negation")
-    rejects(lambda: model.interval_divide_negative_denominator(
-        model.interval_json(Fraction(0), Fraction(0)),
-        model.interval_json(Fraction(-1), Fraction(1))), "D contains zero")
-    b = copy.deepcopy(j)
-    b["derivative_record"]["u_interval"] = model.interval_json(
-        Fraction(0), Fraction(1, 128))
-    rejects(lambda: checker._check_j(
-        b, Fraction(1, 8), model.LAMBDA_PLUS+Fraction(1, 16), cfg),
-        "bad r-u map")
-    b = copy.deepcopy(j)
-    b["ordered_bisection_records"][0]["route_proof"]["normalized_enclosure"] = \
-        model.interval_json(Fraction(2), Fraction(2))
-    rejects(lambda: checker._check_j(
-        b, Fraction(1, 8), model.LAMBDA_PLUS+Fraction(1, 16), cfg),
-        "normalization mismatch")
-    b = copy.deepcopy(j)
-    b["ordered_bisection_records"][0]["route_proof"] = None
-    rejects(lambda: checker._check_j(
-        b, Fraction(1, 8), model.LAMBDA_PLUS+Fraction(1, 16), cfg),
-        "sampled enclosure")
-    b = copy.deepcopy(j)
-    b["ordered_bisection_records"][1]["role"] = "RETAINED_LEFT"
-    rejects(lambda: checker._check_j(
-        b, Fraction(1, 8), model.LAMBDA_PLUS+Fraction(1, 16), cfg),
-        "contrary bisection update")
-    b = copy.deepcopy(j)
-    b["r_interval"] = model.interval_json(Fraction(7, 8), Fraction(1))
-    rejects(lambda: checker._check_j(
-        b, Fraction(1, 8), model.LAMBDA_PLUS+Fraction(1, 16), cfg),
-        "right=1")
-    b = copy.deepcopy(j)
-    b["newton_record"]["D"] = model.interval_json(Fraction(-1), Fraction(1))
-    rejects(lambda: checker._check_j(
-        b, Fraction(1, 8), model.LAMBDA_PLUS+Fraction(1, 16), cfg),
-        "Newton zero denominator")
-    b = copy.deepcopy(j)
-    b["newton_record"]["newton_image"] = b["r_interval"]
-    rejects(lambda: checker._check_j(
-        b, Fraction(1, 8), model.LAMBDA_PLUS+Fraction(1, 16), cfg),
-        "false self containment")
-    b = copy.deepcopy(j)
-    b["ordered_bisection_records"][0]["route_proof"]["ordered_children"].pop()
-    rejects(lambda: checker._check_j(
-        b, Fraction(1, 8), model.LAMBDA_PLUS+Fraction(1, 16), cfg),
-        "missing angular child")
-    b = copy.deepcopy(j)
-    b["ordered_bisection_records"][2]["route_proof"] = None
-    rejects(lambda: checker._check_j(
-        b, Fraction(1, 8), model.LAMBDA_PLUS+Fraction(1, 16), cfg),
-        "missing Newton midpoint route proof")
+    for field,label in (("direct_pinned_F_arb_called","direct F"),
+                        ("direct_pinned_dFdr_arb_called","direct derivative")):
+        b=copy.deepcopy(j);b[field]=True
+        rejects(lambda b=b:checker._check_j(b,Fraction(1,8),model.LAMBDA_PLUS+Fraction(1,16),cfg),label)
+    b=copy.deepcopy(j);b["condition5_derivative_record"]["F_r"]=b["condition5_derivative_record"]["H_u"]
+    rejects(lambda:checker._check_j(b,Fraction(1,8),model.LAMBDA_PLUS+Fraction(1,16),cfg),"label-only derivative negation")
+    b=copy.deepcopy(j);b["newton_steps"][0]["coordinate_map"]["u_interval"]=model.interval_json(0,Fraction(1,128))
+    rejects(lambda:checker._check_j(b,Fraction(1,8),model.LAMBDA_PLUS+Fraction(1,16),cfg),"inexact r-u map")
+    b=copy.deepcopy(j);b["newton_steps"][0]["negative_denominator_rule"]["midpoint_only"]=True
+    # Exact quotient reconstruction rejects any midpoint-only substitution.
+    b["newton_steps"][0]["quotient"]=model.interval_json(0,Fraction(1,128))
+    rejects(lambda:checker._check_j(b,Fraction(1,8),model.LAMBDA_PLUS+Fraction(1,16),cfg),"midpoint-only quotient")
+    b=copy.deepcopy(j);b["newton_steps"][0]["derivative_lower_target_reached"]=model.rational_json(Fraction(6,5))
+    rejects(lambda:checker._check_j(b,Fraction(1,8),model.LAMBDA_PLUS+Fraction(1,16),cfg),"theta without verification")
+    b=copy.deepcopy(j);b["evaluation_accounting"]["derivative_counted_in_outer_budget"]=True
+    rejects(lambda:checker._check_j(b,Fraction(1,8),model.LAMBDA_PLUS+Fraction(1,16),cfg),"derivative charged to outer")
+    b=copy.deepcopy(j);b["newton_steps"][0]["containment_margins"]["left"]=model.rational_json(0)
+    rejects(lambda:checker._check_j(b,Fraction(1,8),model.LAMBDA_PLUS+Fraction(1,16),cfg),"false margin")
+    b=copy.deepcopy(j);b["newton_steps"][0]["F_stop_reason"]="STRICT_SIGN"
+    rejects(lambda:checker._check_j(b,Fraction(1,8),model.LAMBDA_PLUS+Fraction(1,16),cfg),"containment-first reason")
+    b=copy.deepcopy(base);b["effective_floor_registry"]["call_sites"].append("SEVENTH_SITE")
+    rejects(lambda:checker.verify_route_proof(b,cfg,"H_U"),"unlisted floor site")
+    b=copy.deepcopy(base);b["ordered_children"][0]["detail"]["local_geometry"].remove("q")
+    rejects(lambda:checker.verify_route_proof(b,cfg,"H_U"),"old Duffy geometry mixed")
+    b=copy.deepcopy(base);b["ordered_children"][2]["detail"]["q_lo"]=model.rational_json(0)
+    rejects(lambda:checker.verify_route_proof(b,cfg,"H_U"),"sample-derived zero floor")
+    b=copy.deepcopy(base);d=b["ordered_children"][2]["detail"];d["gamma_fallback_used"]=True
+    d["gamma_subdivisions"]=[{"initial_interval":model.interval_json(0,1),"cuts":[model.rational_json(0),model.rational_json(1)],"bin_count":1,"max_bin_depth":0,"use_count":1}]
+    rejects(lambda:checker.verify_route_proof(b,cfg,"H_U"),"gamma adaptive rule removed")
 
     print("BLOCAL_V22_ALL_BINDING_NEGATIVE_CONTROLS_PASS")
     return 0

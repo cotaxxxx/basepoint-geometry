@@ -66,15 +66,41 @@ def _check_gamma_detail(detail: dict[str, Any]) -> None:
                "child gamma policy")
     splits = detail["gamma_subdivisions"]
     model.need(isinstance(splits, list), "gamma subdivisions list")
-    model.need(detail["gamma_fallback_used"] is bool(splits),
-               "gamma fallback marker")
-    if splits:
-        model.need(splits == [
-            {"lo": model.dyadic_json(Fraction(0)),
-             "hi": model.dyadic_json(Fraction(1, 2))},
-            {"lo": model.dyadic_json(Fraction(1, 2)),
-             "hi": model.dyadic_json(Fraction(1))},
-        ], "gamma fallback exact two-bin partition")
+    model.need(splits,"gamma bin record required")
+    model.need(detail["gamma_fallback_used"] is any(x["bin_count"]>1 for x in splits), "gamma fallback marker")
+    model.need(detail["gamma_clamp"]=="[0,1]" and detail["gamma_clamp_fail_closed"] is True,"gamma clamp")
+    for row in splits:
+        lo,hi=model.interval_fractions(row["initial_interval"],"gamma initial")
+        cuts=[model.fraction_from_rational(x) for x in row["cuts"]]
+        model.need(Fraction(0)<=lo<=hi<=1 and cuts[0]==lo and cuts[-1]==hi,"gamma range/endpoints")
+        model.need(all(cuts[i]<cuts[i+1] for i in range(len(cuts)-1)),"gamma ordered cuts")
+        model.need(row["bin_count"]==len(cuts)-1 and row["bin_count"]>=1,"gamma bin count")
+        model.need(0<=row["max_bin_depth"]<=12 and row["use_count"]>0,"gamma depth/use")
+
+
+def _check_floor_registry(reg:dict[str,Any])->None:
+    model.need(reg["call_sites"]==list(policy.EFFECTIVE_FLOOR_SITES),"exact six floor sites")
+    model.need(set(reg["per_site"])==set(policy.EFFECTIVE_FLOOR_SITES),"floor per-site keys")
+    total=0
+    for site,row in reg["per_site"].items():
+        model.need(row["calls"]==row["natural"]+row["structural"] and row["calls"]>=0,"floor site accounting")
+        total+=row["calls"]
+    model.need(total==reg["total_use_count"],"floor total uses")
+    retained=reg["retained"];model.need(len(retained)<=reg["retained_limit"]==64,"floor retained bound")
+    model.need(reg["unique_count"]==len(retained)+reg["omitted_count"],"floor unique accounting")
+    model.need(reg["truncated"] is (reg["omitted_count"]>0),"floor truncation")
+    if not reg["truncated"]:
+        ordered={k:retained[k] for k in sorted(retained)}
+        model.need(model.sha256_bytes(model.canonical_json_bytes(ordered))==reg["canonical_sha256"],"floor canonical digest")
+    for dig,rec in retained.items():
+        model.need(model.sha256_bytes(model.canonical_json_bytes(rec))==dig,"floor record digest")
+        if rec.get("site")=="C1_STRUCTURAL_Q":continue
+        model.need(rec["site"] in policy.EFFECTIVE_FLOOR_SITES,"floor enumerated site")
+        structural=model.fraction_from_rational(rec["structural"]);effective=model.fraction_from_rational(rec["effective"])
+        natural=None if rec["natural"] is None else model.fraction_from_rational(rec["natural"])
+        expected=structural if natural is None else max(structural,natural)
+        model.need(effective==expected and rec["shared_by"]==["f0","f1","f2"],"effective floor max/shared")
+        model.need(rec["selected_source"]==("natural" if natural is not None and natural>structural else "structural"),"floor source")
 
 
 def verify_route_proof(p: dict[str, Any], config: dict[str, Any],
@@ -106,13 +132,15 @@ def verify_route_proof(p: dict[str, Any], config: dict[str, Any],
     model.need(p["eps"] == config["geometry"]["eps"]
                and p["patch_type"] == model.PATCH_TYPE, "eps/patch")
     model.need(p["complete_closed_cover"] is True, "complete cover marker")
+    model.need(p["method_selection_addendum_sha256"]=="7fafe5f465f9f38e61831b804a4bc95090af41b8fe31347897e7b2f40bf3d316","addendum pin")
+    _check_floor_registry(p["effective_floor_registry"])
 
     eps = model.fraction_from_dyadic(config["geometry"]["eps"])
     children = p["ordered_children"]
     model.need(isinstance(children, list) and children, "children")
     contributions: list[dict[str, Any]] = []
 
-    for region in ("T1", "T2", "R1", "R2"):
+    for region in ("T1", "T2", "R2", "C1", "TH"):
         rects: list[tuple[Fraction, Fraction, Fraction, Fraction]] = []
         for child in children:
             if child["region"] != region:
@@ -128,7 +156,7 @@ def verify_route_proof(p: dict[str, Any], config: dict[str, Any],
             model.need(d["measure_identity"] == policy.MEASURE_ID,
                        "measure identity")
 
-            if region in ("R1", "R2"):
+            if region in ("R2", "C1", "TH"):
                 qlo = model.fraction_from_rational(d["q_lo"])
                 qhi = model.fraction_from_rational(d["q_hi"])
                 model.need(qlo > 0 and qhi >= qlo,
@@ -137,19 +165,19 @@ def verify_route_proof(p: dict[str, Any], config: dict[str, Any],
                            "regular q policy")
                 model.need(d["denominator_policy"] == policy.DENOMINATOR_POLICY_ID,
                            "regular exact-endpoint reciprocal denominator")
-                if region == "R2":
-                    wlo = model.fraction_from_rational(d["R2_W_LO"])
-                    coshi = model.fraction_from_rational(d["R2_COS_PHI_LO_HI"])
-                    model.need(wlo >= 0, "R2 W lower nonnegative")
-                    model.need(-1 <= coshi <= 1, "R2 cos upper bounded")
-                    model.need(qlo >= wlo*wlo,
-                               "R2 child q floor includes W lower bound")
+                model.need(d["taylor_order"]==2 and "area*w^2/24" in d["remainder_rule"],"Taylor2 remainder")
+                model.need(isinstance(d["effective_floor_record_sha256"],list),"Taylor floor refs")
+                if region=="C1":model.need(d["c1_q_floor_source"].startswith("C1_"),"C1 structural floor")
             else:
                 zden = model.fraction_from_rational(d["Z_DEN_LO"])
                 model.need(zden > 0, "Z_DEN_LO positive")
                 model.need(d["duffy_id"] == policy.DUFFY_ID, "Duffy id")
+                model.need(d["local_geometry"]==["S","U","W","B","q"],"Duffy local geometry")
                 model.need(d["triangle_substitution"] == region,
                            "triangle substitution")
+                comps=d["Duffy_Z_components"]
+                aa=model.fraction_from_rational(comps["Ahat_lo"]);rb=model.fraction_from_rational(comps["r_lo2_Bhat_lo"]);ww=model.fraction_from_rational(comps["u0_2_over_rho2_hi"])
+                model.need(zden==max(Fraction(0),aa)+max(Fraction(0),rb)+max(Fraction(0),ww),"Duffy strengthened Z")
                 if a0 == 0:
                     model.need(
                         d["bounded_extensions"]["y_h"] == "[0,1]"
@@ -215,99 +243,69 @@ def _check_j(j: dict[str, Any], u_max: Fraction, lambda_start: Fraction,
                "J direct integrators")
     b0, b1 = model.interval_fractions(j["initial_bracket"], "J initial")
     model.need((b0, b1) == (1-u_max, Fraction(1)), "J initial bracket")
-    points = j["ordered_bisection_records"]
-    model.need(points, "J points")
-    first = points[0]
-    model.need(model.fraction_from_rational(first["r"]) == b0
-               and first["sign"] == "POSITIVE", "J left")
-    verify_route_proof(first["route_proof"], config, "F")
-
-    left, right = b0, Fraction(1)
-    negative_found = False
-    by_id = {p["evaluation_id"]: p for p in points}
-    for point in points:
-        model.need(model.fraction_from_rational(point["lambda_start"])
-                   == lambda_start, "J lambda")
-        verify_route_proof(point["route_proof"], config, "F")
-        model.need(point["normalized_F"]
-                   == point["route_proof"]["normalized_enclosure"],
-                   "J point enclosure")
-        rr = model.fraction_from_rational(point["r"])
-        pu0, pu1 = model.interval_fractions(
-            point["route_proof"]["u_interval"], "J point proof u")
-        ps0, ps1 = model.interval_fractions(
-            point["route_proof"]["s_interval"], "J point proof s")
-        ss = lambda_start-model.LAMBDA_PLUS
-        model.need((pu0, pu1) == (1-rr, 1-rr) and (ps0, ps1) == (ss, ss),
-                   "J point route domain")
-        lo, hi = model.interval_fractions(point["normalized_F"], "J point")
-        expected = ("POSITIVE" if lo > 0
-                    else "NEGATIVE" if hi < 0 else "UNRESOLVED")
-        model.need(point["sign"] == expected, "J point sign")
-        if point is first or point["role"] == "NEWTON_MIDPOINT":
-            continue
-        r = model.fraction_from_rational(point["r"])
-        model.need(r == (left+right)/2, "J exact midpoint")
-        if point["role"] == "RETAINED_LEFT":
-            model.need(expected == "POSITIVE", "J left update sign")
-            left = r
-        elif point["role"] == "RETAINED_RIGHT":
-            model.need(expected == "NEGATIVE", "J right update sign")
-            right = r
-            negative_found = True
-            break
+    points=j["ordered_bisection_records"];model.need(points,"J signed points")
+    first=points[0];model.need(model.fraction_from_rational(first["r"])==b0 and first["sign"]=="POSITIVE","J left")
+    ss=lambda_start-model.LAMBDA_PLUS
+    def check_point(point:dict[str,Any],rr:Fraction)->None:
+        verify_route_proof(point["route_proof"],config,"F")
+        model.need(point["normalized_F"]==point["route_proof"]["normalized_enclosure"],"J F proof binding")
+        pu0,pu1=model.interval_fractions(point["route_proof"]["u_interval"],"J F u")
+        ps0,ps1=model.interval_fractions(point["route_proof"]["s_interval"],"J F s")
+        model.need((pu0,pu1)==(1-rr,1-rr) and (ps0,ps1)==(ss,ss),"J F exact domain")
+    check_point(first,b0)
+    full=j["condition5_derivative_record"];verify_route_proof(full["route_proof"],config,"H_U")
+    model.need(full["H_u"]==full["route_proof"]["normalized_enclosure"] and full["F_r"]==model.interval_negate(full["H_u"]),"condition5 endpoint reversal")
+    fu0,fu1=model.interval_fractions(full["u_interval"],"condition5 u")
+    _,fhi=model.interval_fractions(full["F_r"],"condition5 Fr")
+    model.need((fu0,fu1)==(0,u_max) and fhi<0 and full["endpoint_transform"]=={"rule":"[H_lo,H_hi] -> [-H_hi,-H_lo]","label_only":False},"condition5")
+    left,right=b0,Fraction(1);signed_index=1;steps=j["newton_steps"]
+    model.need(0<len(steps)<=config["budgets"]["J_START"]["max_bisections"],"Newton step budget")
+    derivative_total=full["route_proof"]["evaluation_count"]
+    for i,step in enumerate(steps):
+        model.need(step["step_index"]==i and model.interval_fractions(step["bracket"],"step bracket")== (left,right),"step bracket")
+        mid=model.fraction_from_rational(step["midpoint"]);model.need(mid==(left+right)/2,"step midpoint")
+        u0,u1=model.interval_fractions(step["coordinate_map"]["u_interval"],"step u")
+        model.need((u0,u1)==(1-right,1-left) and step["coordinate_map"]["exact_rational"] is True,"exact r-u map")
+        trials=step["derivative_target_trials"];seen=[]
+        for trial in trials:
+            target=model.fraction_from_rational(trial["target"]);seen.append(target)
+            model.need(trial["status"] in ("REACHED","NOT_REACHED") and trial["evaluations"]>0,"target trial")
+        model.need(seen==[Fraction(x) for x in policy.DERIVATIVE_TARGET_LADDER[:len(seen)]],"target descending prefix")
+        reached=step["derivative_lower_target_reached"]
+        if reached is None:model.need(step["derivative_sign_only_fallback"] is True and all(t["status"]=="NOT_REACHED" for t in trials),"sign fallback")
         else:
-            model.need(False, "J bisection role")
-
-    model.need(negative_found and right < 1, "J interior right")
-    rlo, rhi = model.interval_fractions(j["r_interval"], "J final")
-    model.need((rlo, rhi) == (left, right), "J final bracket")
-
-    d = j["derivative_record"]
-    model.need(d["route_id"] == policy.K_ROUTE_ID, "J derivative route")
-    verify_route_proof(d["route_proof"], config, "H_U")
-    ulo, uhi = model.interval_fractions(d["u_interval"], "J u map")
-    model.need((ulo, uhi) == (1-right, 1-left), "J u map")
-    model.need(d["negation_rule_id"] == policy.NEGATION_RULE_ID
-               and d["F_r"] == model.interval_negate(d["H_u"]),
-               "J negation")
-    dlo, dhi = model.interval_fractions(d["F_r"], "J D")
-    model.need(dhi < 0 and d["sup_F_r_lt_zero"] is True,
-               "J derivative negative")
-
-    n = j["newton_record"]
-    model.need(n["interval_arithmetic_policy_id"] == policy.NEWTON_POLICY_ID,
-               "Newton policy")
-    mid = model.fraction_from_rational(n["midpoint"])
-    model.need(mid == (left+right)/2, "Newton midpoint")
-    model.need(n["midpoint_F_record_id"] in by_id, "Newton F ref")
-    mp = by_id[n["midpoint_F_record_id"]]
-    model.need(mp["role"] == "NEWTON_MIDPOINT", "Newton role")
-    verify_route_proof(mp["route_proof"], config, "F")
-    model.need(mp["normalized_F"] == mp["route_proof"]["normalized_enclosure"],
-               "Newton midpoint proof enclosure")
-    mp_r = model.fraction_from_rational(mp["r"])
-    model.need(mp_r == mid, "Newton midpoint exact r")
-    mp_u0, mp_u1 = model.interval_fractions(
-        mp["route_proof"]["u_interval"], "Newton midpoint proof u")
-    mp_s0, mp_s1 = model.interval_fractions(
-        mp["route_proof"]["s_interval"], "Newton midpoint proof s")
-    ss = lambda_start-model.LAMBDA_PLUS
-    model.need((mp_u0, mp_u1) == (1-mid, 1-mid)
-               and (mp_s0, mp_s1) == (ss, ss),
-               "Newton midpoint route domain")
-    fm = mp["normalized_F"]
-    model.need(n["F_m"] == fm and n["D"] == d["F_r"],
-               "Newton operands")
-    qlo, qhi = model.interval_divide_negative_denominator(fm, d["F_r"])
-    qiv = model.outward_dyadic(qlo, qhi)
-    model.need(n["quotient"] == qiv, "Newton quotient")
-    niv = model.outward_dyadic(mid-qhi, mid-qlo)
-    model.need(n["newton_image"] == niv, "Newton image")
-    x0, x1 = model.interval_fractions(niv, "Newton image")
-    model.need(left < x0 <= x1 < right
-               and n["strict_self_containment"] is True,
-               "Newton self containment")
+            theta=model.fraction_from_rational(reached);model.need(trials[-1]["status"]=="REACHED" and theta==seen[-1],"verified theta")
+        verify_route_proof(step["derivative_route_proof"],config,"H_U")
+        if reached is not None:model.need(trials[-1]["evaluations"]==step["derivative_route_proof"]["evaluation_count"],"reached trial accounting")
+        failed_trials=trials if reached is None else trials[:-1]
+        derivative_total+=sum(t["evaluations"] for t in failed_trials)+step["derivative_route_proof"]["evaluation_count"]
+        model.need(step["F_r"]==model.interval_negate(step["H_u"]),"step endpoint reversal")
+        dlo,dhi=model.interval_fractions(step["F_r"],"step Fr");model.need(dhi<0 and not(dlo<=0<=dhi),"step negative derivative")
+        if reached is not None:model.need(dhi<=-model.fraction_from_rational(reached),"theta achieved")
+        mp=step["F_midpoint_record"];check_point(mp,mid)
+        model.need(mp["normalized_F"]==mp["route_proof"]["normalized_enclosure"],"midpoint enclosure")
+        qlo,qhi=model.interval_divide_negative_denominator(mp["normalized_F"],step["F_r"])
+        model.need(step["negative_denominator_rule"]=={"reciprocal_endpoint_rule":"[1/F_r_hi,1/F_r_lo]","midpoint_only":False},"negative denominator endpoint rule")
+        qiv=model.outward_dyadic(qlo,qhi);niv=model.outward_dyadic(mid-qhi,mid-qlo)
+        model.need(step["quotient"]==qiv and step["newton_image"]==niv,"negative denominator quotient")
+        nlo,nhi=model.interval_fractions(niv,"Newton image");contained=left<nlo<=nhi<right
+        model.need(step["strict_self_containment"] is contained,"containment predicate")
+        model.need(step["containment_margins"]=={"left":model.rational_json(nlo-left),"right":model.rational_json(right-nhi)},"exact margins")
+        strict=mp["sign"] in ("POSITIVE","NEGATIVE")
+        model.need(step["strict_sign_certified"] is strict and step["sign_required_for_continuation"] is (not contained),"containment-first flags")
+        if contained:
+            model.need(i==len(steps)-1 and step["F_stop_reason"]=="NEWTON_CONTAINMENT","terminal containment");break
+        model.need(strict and step["F_stop_reason"]=="STRICT_SIGN","sign required to continue")
+        model.need(signed_index<len(points) and points[signed_index]==mp,"ordered signed midpoint")
+        signed_index+=1
+        if mp["sign"]=="POSITIVE":left=mid
+        else:right=mid
+    model.need(steps[-1]["strict_self_containment"] is True and signed_index==len(points),"complete J path")
+    rlo,rhi=model.interval_fractions(j["r_interval"],"J final");model.need((rlo,rhi)==(left,right),"J final bracket")
+    acct=j["evaluation_accounting"]
+    model.need(acct["derivative_counted_in_outer_budget"] is False and acct["outer_budget_counts_only"]=="f_point_outer_evaluations","evaluation attribution")
+    model.need(acct["f_point_outer_evaluations"]==1+len(steps)<=config["budgets"]["J_START"]["max_evaluations"],"F outer count")
+    model.need(acct["derivative_evaluations"]==derivative_total,"derivative count")
 
 
 def _candidate(block: list[dict[str, Any]], summary: dict[str, Any],

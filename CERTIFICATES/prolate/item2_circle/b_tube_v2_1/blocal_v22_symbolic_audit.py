@@ -119,11 +119,20 @@ def measure_logical()->dict[str,object]:
                           "sin(theta)=sqrt(1-c^2)"],
             "derivation":["dc=-sin(theta)dtheta","reverse exact c limits"],"status":"PASS"}
 
+def method_selection_logical()->dict[str,object]:
+    return {"effective_floor":"max(structural,natural) remains a lower bound",
+            "derivative_endpoint_transform":"[H_lo,H_hi] maps exactly to [-H_hi,-H_lo]",
+            "negative_denominator_reciprocal":"[D_lo,D_hi] maps to [1/D_hi,1/D_lo] for D_hi<0",
+            "duffy_Z_lo":"Ahat_lo+r_lo^2*Bhat_lo+u0^2/rho2_hi",
+            "taylor2_remainder":"diagonal area*w^2/24 plus mixed supabs*area*wa*wb/16",
+            "status":"PASS"}
+
 def run_audit()->dict[str,object]:
-    basic();scaled();gamma_sos();jacobians();regularized_K();duffy_radical();f_route();logical=measure_logical()
+    basic();scaled();gamma_sos();jacobians();regularized_K();duffy_radical();f_route();logical=measure_logical();method=method_selection_logical()
     return {"audit_id":AUDIT_ID,"exact_algebra":True,"q_identities":True,"scaled_N_identity":True,
             "gamma_sos_exact_zero":True,"duffy_jacobians_exact":True,"J_equals_rho_K":True,
             "duffy_g2_reduction_exact":True,"F_route_exact":True,"measure_logical_lemma":logical,
+            "method_selection_logical_lemmas":method,
             "numeric_substitution_used_as_proof":False}
 
 if __name__=="__main__":

@@ -40,7 +40,7 @@ def _load_aux(root:Path,config:dict[str,Any])->tuple[Any,Any,Any]:
     pins=config["implementation"]["sources_sha256"]
     route_path="CERTIFICATES/prolate/item2_circle/b_tube_v2_1/blocal_v22_boundary.py"
     route=provenance.load_pinned_module(root,{"path":route_path,"sha256":pins[route_path]},"blocal_v22_pinned_finite_route",
-        ("enclose_hu","enclose_f","validate_helper_lemmas"),{"F_ROUTE_ID":policy.F_ROUTE_ID,"K_ROUTE_ID":policy.K_ROUTE_ID})
+        ("enclose_hu","enclose_f","validate_helper_lemmas","EnclosureFailure"),{"F_ROUTE_ID":policy.F_ROUTE_ID,"K_ROUTE_ID":policy.K_ROUTE_ID})
     audit=provenance.load_pinned_module(root,{"path":config["symbolic_audit"]["path"],"sha256":config["symbolic_audit"]["source_sha256"]},
         "blocal_v22_pinned_symbolic_audit",("run_audit",),{"AUDIT_ID":model.SYMBOLIC_AUDIT_ID})
     checker=provenance.load_pinned_module(root,{"path":config["checker"]["path"],"sha256":config["checker"]["source_sha256"]},
@@ -94,44 +94,89 @@ def _newton_image(mid:Fraction,Fm:dict[str,Any],D:dict[str,Any])->tuple[dict[str
 
 def _build_j_start(candidate_index:int,lambda_start:Fraction,u_max:Fraction,config:dict[str,Any],
                    route:Any,kernel:Any,adapter:Any,acb:Any,arb:Any,fmpq:Any)->tuple[dict[str,Any]|None,str|None,int]:
-    budget=config["budgets"]["J_START"];count=0;points=[]
-    def f_at(r:Fraction,role:str)->tuple[dict[str,Any],dict[str,Any]]:
-        nonlocal count
-        model.need(count<budget["max_evaluations"],"J_START evaluation budget")
-        iv,proof=route.enclose_f(kernel,adapter,acb,arb,fmpq,config,r,r,lambda_start,lambda_start,None);count+=1
-        lo,hi=model.interval_fractions(iv,"J F");sign="POSITIVE" if lo>0 else "NEGATIVE" if hi<0 else "UNRESOLVED"
-        rec={"evaluation_id":f"J-F-{count:03d}","r":model.rational_json(r),"lambda_start":model.rational_json(lambda_start),
-             "route_id":policy.F_ROUTE_ID,"route_proof":proof,"normalized_F":iv,"sign":sign,"role":role}
-        points.append(rec);return iv,rec
+    budget=config["budgets"]["J_START"];f_count=0;derivative_count=0;ordered=[];steps=[]
+    s=lambda_start-model.LAMBDA_PLUS
+    def sign(iv:dict[str,Any])->str:
+        lo,hi=model.interval_fractions(iv,"J F")
+        return "POSITIVE" if lo>0 else "NEGATIVE" if hi<0 else "UNRESOLVED"
+    def f_at(r:Fraction,role:str,accept:Callable[[dict[str,Any]],bool]|None=None)->tuple[dict[str,Any],dict[str,Any]]:
+        nonlocal f_count
+        model.need(f_count<budget["max_evaluations"],"J_START outer evaluation budget")
+        iv,proof=route.enclose_f(kernel,adapter,acb,arb,fmpq,config,r,r,lambda_start,lambda_start,None,accept)
+        f_count+=1;sgn=sign(iv)
+        rec={"evaluation_id":f"J-F-{f_count:03d}","r":model.rational_json(r),"lambda_start":model.rational_json(lambda_start),
+             "route_id":policy.F_ROUTE_ID,"route_proof":proof,"normalized_F":iv,"sign":sgn,"role":role}
+        return iv,rec
+    full_hu,full_proof=route.enclose_hu(kernel,adapter,acb,arb,fmpq,config,Fraction(0),u_max,s,s,"POS")
+    derivative_count+=full_proof["evaluation_count"]
+    full_fr=model.interval_negate(full_hu);_,full_hi=model.interval_fractions(full_fr,"full derivative")
+    if full_hi>=0:return None,"J_START_FULL_DERIVATIVE_NEGATIVITY_UNRESOLVED",f_count
+    full_cond5={"record_id":"J-DERIVATIVE-FULL","r_interval":model.interval_json(1-u_max,Fraction(1)),
+        "u_interval":model.interval_json(Fraction(0),u_max),"H_u":full_hu,"F_r":full_fr,"route_proof":full_proof,
+        "endpoint_transform":{"rule":"[H_lo,H_hi] -> [-H_hi,-H_lo]","label_only":False},
+        "sup_F_r_lt_zero":True,"zero_not_in_F_r":True}
     left,right=1-u_max,Fraction(1);fleft,leftrec=f_at(left,"INITIAL_LEFT")
-    if model.interval_fractions(fleft)[0]<=0:return None,"J_START_LEFT_SIGN_UNRESOLVED",count
-    fright=None;rightrec=None
-    for _ in range(budget["max_bisections"]):
-        m=(left+right)/2;fm,mrec=f_at(m,"BISECTION_MIDPOINT");lo,hi=model.interval_fractions(fm)
-        if hi<0:right,fright,rightrec=m,fm,mrec;rightrec["role"]="RETAINED_RIGHT";break
-        if lo>0:left,fleft,leftrec=m,fm,mrec;leftrec["role"]="RETAINED_LEFT";continue
-        return None,"J_START_BISECTION_SIGN_UNRESOLVED",count
-    if fright is None or right>=1:return None,"J_START_INTERIOR_NEGATIVE_ENDPOINT_NOT_FOUND",count
-    model.need(count<budget["max_evaluations"],"J_START derivative budget")
-    u0,u1=1-right,1-left;s=lambda_start-model.LAMBDA_PLUS
-    hu,huproof=route.enclose_hu(kernel,adapter,acb,arb,fmpq,config,u0,u1,s,s,"POS");count+=1
-    D=model.interval_negate(hu);dlo,dhi=model.interval_fractions(D,"J derivative")
-    if dhi>=0:return None,"J_START_DERIVATIVE_NEGATIVITY_UNRESOLVED",count
-    derivative={"record_id":"J-DERIVATIVE","r_interval":model.interval_json(left,right),"u_interval":model.interval_json(u0,u1),
-                "lambda_start":model.rational_json(lambda_start),"s":model.rational_json(s),"route_id":policy.K_ROUTE_ID,
-                "route_proof":huproof,"H_u":hu,"negation_rule_id":policy.NEGATION_RULE_ID,"F_r":D,"sup_F_r_lt_zero":True}
-    mid=(left+right)/2;Fm,midrec=f_at(mid,"NEWTON_MIDPOINT")
-    quotient,newton=_newton_image(mid,Fm,D);nlo,nhi=model.interval_fractions(newton,"Newton")
-    if not(left<nlo<=nhi<right):return None,"J_START_STRICT_SELF_CONTAINMENT_UNRESOLVED",count
-    newtonrec={"record_id":"J-NEWTON","bracket":model.interval_json(left,right),"midpoint":model.rational_json(mid),
-               "midpoint_F_record_id":midrec["evaluation_id"],"F_m":Fm,"derivative_record_id":derivative["record_id"],"D":D,
-               "interval_arithmetic_policy_id":policy.NEWTON_POLICY_ID,"quotient":quotient,"newton_image":newton,
-               "strict_self_containment":True,"method_id":"INTERVAL_NEWTON_V2"}
-    return {"record_type":"J_START","node":"J_START","candidate_index":candidate_index,"lambda_start":model.rational_json(lambda_start),
-            "initial_bracket":model.interval_json(1-u_max,Fraction(1)),"r_interval":model.interval_json(left,right),
-            "ordered_bisection_records":points,"derivative_record":derivative,"newton_record":newtonrec,
-            "claim":"J_START_UNIQUE_NONDEGENERATE_ROOT","certified":True,
-            "direct_pinned_F_arb_called":False,"direct_pinned_dFdr_arb_called":False},None,count
+    if sign(fleft)!="POSITIVE":return None,"J_START_LEFT_SIGN_UNRESOLVED",f_count
+    ordered.append(leftrec)
+    target_cap=min(config["route_policies"]["K_ROUTE"]["max_evaluations"],
+                   max(4,config["budgets"]["L1"]["max_evaluations"]//4))
+    for step_index in range(budget["max_bisections"]):
+        u0,u1=1-right,1-left;trials=[];chosen=None
+        for theta_text in policy.DERIVATIVE_TARGET_LADDER:
+            theta=Fraction(theta_text);before=derivative_count
+            def derivative_accept(iv:dict[str,Any],theta:Fraction=theta)->bool:
+                lo,_=model.interval_fractions(iv,"H_u target");return lo>=theta
+            try:
+                hu,hproof=route.enclose_hu(kernel,adapter,acb,arb,fmpq,config,u0,u1,s,s,None,derivative_accept,target_cap)
+                derivative_count+=hproof["evaluation_count"]
+                hlo,_=model.interval_fractions(hu,"H_u reached")
+                reached=hlo>=theta
+                trials.append({"target":model.rational_json(theta),"status":"REACHED" if reached else "NOT_REACHED",
+                    "evaluations":hproof["evaluation_count"],"failure_reason":None if reached else "TARGET_NOT_REACHED"})
+                if reached:chosen=(theta,hu,hproof);break
+            except route.EnclosureFailure as exc:
+                derivative_count+=exc.evaluations
+                trials.append({"target":model.rational_json(theta),"status":"NOT_REACHED","evaluations":exc.evaluations,"failure_reason":exc.reason})
+            model.need(derivative_count>=before,"derivative accounting")
+        if chosen is None:
+            hu,hproof=route.enclose_hu(kernel,adapter,acb,arb,fmpq,config,u0,u1,s,s,"POS")
+            derivative_count+=hproof["evaluation_count"];theta=None
+        else:theta,hu,hproof=chosen
+        D=model.interval_negate(hu);dlo,dhi=model.interval_fractions(D,"step derivative")
+        if not(dhi<0 and not(dlo<=0<=dhi)):return None,"J_START_DERIVATIVE_NEGATIVITY_UNRESOLVED",f_count
+        midpoint=(left+right)/2;captured={}
+        def f_accept(iv:dict[str,Any])->bool:
+            q,n=_newton_image(midpoint,iv,D);nlo,nhi=model.interval_fractions(n,"Newton trial")
+            captured.update({"quotient":q,"newton_image":n,"contained":left<nlo<=nhi<right})
+            return sign(iv)!="UNRESOLVED" or captured["contained"]
+        Fm,mrec=f_at(midpoint,"BISECTION_MIDPOINT",f_accept);sgn=sign(Fm)
+        quotient,newton=_newton_image(midpoint,Fm,D);nlo,nhi=model.interval_fractions(newton,"Newton")
+        contained=left<nlo<=nhi<right
+        qlo,qhi=model.interval_fractions(quotient,"quotient")
+        step={"step_index":step_index,"bracket":model.interval_json(left,right),"midpoint":model.rational_json(midpoint),
+            "coordinate_map":{"u_interval":model.interval_json(u0,u1),"u_lo_equals":"1-r_right","u_hi_equals":"1-r_left","exact_rational":True},
+            "derivative_lower_target_reached":model.rational_json(theta) if theta is not None else None,
+            "derivative_target_trials":trials,"derivative_sign_only_fallback":theta is None,"H_u":hu,"F_r":D,"derivative_route_proof":hproof,
+            "endpoint_transform":{"rule":"[H_lo,H_hi] -> [-H_hi,-H_lo]","label_only":False},
+            "F_midpoint_record":mrec,"strict_sign_certified":sgn!="UNRESOLVED","sign_required_for_continuation":not contained,
+            "F_stop_reason":"NEWTON_CONTAINMENT" if contained else "STRICT_SIGN" if sgn!="UNRESOLVED" else "UNRESOLVED",
+            "quotient":quotient,"quotient_width":model.rational_json(qhi-qlo),
+            "negative_denominator_rule":{"reciprocal_endpoint_rule":"[1/F_r_hi,1/F_r_lo]","midpoint_only":False},
+            "newton_image":newton,"containment_margins":{"left":model.rational_json(nlo-left),"right":model.rational_json(right-nhi)},
+            "strict_self_containment":contained}
+        steps.append(step)
+        if contained:
+            return {"record_type":"J_START","node":"J_START","candidate_index":candidate_index,"lambda_start":model.rational_json(lambda_start),
+                "initial_bracket":model.interval_json(1-u_max,Fraction(1)),"r_interval":model.interval_json(left,right),
+                "ordered_bisection_records":ordered,"condition5_derivative_record":full_cond5,"newton_steps":steps,"newton_record":step,
+                "evaluation_accounting":{"f_point_outer_evaluations":f_count,"derivative_evaluations":derivative_count,
+                    "outer_budget_counts_only":"f_point_outer_evaluations","derivative_counted_in_outer_budget":False},
+                "claim":"J_START_UNIQUE_NONDEGENERATE_ROOT","certified":True,
+                "direct_pinned_F_arb_called":False,"direct_pinned_dFdr_arb_called":False},None,f_count
+        if sgn=="POSITIVE":left=midpoint;ordered.append(mrec);mrec["role"]="RETAINED_LEFT"
+        elif sgn=="NEGATIVE":right=midpoint;ordered.append(mrec);mrec["role"]="RETAINED_RIGHT"
+        else:return None,"J_START_BISECTION_SIGN_UNRESOLVED",f_count
+    return None,"J_START_MAX_BISECTIONS",f_count
 
 def _append_candidate(records:list[dict[str,Any]],previous:str,index:int,s_start:Fraction,u_max:Fraction,config:dict[str,Any],
                       route:Any,kernel:Any,adapter:Any,acb:Any,arb:Any,fmpq:Any)->tuple[str,tuple|None,dict[str,int],int]:

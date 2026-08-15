@@ -61,22 +61,24 @@ def main() -> int:
     for token in (
         "enclose_hu", "enclose_f", "validate_helper_lemmas",
         "_safe_nonnegative_sqrt", "_safe_positive_sqrt",
-        "_positive_inverse_factors", "R2_W_LO",
-        "gamma_fallback_used", "Z_DEN_LO", "q_lo", "q_hi",
+        "_positive_inverse_factors", "_effective_floor",
+        "_geometry_jet", "_taylor_cell", "_angle4_adaptive",
+        "gamma_fallback_used", "Z_DEN_LO", "Duffy_Z_components",
     ):
         need(token in route, f"required route token {token}")
 
     for token in (
-        "EXACT_ENDPOINT_RECIPROCAL", "NONNEGATIVE_UPPER_ENDPOINT_SQRT",
-        "CHILD_GAMMA_OR_TWO_BIN_FALLBACK_ALL_CELLS",
-        "PER_CHILD_Q_LO_WITH_R2_W",
+        "BLOCAL_EFFECTIVE_FLOOR_SQRT_V1",
+        "BLOCAL_DETERMINISTIC_GAMMA_MIDPOINT_UNTIL_FINITE_V1",
+        "BLOCAL_SIX_SITE_EFFECTIVE_FLOOR_V1",
+        "DERIVATIVE_TARGET_LADDER",
     ):
         need(token in policy_text, f"required policy token {token}")
 
     for token in (
-        "sqrt_policy_id", "gamma_fallback_used", "R2_W_LO",
-        "q_hi", "Duffy child exact q endpoint bounds",
-        "Newton midpoint proof enclosure",
+        "effective_floor_registry", "exact six floor sites",
+        "Duffy strengthened Z", "Taylor2 remainder",
+        "condition5", "containment-first flags",
     ):
         need(token in checker, f"checker binding token {token}")
 
@@ -98,7 +100,7 @@ def main() -> int:
         "kernel_imported": False,
         "symbolic_audit_exact": True,
         "negative_controls": True,
-        "R1_R4_checker_bindings": True,
+        "method_selection_addendum_bindings": True,
         "source_sha256": {n: digest(HERE/n) for n in SOURCE_NAMES},
         "status": "PASS",
     }, sort_keys=True, separators=(",", ":")))
