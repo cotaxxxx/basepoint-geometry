@@ -59,6 +59,13 @@ def main() -> int:
              f"forbidden proof token {token}")
 
     for token in (
+        "PROGRESS_SCHEMA", "_ProgressJournal", "os.fsync",
+        '"NODE_START"', '"NODE_COMPLETE"', '"PAIR_COMPLETE"',
+        "DIAGNOSTIC_PROGRESS_ONLY", "certificate_evidence",
+    ):
+        need(token in runner, f"required durable progress token {token}")
+
+    for token in (
         "enclose_hu", "enclose_f", "validate_helper_lemmas",
         "_safe_nonnegative_sqrt", "_safe_positive_sqrt",
         "_positive_inverse_factors", "_effective_floor",

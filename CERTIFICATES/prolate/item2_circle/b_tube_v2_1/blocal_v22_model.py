@@ -103,6 +103,7 @@ def validate_config(config: dict[str, Any]) -> None:
         "candidate_order", "precision", "budgets", "route_policies", "canonicalizer_id",
         "adapter", "outputs", "terminal_state_before_run", "geometry", "checker",
         "symbolic_audit", "base_v21", "design_contracts",
+        "lambda_candidate_reduction",
     }, "config")
     need(config["schema"] == SCHEMA and config["design_version"] == DESIGN_VERSION,
          "config identity")
@@ -132,9 +133,19 @@ def validate_config(config: dict[str, Any]) -> None:
     need(fraction_from_dyadic(config["s_neg"]) == S_NEG, "s_neg")
     increments=[fraction_from_dyadic(x) for x in config["lambda_candidates"]]
     uvals=[fraction_from_dyadic(x) for x in config["u_max_candidates"]]
-    need(increments == [Fraction(1,1<<k) for k in range(24,3,-1)], "lambda candidates")
+    need(increments == [Fraction(1,1<<k) for k in range(9,3,-1)], "lambda candidates")
     need(uvals == [Fraction(1,1<<k) for k in (8,7,6,5,4)], "u candidates")
     need(config["candidate_order"] == "LAMBDA_MAJOR_U_MAX_MINOR", "candidate order")
+    need(config["lambda_candidate_reduction"] == {
+        "basis":"LADDER_RUN_5_AGGREGATE_RECORD",
+        "workflow_run_id":31798611738,
+        "aggregate_record_sha256":"d6c7e5f5a42acbbfb9e7b37fa2e7c5026a558ebc4d270ee5951f7b162081cca7",
+        "validated_candidate_count":21,
+        "excluded_original_indices":list(range(15)),
+        "retained_original_indices":list(range(15,21)),
+        "observation":"Original indices 0-14 were all budget-faithful MAX_EVALUATIONS INDETERMINATE.",
+        "nonclaim":"This candidate-set reduction removes already observed indeterminate recomputation; it does not relax certification conditions, decision criteria, or budgets.",
+    }, "lambda candidate reduction provenance")
     exact_keys(config["precision"], {"bits","absolute_tolerance"}, "precision")
     need(isinstance(config["precision"]["bits"],int) and config["precision"]["bits"]>=128,
          "precision bits")

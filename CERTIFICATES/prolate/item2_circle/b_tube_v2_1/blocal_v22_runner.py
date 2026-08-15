@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """B-LOCAL v2.2 runner: finite F/K routes for L1/L2/L3/J_START."""
 from __future__ import annotations
-import argparse, subprocess
+import argparse, os, subprocess, time
 from collections import deque
+from datetime import datetime, timezone
 from fractions import Fraction
 from pathlib import Path
 from typing import Any, Callable
@@ -20,6 +21,31 @@ DESIGN_COMMITS=[
 CERTIFICATE_SCHEMA="blocal-certificate-v2-finite-routes"
 SUMMARY_SCHEMA="blocal-run-summary-v2-finite-routes"
 MACHINE_SCHEMA="btube-blocal-machine-conclusion-v2-finite-routes"
+PROGRESS_SCHEMA="blocal-progress-v1-diagnostic-only"
+PROGRESS_FILE="progress.blocal.jsonl"
+
+
+def _utc_now()->str:
+    return datetime.now(timezone.utc).isoformat(timespec="microseconds").replace("+00:00","Z")
+
+
+class _ProgressJournal:
+    """Durable diagnostic progress; never part of the certificate record chain."""
+    def __init__(self,path:Path)->None:
+        model.need(not path.exists(),"fresh progress journal")
+        self.path=path;self.sequence=0
+
+    def append(self,event_type:str,**fields:Any)->None:
+        record={"schema":PROGRESS_SCHEMA,"evidence_role":"DIAGNOSTIC_PROGRESS_ONLY",
+                "certificate_evidence":False,"sequence":self.sequence,
+                "event_type":event_type,"timestamp_utc":_utc_now(),**fields}
+        raw=model.canonical_json_bytes(record)+b"\n"
+        fd=os.open(self.path,os.O_WRONLY|os.O_CREAT|os.O_APPEND,0o600)
+        try:
+            written=os.write(fd,raw);model.need(written==len(raw),"progress append")
+            os.fsync(fd)
+        finally:os.close(fd)
+        self.sequence+=1
 
 
 def repository_root()->Path:return Path(__file__).resolve(strict=True).parents[4]
@@ -185,14 +211,33 @@ def _build_j_start(candidate_index:int,lambda_start:Fraction,u_max:Fraction,conf
     return None,"J_START_MAX_BISECTIONS",f_count
 
 def _append_candidate(records:list[dict[str,Any]],previous:str,index:int,s_start:Fraction,u_max:Fraction,config:dict[str,Any],
-                      route:Any,kernel:Any,adapter:Any,acb:Any,arb:Any,fmpq:Any)->tuple[str,tuple|None,dict[str,int],int]:
+                      route:Any,kernel:Any,adapter:Any,acb:Any,arb:Any,fmpq:Any,
+                      progress:_ProgressJournal)->tuple[str,tuple|None,dict[str,int],int]:
     lam_start=model.LAMBDA_PLUS+s_start
+    pair_started=time.monotonic()
+    progress.append("PAIR_START",candidate_index=index,lambda_increment=model.dyadic_json(s_start),
+                    lambda_start=model.rational_json(lam_start),u_max=model.dyadic_json(u_max))
+    node_started=time.monotonic();progress.append("NODE_START",candidate_index=index,node="L1",
+        lambda_start=model.rational_json(lam_start),u_max=model.dyadic_json(u_max),evaluation_count=0)
     l1=_certify_outer("L1",index,(Fraction(0),u_max,-model.S_NEG,s_start),config,
         lambda u0,u1,s0,s1:route.enclose_hu(kernel,adapter,acb,arb,fmpq,config,u0,u1,s0,s1,"POS"),"POS")
+    progress.append("NODE_COMPLETE",candidate_index=index,node="L1",status="CERTIFIED" if l1[1] else "INCOMPLETE",
+        evaluation_count=l1[3],evaluation_scope="OUTER_CELLS",leaf_count=len(l1[0]),failure_reason=l1[2],
+        elapsed_seconds=f"{time.monotonic()-node_started:.6f}")
+    node_started=time.monotonic();progress.append("NODE_START",candidate_index=index,node="L2",
+        lambda_start=model.rational_json(lam_start),u_max=model.dyadic_json(u_max),evaluation_count=0)
     l2=_certify_outer("L2",index,(-model.S_NEG,s_start),config,
         lambda s0,s1:route.enclose_f(kernel,adapter,acb,arb,fmpq,config,1-u_max,1-u_max,model.LAMBDA_PLUS+s0,model.LAMBDA_PLUS+s1,"POS"),"POS")
+    progress.append("NODE_COMPLETE",candidate_index=index,node="L2",status="CERTIFIED" if l2[1] else "INCOMPLETE",
+        evaluation_count=l2[3],evaluation_scope="OUTER_CELLS",leaf_count=len(l2[0]),failure_reason=l2[2],
+        elapsed_seconds=f"{time.monotonic()-node_started:.6f}")
+    node_started=time.monotonic();progress.append("NODE_START",candidate_index=index,node="L3",
+        lambda_start=model.rational_json(lam_start),u_max=model.dyadic_json(u_max),evaluation_count=0)
     l3=_certify_outer("L3",index,(Fraction(0),s_start),config,
         lambda s0,s1:route.enclose_f(kernel,adapter,acb,arb,fmpq,config,Fraction(1),Fraction(1),model.LAMBDA_PLUS+s0,model.LAMBDA_PLUS+s1,"NEG"),"NEG")
+    progress.append("NODE_COMPLETE",candidate_index=index,node="L3",status="CERTIFIED" if l3[1] else "INCOMPLETE",
+        evaluation_count=l3[3],evaluation_scope="OUTER_CELLS",leaf_count=len(l3[0]),failure_reason=l3[2],
+        elapsed_seconds=f"{time.monotonic()-node_started:.6f}")
     results={"L1":l1,"L2":l2,"L3":l3};counts={};evals={};failure=None;allok=True
     for node in ("L1","L2","L3"):
         leaves,ok,why,n=results[node]
@@ -200,26 +245,41 @@ def _append_candidate(records:list[dict[str,Any]],previous:str,index:int,s_start
         counts[node]=len(leaves);evals[node]=n;allok=allok and ok;failure=failure or why
     j=None;jn=0
     if allok:
+        node_started=time.monotonic();progress.append("NODE_START",candidate_index=index,node="J_START",
+            lambda_start=model.rational_json(lam_start),u_max=model.dyadic_json(u_max),evaluation_count=0)
         j,jwhy,jn=_build_j_start(index,lam_start,u_max,config,route,kernel,adapter,acb,arb,fmpq);failure=failure or jwhy
         if j is not None:previous=model.append_record(records,previous,j)
+        progress.append("NODE_COMPLETE",candidate_index=index,node="J_START",status="CERTIFIED" if j else "INCOMPLETE",
+            evaluation_count=jn,evaluation_scope="F_POINT_OUTER_EVALUATIONS",failure_reason=jwhy,
+            elapsed_seconds=f"{time.monotonic()-node_started:.6f}")
+    else:
+        progress.append("NODE_SKIPPED",candidate_index=index,node="J_START",status="PREREQUISITE_INCOMPLETE",
+            evaluation_count=0,evaluation_scope="F_POINT_OUTER_EVALUATIONS",failure_reason=failure)
     accepted=allok and j is not None
     previous=model.append_record(records,previous,{"record_type":"CANDIDATE_SUMMARY","candidate_index":index,
         "lambda_start":model.rational_json(lam_start),"u_max":model.dyadic_json(u_max),"coverage_counts":counts,
         "route_evaluations":{**evals,"J_START":jn},"node_status":{n:("CERTIFIED" if results[n][1] else "INCOMPLETE") for n in results}|{"J_START":"CERTIFIED" if j else "NOT_CERTIFIED"},
         "candidate_accepted":accepted,"first_failure_reason":None if accepted else (failure or "CANDIDATE_INCOMPLETE")})
+    progress.append("PAIR_COMPLETE",candidate_index=index,status="ACCEPTED" if accepted else "INCOMPLETE",
+        evaluation_count=sum(evals.values())+jn,evaluation_scope="NODE_REPORTED_EVALUATIONS",
+        first_failure_reason=None if accepted else (failure or "CANDIDATE_INCOMPLETE"),
+        elapsed_seconds=f"{time.monotonic()-pair_started:.6f}")
     return previous,(index,lam_start,u_max,j) if accepted else None,counts,1 if j else 0
 
 def run(config_path:Path,output_directory:Path)->dict[str,Any]:
     root=repository_root();model.need(not config_path.is_absolute(),"relative config")
     raw=provenance.repo_file(root,config_path.as_posix()).read_bytes();config=model.parse_canonical_json(raw);model.validate_config(config)
     source_head=git_head(root);provenance.verify_implementation_sources(root,config["implementation"]);provenance.verify_stage1_dependency(root,config["stage1_dependency"])
+    model.need(not output_directory.exists(),"fresh output required");output_directory.mkdir(parents=True,mode=0o700)
+    config_hash=model.sha256_bytes(raw);progress=_ProgressJournal(output_directory/PROGRESS_FILE)
+    progress.append("RUN_START",source_head=source_head,blocal_run_config_sha256=config_hash,
+                    lambda_candidate_count=len(config["lambda_candidates"]),u_max_candidate_count=len(config["u_max_candidates"]))
     route,audit,checker=_load_aux(root,config);adapter=_load_adapter(root,config)
     from flint import acb,arb,ctx,fmpq  # type: ignore[import-not-found]
     ctx.prec=config["precision"]["bits"]
     kernel=provenance.load_pinned_module(root,config["kernel"],"blocal_v22_pinned_kernel",tuple(config["kernel"]["required_api"]),{"FORMULA_STATE":config["kernel"]["formula_state"]})
     helper=route.validate_helper_lemmas(arb,fmpq,config)
-    model.need(not output_directory.exists(),"fresh output required");output_directory.mkdir(parents=True,mode=0o700)
-    config_hash=model.sha256_bytes(raw);records=[];previous=model.chain_genesis(config_hash)
+    records=[];previous=model.chain_genesis(config_hash)
     previous=model.append_record(records,previous,{"record_type":"RUN_HEADER","schema":model.SCHEMA,"design_version":model.DESIGN_VERSION,
         "source_head":source_head,"blocal_run_config_sha256":config_hash,"design_contracts":config["design_contracts"],"design_commits":DESIGN_COMMITS,
         "kernel_source_sha256":config["kernel"]["sha256"],"adapter_source_sha256":config["adapter"]["source_sha256"],
@@ -227,7 +287,7 @@ def run(config_path:Path,output_directory:Path)->dict[str,Any]:
         "chain_domain":model.CHAIN_DOMAIN,"chain_genesis":model.chain_genesis(config_hash)})
     totals={"L1":0,"L2":0,"L3":0};selected=None;attempted=0;jtotal=0
     for idx,(s,u) in enumerate(_schedule(config)):
-        previous,here,counts,jc=_append_candidate(records,previous,idx,s,u,config,route,kernel,adapter,acb,arb,fmpq)
+        previous,here,counts,jc=_append_candidate(records,previous,idx,s,u,config,route,kernel,adapter,acb,arb,fmpq,progress)
         for k in totals:totals[k]+=counts[k]
         attempted+=1;jtotal+=jc
         if here is not None:selected=here;break
@@ -249,6 +309,7 @@ def run(config_path:Path,output_directory:Path)->dict[str,Any]:
     summary={"schema":SUMMARY_SCHEMA,"terminal_state":machine["status"],"blocal_run_config_sha256":config_hash,"source_head":source_head,
              "records_sha256":model.sha256_bytes(records_raw),"certificate_sha256":model.sha256_bytes(cert_raw),"calibration_started":False,"tag_created":False}
     out=config["outputs"];(output_directory/out["records"]).write_bytes(records_raw);(output_directory/out["certificate"]).write_bytes(cert_raw);(output_directory/out["summary"]).write_bytes(model.canonical_json_bytes(summary))
+    progress.append("RUN_COMPLETE",status=machine["status"],selected_candidate_index=machine["selected_candidate_index"])
     return summary
 
 def main(argv:list[str]|None=None)->int:

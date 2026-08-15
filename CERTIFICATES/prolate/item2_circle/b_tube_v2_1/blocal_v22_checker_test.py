@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import copy
 import heapq
+import json
+import tempfile
 from fractions import Fraction
 
 import blocal_v22_checker as checker
@@ -86,8 +88,18 @@ def config() -> dict:
         "lambda_plus": model.rational_json(model.LAMBDA_PLUS),
         "s_neg": model.dyadic_json(model.S_NEG),
         "lambda_candidates": [
-            model.dyadic_json(Fraction(1, 1 << k)) for k in range(24, 3, -1)
+            model.dyadic_json(Fraction(1, 1 << k)) for k in range(9, 3, -1)
         ],
+        "lambda_candidate_reduction": {
+            "basis": "LADDER_RUN_5_AGGREGATE_RECORD",
+            "workflow_run_id": 31798611738,
+            "aggregate_record_sha256": "d6c7e5f5a42acbbfb9e7b37fa2e7c5026a558ebc4d270ee5951f7b162081cca7",
+            "validated_candidate_count": 21,
+            "excluded_original_indices": list(range(15)),
+            "retained_original_indices": list(range(15, 21)),
+            "observation": "Original indices 0-14 were all budget-faithful MAX_EVALUATIONS INDETERMINATE.",
+            "nonclaim": "This candidate-set reduction removes already observed indeterminate recomputation; it does not relax certification conditions, decision criteria, or budgets.",
+        },
         "u_max_candidates": [
             model.dyadic_json(Fraction(1, 1 << k)) for k in (8, 7, 6, 5, 4)
         ],
@@ -398,6 +410,21 @@ def main() -> int:
     cfg = config()
     model.validate_config(cfg)
     check_j_start_f_routing()
+    with tempfile.TemporaryDirectory() as td:
+        progress_path = runner.Path(td)/runner.PROGRESS_FILE
+        journal = runner._ProgressJournal(progress_path)
+        journal.append("NODE_START", candidate_index=0, node="L1",
+                       evaluation_count=0)
+        journal.append("NODE_COMPLETE", candidate_index=0, node="L1",
+                       evaluation_count=7, status="CERTIFIED")
+        raw = progress_path.read_bytes()
+        model.need(raw.endswith(b"\n"), "progress newline flush")
+        events = [json.loads(line) for line in raw.splitlines()]
+        model.need([e["sequence"] for e in events] == [0, 1],
+                   "progress sequence")
+        model.need(all(e["certificate_evidence"] is False and
+                       e["evidence_role"] == "DIAGNOSTIC_PROGRESS_ONLY"
+                       for e in events), "progress nonclaim")
     base = proof(cfg, "H_U", Fraction(1), Fraction(0), Fraction(1, 8),
                  -model.S_NEG, Fraction(1, 16))
     checker.verify_route_proof(base, cfg, "H_U")

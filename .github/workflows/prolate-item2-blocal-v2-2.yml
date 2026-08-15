@@ -20,7 +20,7 @@ jobs:
     env:
       BLOCAL_DIR: CERTIFICATES/prolate/item2_circle/b_tube_v2_1
       CONFIG: CERTIFICATES/prolate/item2_circle/b_tube_v2_1/config.blocal-v2.2-run.json
-      CONFIG_SHA256: 83286b738330e6d34d5e600150d6c658d9ae5252992f4979b95721e243085fd3
+      CONFIG_SHA256: 268324106b7a6db12b1f3f7f5b2df7db0378efb9ae85b1e9d1268b980d4618a6
     steps:
       - name: Verify tag suffix equals commit SHA
         shell: bash
@@ -53,7 +53,7 @@ jobs:
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
           test "$(sha256sum "$CONFIG" | awk '{print $1}')" = "$CONFIG_SHA256"
-          test "$(wc -c < "$CONFIG")" -eq 6402
+          test "$(wc -c < "$CONFIG")" -eq 6750
           PYTHONDONTWRITEBYTECODE=1 python - <<'PY'
           import hashlib, json, sys
           from pathlib import Path
@@ -109,14 +109,24 @@ jobs:
         run: |
           set -euo pipefail
           RUN_DIR="$RUNNER_TEMP/blocal-v2.2-output"
-          test -f "$RUN_DIR/records.blocal.jsonl"
-          test -f "$RUN_DIR/certificate.blocal.json"
-          test -f "$RUN_DIR/run-summary.blocal.json"
-          sha256sum \
-            "$RUN_DIR/records.blocal.jsonl" \
-            "$RUN_DIR/certificate.blocal.json" \
-            "$RUN_DIR/run-summary.blocal.json" \
-            > "$RUN_DIR/SHA256SUMS.txt"
+          test -f "$RUN_DIR/progress.blocal.jsonl"
+          sha256sum "$RUN_DIR/progress.blocal.jsonl" \
+            > "$RUN_DIR/PROGRESS_SHA256SUMS.txt"
+          complete=0
+          for path in records.blocal.jsonl certificate.blocal.json run-summary.blocal.json; do
+            if [ -f "$RUN_DIR/$path" ]; then
+              complete=$((complete + 1))
+            fi
+          done
+          if [ "$complete" -eq 3 ]; then
+            sha256sum \
+              "$RUN_DIR/records.blocal.jsonl" \
+              "$RUN_DIR/certificate.blocal.json" \
+              "$RUN_DIR/run-summary.blocal.json" \
+              > "$RUN_DIR/SHA256SUMS.txt"
+          else
+            test "$complete" -eq 0
+          fi
 
       - name: Upload B-LOCAL v2.2 evidence
         if: always()
