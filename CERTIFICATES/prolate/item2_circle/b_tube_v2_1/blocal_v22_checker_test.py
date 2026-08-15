@@ -10,6 +10,7 @@ import blocal_v22_checker as checker
 import blocal_v22_boundary as boundary
 import blocal_v22_model as model
 import blocal_v22_policy as policy
+import blocal_v22_runner as runner
 
 
 def rejects(fn, label: str) -> None:
@@ -18,6 +19,50 @@ def rejects(fn, label: str) -> None:
     except Exception:
         return
     raise RuntimeError(f"negative control accepted: {label}")
+
+
+def check_j_start_f_routing() -> None:
+    """Pin strict-sign initial F versus containment-first midpoint routing."""
+    calls = []
+
+    class FakeRoute:
+        class EnclosureFailure(Exception):
+            pass
+
+        def enclose_f(self, *args):
+            required_sign, accept = args[-2:]
+            calls.append((required_sign, accept))
+            interval = model.interval_json(Fraction(1), Fraction(2))
+            if accept is not None:
+                original = runner._newton_image
+                try:
+                    runner._newton_image = lambda *unused: (_ for _ in ()).throw(
+                        RuntimeError("Newton must not precede strict sign"))
+                    model.need(accept(interval), "strict sign short-circuits Newton")
+                finally:
+                    runner._newton_image = original
+            return interval, {
+                "evaluation_count": 1
+            }
+
+        def enclose_hu(self, *args):
+            accept = args[-1] if callable(args[-1]) else None
+            interval = model.interval_json(Fraction(2), Fraction(3))
+            if accept is not None:
+                model.need(accept(interval), "fake derivative target")
+            return interval, {"evaluation_count": 1}
+
+    cfg = config()
+    cfg["budgets"]["J_START"]["max_bisections"] = 1
+    result, reason, _ = runner._build_j_start(
+        0, model.LAMBDA_PLUS + Fraction(1, 1 << 9), Fraction(1, 1 << 8),
+        cfg, FakeRoute(), object(), object(), object(), object(), object())
+    model.need(result is None and reason == "J_START_MAX_BISECTIONS",
+               "fake J_START termination")
+    model.need(len(calls) == 2, "fake J_START F call count")
+    model.need(calls[0] == ("POS", None), "initial left strict POS route")
+    model.need(calls[1][0] is None and callable(calls[1][1]),
+               "midpoint containment-first accept route")
 
 
 def config() -> dict:
@@ -352,6 +397,7 @@ class BadBall:
 def main() -> int:
     cfg = config()
     model.validate_config(cfg)
+    check_j_start_f_routing()
     base = proof(cfg, "H_U", Fraction(1), Fraction(0), Fraction(1, 8),
                  -model.S_NEG, Fraction(1, 16))
     checker.verify_route_proof(base, cfg, "H_U")

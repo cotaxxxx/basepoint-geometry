@@ -99,10 +99,11 @@ def _build_j_start(candidate_index:int,lambda_start:Fraction,u_max:Fraction,conf
     def sign(iv:dict[str,Any])->str:
         lo,hi=model.interval_fractions(iv,"J F")
         return "POSITIVE" if lo>0 else "NEGATIVE" if hi<0 else "UNRESOLVED"
-    def f_at(r:Fraction,role:str,accept:Callable[[dict[str,Any]],bool]|None=None)->tuple[dict[str,Any],dict[str,Any]]:
+    def f_at(r:Fraction,role:str,required_sign:str|None=None,
+             accept:Callable[[dict[str,Any]],bool]|None=None)->tuple[dict[str,Any],dict[str,Any]]:
         nonlocal f_count
         model.need(f_count<budget["max_evaluations"],"J_START outer evaluation budget")
-        iv,proof=route.enclose_f(kernel,adapter,acb,arb,fmpq,config,r,r,lambda_start,lambda_start,None,accept)
+        iv,proof=route.enclose_f(kernel,adapter,acb,arb,fmpq,config,r,r,lambda_start,lambda_start,required_sign,accept)
         f_count+=1;sgn=sign(iv)
         rec={"evaluation_id":f"J-F-{f_count:03d}","r":model.rational_json(r),"lambda_start":model.rational_json(lambda_start),
              "route_id":policy.F_ROUTE_ID,"route_proof":proof,"normalized_F":iv,"sign":sgn,"role":role}
@@ -115,7 +116,7 @@ def _build_j_start(candidate_index:int,lambda_start:Fraction,u_max:Fraction,conf
         "u_interval":model.interval_json(Fraction(0),u_max),"H_u":full_hu,"F_r":full_fr,"route_proof":full_proof,
         "endpoint_transform":{"rule":"[H_lo,H_hi] -> [-H_hi,-H_lo]","label_only":False},
         "sup_F_r_lt_zero":True,"zero_not_in_F_r":True}
-    left,right=1-u_max,Fraction(1);fleft,leftrec=f_at(left,"INITIAL_LEFT")
+    left,right=1-u_max,Fraction(1);fleft,leftrec=f_at(left,"INITIAL_LEFT","POS")
     if sign(fleft)!="POSITIVE":return None,"J_START_LEFT_SIGN_UNRESOLVED",f_count
     ordered.append(leftrec)
     target_cap=min(config["route_policies"]["K_ROUTE"]["max_evaluations"],
@@ -146,10 +147,15 @@ def _build_j_start(candidate_index:int,lambda_start:Fraction,u_max:Fraction,conf
         if not(dhi<0 and not(dlo<=0<=dhi)):return None,"J_START_DERIVATIVE_NEGATIVITY_UNRESOLVED",f_count
         midpoint=(left+right)/2;captured={}
         def f_accept(iv:dict[str,Any])->bool:
-            q,n=_newton_image(midpoint,iv,D);nlo,nhi=model.interval_fractions(n,"Newton trial")
-            captured.update({"quotient":q,"newton_image":n,"contained":left<nlo<=nhi<right})
-            return sign(iv)!="UNRESOLVED" or captured["contained"]
-        Fm,mrec=f_at(midpoint,"BISECTION_MIDPOINT",f_accept);sgn=sign(Fm)
+            if sign(iv)!="UNRESOLVED":
+                return True
+            try:
+                q,n=_newton_image(midpoint,iv,D);nlo,nhi=model.interval_fractions(n,"Newton trial")
+                captured.update({"quotient":q,"newton_image":n,"contained":left<nlo<=nhi<right})
+                return captured["contained"]
+            except Exception:
+                return False
+        Fm,mrec=f_at(midpoint,"BISECTION_MIDPOINT",None,f_accept);sgn=sign(Fm)
         quotient,newton=_newton_image(midpoint,Fm,D);nlo,nhi=model.interval_fractions(newton,"Newton")
         contained=left<nlo<=nhi<right
         qlo,qhi=model.interval_fractions(quotient,"quotient")
