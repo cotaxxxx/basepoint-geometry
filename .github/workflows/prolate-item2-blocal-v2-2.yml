@@ -1,0 +1,133 @@
+name: Prolate item2 B-LOCAL v2.2
+
+on:
+  push:
+    tags:
+      - "blocal-v2.2-run-*"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: prolate-item2-blocal-v2-2-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  blocal:
+    if: startsWith(github.ref, 'refs/tags/blocal-v2.2-run-')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    env:
+      BLOCAL_DIR: CERTIFICATES/prolate/item2_circle/b_tube_v2_1
+      CONFIG: CERTIFICATES/prolate/item2_circle/b_tube_v2_1/config.blocal-v2.2-run.json
+      CONFIG_SHA256: 83286b738330e6d34d5e600150d6c658d9ae5252992f4979b95721e243085fd3
+    steps:
+      - name: Verify tag suffix equals commit SHA
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_EVENT_NAME" = "push"
+          TAG_SUFFIX="${GITHUB_REF#refs/tags/blocal-v2.2-run-}"
+          printf '%s' "$TAG_SUFFIX" | grep -Eq '^[0-9a-f]{40}$'
+          test "$TAG_SUFFIX" = "$GITHUB_SHA"
+
+      - name: Checkout immutable source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+          clean: true
+          path: source
+
+      - name: Set up pinned Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.12"
+          check-latest: false
+
+      - name: Independent byte and structure gate
+        working-directory: source
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$(sha256sum "$CONFIG" | awk '{print $1}')" = "$CONFIG_SHA256"
+          test "$(wc -c < "$CONFIG")" -eq 6402
+          PYTHONDONTWRITEBYTECODE=1 python - <<'PY'
+          import hashlib, json, sys
+          from pathlib import Path
+          root = Path.cwd()
+          base = root / 'CERTIFICATES/prolate/item2_circle/b_tube_v2_1'
+          sys.path.insert(0, str(base))
+          import blocal_v22_model as model
+          config_path = root / 'CERTIFICATES/prolate/item2_circle/b_tube_v2_1/config.blocal-v2.2-run.json'
+          raw = config_path.read_bytes()
+          cfg = model.parse_canonical_json(raw)
+          model.validate_config(cfg)
+          if raw != model.canonical_json_bytes(cfg):
+              raise SystemExit('non-canonical config bytes')
+          for path, expected in cfg['implementation']['sources_sha256'].items():
+              actual = hashlib.sha256((root / path).read_bytes()).hexdigest()
+              if actual != expected:
+                  raise SystemExit(f'source pin mismatch: {path}')
+          print(json.dumps({'config_sha256': hashlib.sha256(raw).hexdigest(),
+                            'source_pin_count': len(cfg['implementation']['sources_sha256']),
+                            'status': 'PASS'}, sort_keys=True, separators=(',', ':')))
+          PY
+          PYTHONDONTWRITEBYTECODE=1 python "$BLOCAL_DIR/blocal_v22_static_test.py"
+          PYTHONDONTWRITEBYTECODE=1 python "$BLOCAL_DIR/blocal_v22_symbolic_audit.py"
+          PYTHONDONTWRITEBYTECODE=1 python "$BLOCAL_DIR/blocal_v22_checker_test.py"
+
+      - name: Install hash-pinned runtime dependency
+        working-directory: source
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --require-hashes --only-binary=:all: --no-deps \
+            -r "$BLOCAL_DIR/requirements.blocal-run.txt"
+
+      - name: Execute authorized B-LOCAL v2.2 production run
+        id: run
+        working-directory: source
+        shell: bash
+        run: |
+          set -uo pipefail
+          RUN_DIR="$RUNNER_TEMP/blocal-v2.2-output"
+          test ! -e "$RUN_DIR"
+          python "$BLOCAL_DIR/blocal_v22_runner.py" --config "$CONFIG" --output-dir "$RUN_DIR"
+          code=$?
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+          if [ "$code" -ne 0 ] && [ "$code" -ne 2 ]; then
+            exit "$code"
+          fi
+          exit 0
+
+      - name: Record output byte identities
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          RUN_DIR="$RUNNER_TEMP/blocal-v2.2-output"
+          test -f "$RUN_DIR/records.blocal.jsonl"
+          test -f "$RUN_DIR/certificate.blocal.json"
+          test -f "$RUN_DIR/run-summary.blocal.json"
+          sha256sum \
+            "$RUN_DIR/records.blocal.jsonl" \
+            "$RUN_DIR/certificate.blocal.json" \
+            "$RUN_DIR/run-summary.blocal.json" \
+            > "$RUN_DIR/SHA256SUMS.txt"
+
+      - name: Upload B-LOCAL v2.2 evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: prolate-item2-blocal-v2-2-${{ github.sha }}
+          path: ${{ runner.temp }}/blocal-v2.2-output
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Enforce complete terminal state
+        if: always()
+        shell: bash
+        run: test "${{ steps.run.outputs.code }}" = "0"
