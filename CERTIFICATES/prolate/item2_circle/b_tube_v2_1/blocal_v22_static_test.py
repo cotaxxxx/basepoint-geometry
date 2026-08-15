@@ -63,6 +63,7 @@ def main() -> int:
         "_safe_nonnegative_sqrt", "_safe_positive_sqrt",
         "_positive_inverse_factors", "_effective_floor",
         "_geometry_jet", "_taylor_cell", "_angle4_adaptive",
+        "_WidthEntry", "unevaluated", "incremental sum reconstruction",
         "gamma_fallback_used", "Z_DEN_LO", "Duffy_Z_components",
     ):
         need(token in route, f"required route token {token}")

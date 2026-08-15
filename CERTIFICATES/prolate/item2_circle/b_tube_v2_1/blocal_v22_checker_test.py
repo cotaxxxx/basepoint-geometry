@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import copy
+import heapq
 from fractions import Fraction
 
 import blocal_v22_checker as checker
+import blocal_v22_boundary as boundary
 import blocal_v22_model as model
 import blocal_v22_policy as policy
 
@@ -353,6 +355,12 @@ def main() -> int:
     base = proof(cfg, "H_U", Fraction(1), Fraction(0), Fraction(1, 8),
                  -model.S_NEG, Fraction(1, 16))
     checker.verify_route_proof(base, cfg, "H_U")
+    width_heap=[boundary._WidthEntry(Fraction(1),-policy.REGION_ORDER["R2"],"R20"),
+                boundary._WidthEntry(Fraction(1),-policy.REGION_ORDER["T1"],"T10"),
+                boundary._WidthEntry(Fraction(1),-policy.REGION_ORDER["T1"],"T11")]
+    heapq.heapify(width_heap)
+    model.need([heapq.heappop(width_heap).path for _ in range(3)]==["T11","T10","R20"],
+               "width heap preserves historical max tie-break")
 
     # Existing fail-closed and structural controls.
     bad = copy.deepcopy(base)

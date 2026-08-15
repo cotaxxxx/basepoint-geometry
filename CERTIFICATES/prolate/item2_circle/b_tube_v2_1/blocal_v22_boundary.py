@@ -10,6 +10,7 @@ a deterministic adaptive ball sum.
 from __future__ import annotations
 
 import hashlib
+import heapq
 import json
 from dataclasses import dataclass
 from fractions import Fraction
@@ -77,6 +78,18 @@ class SplitRequired(RuntimeError):
 class EnclosureFailure(RuntimeError):
     def __init__(self, reason:str, evaluations:int):
         super().__init__(reason);self.reason=reason;self.evaluations=evaluations
+
+
+@dataclass(frozen=True)
+class _WidthEntry:
+    width: Fraction
+    neg_region_order: int
+    path: str
+
+    def __lt__(self, other: "_WidthEntry") -> bool:
+        # heapq is a min-heap; reverse the complete historical max() key.
+        return (self.width,self.neg_region_order,self.path) > (
+            other.width,other.neg_region_order,other.path)
 
 
 @dataclass(frozen=True)
@@ -851,65 +864,92 @@ def enclose_route(quantity: str, kernel: Any, adapter: Any, acb_type: Any,
     effective_evaluation_cap=pcfg["max_evaluations"] if evaluation_cap is None else evaluation_cap
     model.need(isinstance(effective_evaluation_cap,int) and 0<effective_evaluation_cap<=pcfg["max_evaluations"],"route evaluation cap")
     eps=model.fraction_from_dyadic(config["geometry"]["eps"])
-    _reset_floor_trace();leaves=_root_initial();evaluations=0
-    values:dict[str,Any]={};meta:dict[str,dict[str,Any]]={};split_reasons:dict[str,str]={}
+    _reset_floor_trace();evaluations=0
+    leaves:dict[str,Cell]={};values:dict[str,Any]={};canonical:dict[str,dict[str,Any]]={}
+    meta:dict[str,dict[str,Any]]={};split_reasons:dict[str,str]={}
+    unevaluated:list[tuple[int,str]]=[];shallow:list[tuple[int,str]]=[];widths:list[_WidthEntry]=[]
+    sum_lo=sum_hi=Fraction(0)
+
+    def add_leaf(cell:Cell)->None:
+        leaves[cell.path]=cell
+        key=(policy.REGION_ORDER[cell.region],cell.path)
+        heapq.heappush(unevaluated,key)
+        if cell.depth<pcfg["min_depth"]:heapq.heappush(shallow,key)
+
+    def remove_leaf(cell:Cell)->dict[str,Any]|None:
+        nonlocal sum_lo,sum_hi
+        leaves.pop(cell.path)
+        detail=meta.pop(cell.path,None);values.pop(cell.path,None)
+        iv=canonical.pop(cell.path,None)
+        if iv is not None:
+            lo,hi=model.interval_fractions(iv,"remove cached child")
+            sum_lo-=lo;sum_hi-=hi
+        return detail
+
+    def split_leaf(cell:Cell,reason:str)->None:
+        model.need(cell.depth<pcfg["max_depth"],f"angular depth: {reason}")
+        model.need(len(leaves)+1<=pcfg["max_children"],"angular child budget")
+        detail=remove_leaf(cell)
+        for child in _split(cell,detail):add_leaf(child)
+        split_reasons[cell.path]=reason
 
     def eval_one(cell: Cell) -> None:
-        nonlocal evaluations
+        nonlocal evaluations,sum_lo,sum_hi
         if evaluations>=effective_evaluation_cap:
             raise EnclosureFailure("ANGULAR_EVALUATION_BUDGET",evaluations)
         value,detail=_cell_eval(quantity,kernel,adapter,acb_type,arb_type,fmpq_type,
                                 cell,u0,u1,s0,s1,eps,pcfg["max_depth"])
-        evaluations+=1;values[cell.path]=value;meta[cell.path]=detail
+        iv=_canonical(adapter,value,"accepted child")
+        lo,hi=model.interval_fractions(iv,"cached child")
+        evaluations+=1;values[cell.path]=value;canonical[cell.path]=iv;meta[cell.path]=detail
+        sum_lo+=lo;sum_hi+=hi
+        if cell.depth<pcfg["max_depth"]:
+            heapq.heappush(widths,_WidthEntry(hi-lo,-policy.REGION_ORDER[cell.region],cell.path))
+
+    for root in _root_initial():add_leaf(root)
 
     while True:
         forced=None
-        for cell in sorted(leaves,key=lambda c:(policy.REGION_ORDER[c.region],c.path)):
-            if cell.path not in values:
-                try:
-                    eval_one(cell)
-                except SplitRequired as exc:
-                    forced=(cell,exc.reason);break
+        while unevaluated:
+            _,path=heapq.heappop(unevaluated)
+            cell=leaves.get(path)
+            if cell is None or path in canonical:continue
+            try:eval_one(cell)
+            except SplitRequired as exc:
+                forced=(cell,exc.reason);break
         if forced is not None:
-            cell,reason=forced
-            model.need(cell.depth<pcfg["max_depth"], f"angular depth: {reason}")
-            model.need(len(leaves)+1<=pcfg["max_children"], "angular child budget")
-            detail=meta.pop(cell.path,None);leaves.remove(cell);values.pop(cell.path,None)
-            leaves.extend(_split(cell,detail));split_reasons[cell.path]=reason
+            split_leaf(*forced)
             continue
-        shallow=next((c for c in sorted(leaves,key=lambda c:(policy.REGION_ORDER[c.region],c.path))
-                      if c.depth<pcfg["min_depth"]),None)
-        if shallow is not None:
-            model.need(len(leaves)+1<=pcfg["max_children"],"angular child budget min depth")
-            detail=meta.pop(shallow.path,None);leaves.remove(shallow);values.pop(shallow.path,None)
-            leaves.extend(_split(shallow,detail));split_reasons[shallow.path]="MIN_DEPTH"
+        shallow_cell=None
+        while shallow:
+            _,path=heapq.heappop(shallow);cell=leaves.get(path)
+            if cell is not None and cell.depth<pcfg["min_depth"]:
+                shallow_cell=cell;break
+        if shallow_cell is not None:
+            split_leaf(shallow_cell,"MIN_DEPTH")
             continue
-        child_intervals=[_canonical(adapter,values[c.path],"accepted child")
-                         for c in sorted(leaves,key=lambda c:(policy.REGION_ORDER[c.region],c.path))]
-        ulo,uhi=model.interval_add_exact(child_intervals)
-        unnorm=model.outward_dyadic(ulo,uhi);normalized=model.normalize_interval(unnorm)
+        unnorm=model.outward_dyadic(sum_lo,sum_hi);normalized=model.normalize_interval(unnorm)
         lo,hi=model.interval_fractions(normalized,"root normalized")
         resolved=((accept is not None and accept(normalized)) or
                   (accept is None and (required_sign is None or (required_sign=="POS" and lo>0)
                   or (required_sign=="NEG" and hi<0))))
         if resolved:
             break
-        candidates=[c for c in leaves if c.depth<pcfg["max_depth"]]
-        model.need(candidates,"angular sign unresolved at depth limit")
         model.need(len(leaves)+1<=pcfg["max_children"],"angular sign child budget")
-        def width_key(c:Cell)->tuple[Fraction,int,str]:
-            iv=_canonical(adapter,values[c.path],"width")
-            a,b=model.interval_fractions(iv,"width")
-            return (b-a,-policy.REGION_ORDER[c.region],c.path)
-        chosen=max(candidates,key=width_key)
-        detail=meta.pop(chosen.path,None);leaves.remove(chosen);values.pop(chosen.path,None)
-        leaves.extend(_split(chosen,detail));split_reasons[chosen.path]="ROOT_PREDICATE_UNRESOLVED"
+        chosen=None
+        while widths:
+            entry=heapq.heappop(widths);cell=leaves.get(entry.path)
+            if cell is not None and cell.depth<pcfg["max_depth"] and entry.path in canonical:
+                chosen=cell;break
+        model.need(chosen is not None,"angular sign unresolved at depth limit")
+        split_leaf(chosen,"ROOT_PREDICATE_UNRESOLVED")
 
-    model.need(all(_cover_ok(leaves,r) for r in policy.REGION_ORDER),"exact angular cover")
-    ordered=sorted(leaves,key=lambda c:(policy.REGION_ORDER[c.region],c.path))
+    leaf_list=list(leaves.values())
+    model.need(all(_cover_ok(leaf_list,r) for r in policy.REGION_ORDER),"exact angular cover")
+    ordered=sorted(leaf_list,key=lambda c:(policy.REGION_ORDER[c.region],c.path))
     child_records=[]
     for c in ordered:
-        iv=_canonical(adapter,values[c.path],"final child")
+        iv=canonical[c.path]
         child_records.append({
             "child_id":c.path,"parent_id":c.path[:-1] if len(c.path)>2 else None,
             "region":c.region,"depth":c.depth,"box":{
@@ -919,6 +959,7 @@ def enclose_route(quantity: str, kernel: Any, adapter: Any, acb_type: Any,
             "contribution_enclosure":iv,"status":"ACCEPTED",
         })
     ulo,uhi=model.interval_add_exact([r["contribution_enclosure"] for r in child_records])
+    model.need((ulo,uhi)==(sum_lo,sum_hi),"incremental sum reconstruction")
     unnormalized=model.outward_dyadic(ulo,uhi);normalized=model.normalize_interval(unnormalized)
     route_id=F_ROUTE_ID if quantity=="F" else K_ROUTE_ID
     body={
