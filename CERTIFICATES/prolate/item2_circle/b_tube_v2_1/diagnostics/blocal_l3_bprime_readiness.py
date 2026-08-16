@@ -10,6 +10,7 @@ import os
 from pathlib import Path
 import platform
 import shutil
+import subprocess
 import sys
 import tempfile
 import time
@@ -179,6 +180,24 @@ def main():
     run_cfg = json.loads(run_cfg_bytes)
     s1 = run_cfg["stage1_dependency"]
 
+    # Implementation release gate on the exact head under test.  This remains
+    # readiness/design evidence and is not inserted into the certificate chain.
+    source_hashes = {}
+    for rel, expected in run_cfg["implementation"]["sources_sha256"].items():
+        got = sha256_file(ROOT / rel)
+        if got != expected:
+            fail(f"implementation source pin mismatch: {rel}: {got} != {expected}")
+        source_hashes[rel] = got
+    static_run = subprocess.run(
+        [sys.executable, str(BTUBE / "blocal_v22_static_test.py")],
+        cwd=ROOT, check=True, capture_output=True, text=True)
+    print(static_run.stdout.strip(), flush=True)
+    runtime_readiness = subprocess.run(
+        [sys.executable, str(BTUBE / "blocal_v22_readiness_test.py"), "--config",
+         "CERTIFICATES/prolate/item2_circle/b_tube_v2_1/config.blocal-v2.2-run.json"],
+        cwd=ROOT, check=True, capture_output=True, text=True)
+    print(runtime_readiness.stdout.strip(), flush=True)
+
     if sha256_file(STAGE1_ZIP) != s1["artifact_zip_sha256"]:
         fail("Stage-1 ZIP SHA-256 mismatch")
     if sha256_file(STAGE1_CONFIG) != s1["config_sha256"]:
@@ -276,9 +295,15 @@ def main():
     (outdir / "bprime-transcript.txt").write_text(transcript, encoding="utf-8")
 
     record = {
-        "schema": "blocal-l3-bprime-readiness-v1",
+        "schema": "blocal-l3-bprime-readiness-v2",
         "certificate_evidence": False,
         "evidence_role": "READINESS_DESIGN_ONLY",
+        "implementation_gate": {
+            "config_sha256": sha256_bytes(run_cfg_bytes),
+            "source_sha256": source_hashes,
+            "static_test_pass": True,
+            "production_shaped_runtime_readiness_pass": True,
+        },
         "route_id": ROUTE_ID,
         "policy_id": POLICY_ID,
         "domain_audit": domain_audit,
