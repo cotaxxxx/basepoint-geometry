@@ -20,7 +20,7 @@ jobs:
     env:
       BLOCAL_DIR: CERTIFICATES/prolate/item2_circle/b_tube_v2_1
       CONFIG: CERTIFICATES/prolate/item2_circle/b_tube_v2_1/config.blocal-v2.2-run.json
-      CONFIG_SHA256: 268324106b7a6db12b1f3f7f5b2df7db0378efb9ae85b1e9d1268b980d4618a6
+      CONFIG_SHA256: 7565d104359264ad1bc6950d6de935718c7a30e64e40127d1d4ac633f58ba34d
     steps:
       - name: Verify tag suffix equals commit SHA
         shell: bash
@@ -53,7 +53,7 @@ jobs:
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
           test "$(sha256sum "$CONFIG" | awk '{print $1}')" = "$CONFIG_SHA256"
-          test "$(wc -c < "$CONFIG")" -eq 6750
+          test "$(wc -c < "$CONFIG")" -eq 8263
           PYTHONDONTWRITEBYTECODE=1 python - <<'PY'
           import hashlib, json, sys
           from pathlib import Path
@@ -67,12 +67,22 @@ jobs:
           model.validate_config(cfg)
           if raw != model.canonical_json_bytes(cfg):
               raise SystemExit('non-canonical config bytes')
-          for path, expected in cfg['implementation']['sources_sha256'].items():
+          source_pins = cfg['implementation']['sources_sha256']
+          if len(source_pins) != 11:
+              raise SystemExit(f'unexpected source pin count: {len(source_pins)}')
+          for path, expected in source_pins.items():
               actual = hashlib.sha256((root / path).read_bytes()).hexdigest()
               if actual != expected:
                   raise SystemExit(f'source pin mismatch: {path}')
+          l3_design_path = base / 'BLOCAL_BENTRY_DEPENDENCY_DESIGN_V2_2_REVISION_ADDENDUM_L3_BPRIME.md'
+          l3_design_sha = hashlib.sha256(l3_design_path.read_bytes()).hexdigest()
+          if l3_design_sha != cfg['design_contracts']['l3_bprime']:
+              raise SystemExit('L3 design contract byte mismatch')
+          if l3_design_sha != model.L3_BPRIME_DESIGN_SHA256:
+              raise SystemExit('L3 model design-contract pin mismatch')
           print(json.dumps({'config_sha256': hashlib.sha256(raw).hexdigest(),
-                            'source_pin_count': len(cfg['implementation']['sources_sha256']),
+                            'source_pin_count': len(source_pins),
+                            'l3_design_sha256': l3_design_sha,
                             'status': 'PASS'}, sort_keys=True, separators=(',', ':')))
           PY
           PYTHONDONTWRITEBYTECODE=1 python "$BLOCAL_DIR/blocal_v22_static_test.py"
