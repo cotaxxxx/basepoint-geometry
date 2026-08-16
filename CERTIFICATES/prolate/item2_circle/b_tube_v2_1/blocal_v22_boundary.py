@@ -359,12 +359,14 @@ def _geometry(adapter: Any, arb_type: Any, fmpq_type: Any,
 
 _FLOOR_REGISTRY:dict[str,dict[str,Any]]={}
 _FLOOR_USE:dict[str,int]={}
+_C1_STRUCTURAL_USES=0
 _FLOOR_SITE_COUNTS={s:{"calls":0,"natural":0,"structural":0} for s in policy.EFFECTIVE_FLOOR_SITES}
 _GAMMA_TRACE:dict[str,dict[str,Any]]={}
 
 
 def _reset_floor_trace()->None:
-    _FLOOR_REGISTRY.clear();_FLOOR_USE.clear()
+    global _C1_STRUCTURAL_USES
+    _FLOOR_REGISTRY.clear();_FLOOR_USE.clear();_C1_STRUCTURAL_USES=0
     for s in _FLOOR_SITE_COUNTS:_FLOOR_SITE_COUNTS[s]={"calls":0,"natural":0,"structural":0}
 
 
@@ -380,10 +382,11 @@ def _record_gamma(rows:list[dict[str,Any]])->None:
 
 
 def _intern_floor(rec:dict[str,Any])->str:
+    global _C1_STRUCTURAL_USES
     dig=hashlib.sha256(model.canonical_json_bytes(rec)).hexdigest()
     prior=_FLOOR_REGISTRY.get(dig)
     if prior is not None:model.need(prior==rec,"floor record hash collision")
-    _FLOOR_REGISTRY[dig]=rec;_FLOOR_USE[dig]=_FLOOR_USE.get(dig,0)+1
+    _FLOOR_REGISTRY[dig]=rec;_FLOOR_USE[dig]=_FLOOR_USE.get(dig,0)+1;_C1_STRUCTURAL_USES+=int(rec.get("site")=="C1_STRUCTURAL_Q")
     return dig
 
 
@@ -415,6 +418,7 @@ def _floor_summary()->dict[str,Any]:
     ordered={k:_FLOOR_REGISTRY[k] for k in sorted(_FLOOR_REGISTRY)};keys=sorted(ordered);limit=64
     return {"call_sites":list(policy.EFFECTIVE_FLOOR_SITES),"unique_count":len(keys),
             "total_use_count":sum(_FLOOR_USE.values()),
+            "c1_structural_uses":_C1_STRUCTURAL_USES,
             "canonical_sha256":hashlib.sha256(model.canonical_json_bytes(ordered)).hexdigest(),
             "retained_limit":limit,"retained":{k:ordered[k] for k in keys[:limit]},
             "truncated":len(keys)>limit,"omitted_count":max(0,len(keys)-limit),

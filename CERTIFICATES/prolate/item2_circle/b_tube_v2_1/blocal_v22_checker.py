@@ -81,15 +81,22 @@ def _check_gamma_detail(detail: dict[str, Any]) -> None:
 def _check_floor_registry(reg:dict[str,Any])->None:
     model.need(reg["call_sites"]==list(policy.EFFECTIVE_FLOOR_SITES),"exact six floor sites")
     model.need(set(reg["per_site"])==set(policy.EFFECTIVE_FLOOR_SITES),"floor per-site keys")
+    c1=reg["c1_structural_uses"]
+    model.need(isinstance(c1,int) and not isinstance(c1,bool) and c1>=0,"C1 structural use accounting")
+    model.need(isinstance(reg["total_use_count"],int) and not isinstance(reg["total_use_count"],bool)
+               and reg["total_use_count"]>=0,"floor total use type")
     total=0
     for site,row in reg["per_site"].items():
         model.need(row["calls"]==row["natural"]+row["structural"] and row["calls"]>=0,"floor site accounting")
         total+=row["calls"]
-    model.need(total==reg["total_use_count"],"floor total uses")
+    model.need(total+c1==reg["total_use_count"],"floor total uses")
     retained=reg["retained"];model.need(len(retained)<=reg["retained_limit"]==64,"floor retained bound")
     model.need(reg["unique_count"]==len(retained)+reg["omitted_count"],"floor unique accounting")
     model.need(reg["truncated"] is (reg["omitted_count"]>0),"floor truncation")
+    retained_c1=sum(1 for rec in retained.values() if rec.get("site")=="C1_STRUCTURAL_Q")
+    model.need(c1>=retained_c1,"C1 structural retained/use accounting")
     if not reg["truncated"]:
+        model.need((c1==0)==(retained_c1==0),"C1 structural presence accounting")
         ordered={k:retained[k] for k in sorted(retained)}
         model.need(model.sha256_bytes(model.canonical_json_bytes(ordered))==reg["canonical_sha256"],"floor canonical digest")
     for dig,rec in retained.items():

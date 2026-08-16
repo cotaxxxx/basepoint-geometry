@@ -273,6 +273,15 @@ def proof(cfg: dict, quantity: str, value: Fraction,
         "method_selection_addendum_sha256":"7fafe5f465f9f38e61831b804a4bc95090af41b8fe31347897e7b2f40bf3d316",
         "c1_floor_spec_sha256":"8492755d298ace4c09f5118993eb2f2fa968d55ae5d04b81ff20c2c856fc90d3",
     }
+    c1rec={"site":"C1_STRUCTURAL_Q","record":{"fixture":"SYNTHETIC_C1_STRUCTURAL_Q"}}
+    c1dig=model.sha256_bytes(model.canonical_json_bytes(c1rec))
+    retained={c1dig:c1rec}
+    reg=p["effective_floor_registry"]
+    reg["unique_count"]=1
+    reg["total_use_count"]=1
+    reg["c1_structural_uses"]=1
+    reg["retained"]=retained
+    reg["canonical_sha256"]=model.sha256_bytes(model.canonical_json_bytes(retained))
     p["proof_id"] = model.sha256_bytes(model.canonical_json_bytes(p))
     return p
 
@@ -558,6 +567,11 @@ def main() -> int:
     rejects(lambda:checker._check_j(b,Fraction(1,8),model.LAMBDA_PLUS+Fraction(1,16),cfg),"containment-first reason")
     b=copy.deepcopy(base);b["effective_floor_registry"]["call_sites"].append("SEVENTH_SITE")
     rejects(lambda:checker.verify_route_proof(b,cfg,"H_U"),"unlisted floor site")
+    b=copy.deepcopy(base);reg=b["effective_floor_registry"];reg["c1_structural_uses"]=0
+    row=reg["per_site"]["ORDINARY_Q"];row["calls"]=1;row["structural"]=1
+    rejects(lambda:checker.verify_route_proof(b,cfg,"H_U"),"C1 structural use folded into six-site accounting")
+    b=copy.deepcopy(base);del b["effective_floor_registry"]["c1_structural_uses"]
+    rejects(lambda:checker.verify_route_proof(b,cfg,"H_U"),"missing C1 structural accounting")
     b=copy.deepcopy(base);b["ordered_children"][0]["detail"]["local_geometry"].remove("q")
     rejects(lambda:checker.verify_route_proof(b,cfg,"H_U"),"old Duffy geometry mixed")
     b=copy.deepcopy(base);b["ordered_children"][2]["detail"]["q_lo"]=model.rational_json(0)
