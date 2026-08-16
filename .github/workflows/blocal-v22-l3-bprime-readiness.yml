@@ -1,0 +1,57 @@
+name: B-LOCAL v2.2 L3 Bprime readiness
+
+on:
+  push:
+    branches:
+      - "agent/blocal-v22-l3-bprime-design"
+    paths:
+      - ".github/workflows/blocal-v22-l3-bprime-readiness.yml"
+      - "CERTIFICATES/prolate/item2_circle/b_tube_v2_1/diagnostics/blocal_l3_bprime_readiness.py"
+
+permissions:
+  contents: read
+
+jobs:
+  readiness:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout readiness head
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install pinned python-flint and Stage-1 symbolic-audit version
+        shell: bash
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install --require-hashes -r CERTIFICATES/prolate/item2_circle/b_tube_v2_1/requirements.blocal-run.txt
+          python -m pip install "sympy==1.14.0"
+
+      - name: Execute one-process L3 Bprime readiness
+        shell: bash
+        run: |
+          set -euo pipefail
+          python CERTIFICATES/prolate/item2_circle/b_tube_v2_1/diagnostics/blocal_l3_bprime_readiness.py \
+            --output-dir readiness-out
+
+      - name: Record artifact byte identities
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -d readiness-out ]; then
+            find readiness-out -maxdepth 1 -type f -print -exec sha256sum {} \; | tee readiness-out/WORKFLOW_SHA256SUMS.txt
+          fi
+
+      - name: Upload readiness evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: blocal-l3-bprime-readiness-${{ github.run_id }}
+          path: readiness-out/
+          if-no-files-found: error
+          retention-days: 30
