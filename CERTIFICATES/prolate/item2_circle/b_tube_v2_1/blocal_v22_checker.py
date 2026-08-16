@@ -308,6 +308,226 @@ def _check_j(j: dict[str, Any], u_max: Fraction, lambda_start: Fraction,
     model.need(acct["derivative_evaluations"]==derivative_total,"derivative count")
 
 
+def _poly_clean(p: dict[tuple[int, int, int], int]) -> dict[tuple[int, int, int], int]:
+    return {m: c for m, c in p.items() if c}
+
+
+def _poly_add(a: dict[tuple[int, int, int], int],
+              b: dict[tuple[int, int, int], int]) -> dict[tuple[int, int, int], int]:
+    out = dict(a)
+    for monomial, coeff in b.items():
+        out[monomial] = out.get(monomial, 0) + coeff
+    return _poly_clean(out)
+
+
+def _poly_scale(a: dict[tuple[int, int, int], int], k: int) -> dict[tuple[int, int, int], int]:
+    return _poly_clean({m: k*c for m, c in a.items()})
+
+
+def _poly_sub(a: dict[tuple[int, int, int], int],
+              b: dict[tuple[int, int, int], int]) -> dict[tuple[int, int, int], int]:
+    return _poly_add(a, _poly_scale(b, -1))
+
+
+def _poly_mul(a: dict[tuple[int, int, int], int],
+              b: dict[tuple[int, int, int], int]) -> dict[tuple[int, int, int], int]:
+    out: dict[tuple[int, int, int], int] = {}
+    for ma, ca in a.items():
+        for mb, cb in b.items():
+            monomial = tuple(x+y for x, y in zip(ma, mb))
+            out[monomial] = out.get(monomial, 0) + ca*cb
+    return _poly_clean(out)
+
+
+def _poly_pow(a: dict[tuple[int, int, int], int], n: int) -> dict[tuple[int, int, int], int]:
+    out = {(0, 0, 0): 1}
+    for _ in range(n):
+        out = _poly_mul(out, a)
+    return out
+
+
+def _poly_substitute_q(a: dict[tuple[int, int, int], int], value: int) -> dict[tuple[int, int, int], int]:
+    out: dict[tuple[int, int, int], int] = {}
+    for (et, eq, ed), coeff in a.items():
+        monomial = (et, 0, ed)
+        out[monomial] = out.get(monomial, 0) + coeff*(value**eq)
+    return _poly_clean(out)
+
+
+def _poly_q_coefficient(a: dict[tuple[int, int, int], int], degree: int) -> dict[tuple[int, int, int], int]:
+    return _poly_clean({(et, 0, ed): coeff
+                        for (et, eq, ed), coeff in a.items() if eq == degree})
+
+
+def _verify_domain_algebra_exact() -> dict[str, bool]:
+    one = {(0, 0, 0): 1}
+    T = {(1, 0, 0): 1}
+    Q = {(0, 1, 0): 1}
+    D = {(0, 0, 1): 1}
+    one_minus_T = _poly_sub(one, T)
+    c2 = _poly_scale(_poly_mul(_poly_mul(T, one_minus_T), Q), 4)
+    A = _poly_add(one, _poly_mul(_poly_mul(D, one_minus_T), Q))
+    J = _poly_add(one, _poly_mul(_poly_mul(D, _poly_sub(one, _poly_scale(T, 2))), Q))
+    N = _poly_add(_poly_mul(D, c2), _poly_scale(T, 4))
+    K = _poly_add(
+        _poly_mul(_poly_mul(D, c2), _poly_sub(one, _poly_scale(T, 2))),
+        _poly_mul(_poly_scale(T, 2), _poly_sub(_poly_scale(one, 2), _poly_scale(T, 2))),
+    )
+    W = _poly_sub(_poly_add(one, D), _poly_mul(D, c2))
+    R = {
+        (2, 2, 2): 4, (1, 2, 2): -4, (1, 1, 1): -4,
+        (0, 1, 2): 1, (0, 1, 1): 1, (0, 0, 1): 1, (0, 0, 0): 1,
+    }
+    two_TD_minus_D_minus_1 = _poly_sub(
+        _poly_sub(_poly_mul(_poly_scale(T, 2), D), D), one)
+    checks = {
+        'N_EQ_4T_A': not _poly_sub(N, _poly_scale(_poly_mul(T, A), 4)),
+        'K_EQ_4T1MT_J': not _poly_sub(K, _poly_scale(_poly_mul(_poly_mul(T, one_minus_T), J), 4)),
+        'W_EQ_1_PLUS_D_1MC2': not _poly_sub(W, _poly_add(one, _poly_mul(D, _poly_sub(one, c2)))),
+        'C2_BOUND_IDENTITY': not _poly_sub(
+            _poly_sub(one, _poly_scale(_poly_mul(T, one_minus_T), 4)),
+            _poly_pow(_poly_sub(_poly_scale(T, 2), one), 2)),
+        'X_RANGE_FACTOR': not _poly_sub(
+            _poly_sub(_poly_mul(W, A), _poly_mul(_poly_add(one, D), T)),
+            _poly_mul(one_minus_T, R)),
+        'R_Q0': not _poly_sub(_poly_substitute_q(R, 0), _poly_add(D, one)),
+        'R_Q1': not _poly_sub(_poly_substitute_q(R, 1), _poly_pow(two_TD_minus_D_minus_1, 2)),
+        'R_Q2_CONCAVITY_COEFF': not _poly_sub(
+            _poly_q_coefficient(R, 2),
+            _poly_scale(_poly_mul(_poly_mul(T, _poly_sub(T, one)), _poly_pow(D, 2)), 4)),
+    }
+    model.need(all(checks.values()), 'checker L3 exact domain algebra audit')
+    return checks
+
+
+def _check_l3(r: dict[str, Any], config: dict[str, Any], idx: int,
+              s_start: Fraction) -> bool:
+    lambda_start = model.LAMBDA_PLUS + s_start
+    model.need(r["record_type"] == "L3_MONOTONICITY" and r["node"] == "L3",
+               "L3 record identity")
+    model.need(r["candidate_index"] == idx, "L3 candidate index")
+    model.need(r["route_id"] == model.L3_BPRIME_ROUTE_ID
+               and r["policy_id"] == model.L3_BPRIME_POLICY_ID, "L3 route/policy")
+    model.need(r["identity_lemma_id"] == model.L3_BOUNDARY_IDENTITY_ID
+               and r["inference_id"] == model.L3_MONOTONICITY_INFERENCE_ID,
+               "L3 identity/inference")
+    model.need(model.fraction_from_rational(r["lambda_plus"]) == model.LAMBDA_PLUS,
+               "L3 lambda_plus")
+    model.need(model.fraction_from_rational(r["s_start"]) == s_start
+               and model.fraction_from_rational(r["lambda_start"]) == lambda_start,
+               "L3 candidate lambda relation")
+    sd0, sd1 = model.interval_fractions(r["s_domain"], "L3 s domain")
+    model.need((sd0, sd1) == (Fraction(0), s_start), "L3 complete closed s domain")
+
+    dep = r["stage1_dependency"]
+    cfgdep = config["stage1_dependency"]
+    model.need(dep == {
+        "source_head": cfgdep["source_head"],
+        "artifact_zip_sha256": cfgdep["artifact_zip_sha256"],
+        "descriptor_sha256": cfgdep["config_sha256"],
+        "certificate_sha256": cfgdep["certificate_sha256"],
+        "manifest_sha256": cfgdep["manifest_sha256"],
+        "bprime_source_sha256": config["l3_bprime_route"]["stage1_bprime_member_sha256"],
+        "identity_source_sha256": config["l3_bprime_route"]["stage1_verify_change_of_variables_sha256"],
+    }, "L3 Stage-1 provenance")
+    ep = r["stage1_endpoint_evidence"]
+    model.need(ep["evaluation_key"] == "B(206539/100000)", "L3 endpoint key")
+    model.need(ep["enclosure"] == config["l3_bprime_route"]["endpoint_evidence"]["enclosure"],
+               "L3 endpoint exact evidence")
+    _, ehi = model.rational_interval_fractions(ep["enclosure"], "L3 endpoint")
+    model.need(ep["strict_upper_lt_zero"] is (ehi < 0) and ehi < 0,
+               "L3 endpoint strict negative")
+
+    dp = r["derivative_policy"]
+    cfgp = config["l3_bprime_route"]
+    model.need(dp == {k: cfgp[k] for k in (
+        "python_flint","dps","bands","rel_tol","eval_limit","depth_limit",
+        "max_interval_calls","max_subdivision_depth","subdivision_enabled")},
+        "L3 derivative policy binding")
+    independent_algebra = _verify_domain_algebra_exact()
+    audit = r["extended_domain_audit"]
+    model.need(audit["audit_id"] == model.L3_BPRIME_DOMAIN_AUDIT_ID
+               and audit["status"] == "PASS", "L3 domain audit")
+    model.need(audit.get("exact_algebra_checks") in (None, independent_algebra),
+               "L3 recorded exact algebra checks")
+    ad0, ad1 = model.rational_interval_fractions(audit["lambda_domain"], "L3 audit domain")
+    model.need((ad0, ad1) == (model.LAMBDA_PLUS, lambda_start), "L3 audit coverage")
+    model.need(audit["lambda_gt_1_exact"] is True
+               and audit["A_positive_lemma"] == "A=1+(lambda^2-1)(1-T)q >= 1"
+               and audit["W_positive_lemma"] == "W=lambda^2(1-c2)+c2 >= 1"
+               and audit["c2_range_lemma"] == "c2=4T(1-T)q in [0,1]"
+               and audit["x_range_lemma"] == "W*A-lambda^2*T=(1-T)R; R concave in q; R(0)=D+1; R(1)=(2TD-D-1)^2"
+               and audit["angle_data_domain"] == "0<=x<=1; x=1 handled by pinned hypergeometric branch"
+               and audit["identity_id"] == model.L3_BOUNDARY_IDENTITY_ID
+               and audit["identity_source_sha256"] == model.STAGE1_VERIFY_CHANGE_SHA256
+               and audit["no_new_singularity_or_branch_crossing"] is True,
+               "L3 domain hypotheses")
+    guard = r["inherited_branch_guard_audit"]
+    model.need(guard["audit_id"] == model.L3_BPRIME_BRANCH_GUARD_AUDIT_ID
+               and guard["status"] == "PASS" and guard["float_call_count"] == 3
+               and guard["allowed_functions"] == ["_abs_upper", "_h_data"]
+               and guard["proof_decision_use"] is False, "L3 inherited float guards")
+    model.need(len(guard["locations"]) == 3
+               and all(x["function"] in ("_abs_upper", "_h_data") for x in guard["locations"]),
+               "L3 float guard locations")
+
+    pd0, pd1 = model.rational_interval_fractions(r["derivative_proof_domain"], "L3 derivative domain")
+    model.need((pd0, pd1) == (model.LAMBDA_PLUS, lambda_start), "L3 derivative full domain")
+    leaves = r["derivative_interval_records"]
+    model.need(isinstance(leaves, list) and leaves, "L3 derivative leaves")
+    intervals: list[tuple[Fraction, Fraction]] = []
+    all_negative = True
+    enclosures: list[tuple[Fraction, Fraction]] = []
+    for i, leaf in enumerate(leaves):
+        model.need(leaf["call_index"] == i, "L3 derivative call order")
+        lo, hi = model.rational_interval_fractions(leaf["lambda_interval"], "L3 leaf lambda")
+        model.need(model.LAMBDA_PLUS <= lo < hi <= lambda_start, "L3 leaf containment")
+        intervals.append((lo, hi))
+        iv = leaf["Bprime_enclosure"]
+        if iv is None:
+            model.need(leaf["strict_upper_lt_zero"] is False
+                       and leaf["status"] == "UNRESOLVED"
+                       and isinstance(leaf["failure_reason"], str), "L3 unresolved leaf")
+            all_negative = False
+        else:
+            blo, bhi = model.interval_fractions(iv, "L3 Bprime leaf")
+            strict = bhi < 0
+            model.need(leaf["strict_upper_lt_zero"] is strict, "L3 leaf sign predicate")
+            model.need(leaf["status"] == ("CERTIFIED" if strict else "UNRESOLVED"),
+                       "L3 leaf status")
+            model.need((leaf["failure_reason"] is None) is strict, "L3 leaf failure reason")
+            all_negative = all_negative and strict
+            enclosures.append((blo, bhi))
+    intervals.sort()
+    model.need(intervals[0][0] == model.LAMBDA_PLUS and intervals[-1][1] == lambda_start,
+               "L3 derivative endpoints")
+    for i in range(1, len(intervals)):
+        model.need(intervals[i-1][1] == intervals[i][0], "L3 derivative exact adjacency")
+    model.need(len(leaves) <= cfgp["max_interval_calls"], "L3 derivative call budget")
+    if cfgp["subdivision_enabled"] is False:
+        model.need(len(leaves) == 1, "L3 whole-interval V1")
+
+    if all_negative:
+        expected = model.interval_json(min(x[0] for x in enclosures),
+                                       max(x[1] for x in enclosures))
+        model.need(r["final_Bprime_enclosure"] == expected, "L3 final Bprime hull")
+    else:
+        model.need(r["final_Bprime_enclosure"] is None or
+                   isinstance(r["final_Bprime_enclosure"], dict), "L3 unresolved final enclosure")
+    model.need(r["Bprime_upper_lt_zero"] is all_negative, "L3 final derivative predicate")
+    certified = all_negative and ehi < 0
+    model.need(r["certified"] is certified, "L3 certified predicate")
+    model.need(r["monotonicity_inference_applied"] is certified
+               and r["boundary_identity_applied"] is certified, "L3 inference application")
+    model.need(r["direct_F_route_used"] is False
+               and r["sampled_or_finite_difference_used"] is False
+               and r["float_proof_decision_used"] is False, "L3 prohibited proof paths")
+    model.need(r["final_claim"] == ("H(0,s)<0 on [0,s_start]" if certified else None),
+               "L3 final claim")
+    model.need((r["failure_reason"] is None) is certified, "L3 failure state")
+    return certified
+
+
 def _candidate(block: list[dict[str, Any]], summary: dict[str, Any],
                config: dict[str, Any]) -> bool:
     idx = summary["candidate_index"]
@@ -317,16 +537,16 @@ def _candidate(block: list[dict[str, Any]], summary: dict[str, Any],
     l1 = [r for r in block if r.get("node") == "L1"]
     l2 = [r for r in block if r.get("node") == "L2"]
     l3 = [r for r in block if r.get("node") == "L3"]
-    for r in l1+l2+l3:
+    for r in l1+l2:
         model.need(r["candidate_index"] == idx, "candidate index")
         _check_tile(r, config, r["node"])
+    model.need(len(l3) == 1, "single L3 monotonicity record")
+    ok3 = _check_l3(l3[0], config, idx, s_start)
     _cover([_rect_from_l1(r) for r in l1],
            (Fraction(0), u_max, -model.S_NEG, s_start), "L1")
     _cover1(l2, -model.S_NEG, s_start, "L2")
-    _cover1(l3, Fraction(0), s_start, "L3")
     ok1 = all(r["certified"] for r in l1)
     ok2 = all(r["certified"] for r in l2)
-    ok3 = all(r["certified"] for r in l3)
     js = [r for r in block if r.get("record_type") == "J_START"]
     if js:
         model.need(len(js) == 1, "single J_START")
@@ -385,6 +605,8 @@ def verify_records(records: list[dict[str, Any]], config: dict[str, Any],
         "candidate_summaries": expected,
         "accepted_candidate_index": accepted[0] if accepted else None,
         "all_F_Fr_consumers_finite_routes": True,
+        "l3_boundary_monotonicity_checked": True,
+        "all_required_consumers_authorized_routes": True,
         "closed_coverage_checked": True,
         "route_trees_checked": True,
         "R1_R4_runtime_repairs_bound": True,

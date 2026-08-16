@@ -18,6 +18,8 @@ SOURCE_NAMES = [
     "blocal_v22_boundary.py",
     "blocal_v22_checker.py",
     "blocal_v22_checker_test.py",
+    "blocal_v22_l3_bprime.py",
+    "blocal_v22_l3_bprime_test.py",
     "blocal_v22_runner.py",
     "blocal_v22_static_test.py",
     "blocal_v22_symbolic_audit.py",
@@ -49,6 +51,7 @@ def main() -> int:
     route = (HERE/"blocal_v22_boundary.py").read_text()
     runner = (HERE/"blocal_v22_runner.py").read_text()
     checker = (HERE/"blocal_v22_checker.py").read_text()
+    l3 = (HERE/"blocal_v22_l3_bprime.py").read_text()
     policy_text = (HERE/"blocal_v22_policy.py").read_text()
 
     for token in (
@@ -87,14 +90,27 @@ def main() -> int:
         "effective_floor_registry", "exact six floor sites",
         "Duffy strengthened Z", "Taylor2 remainder",
         "condition5", "containment-first flags",
+        "L3_MONOTONICITY", "L3 complete closed s domain",
     ):
         need(token in checker, f"checker binding token {token}")
+
+    for token in ("BLOCAL_L3_STAGE1_ENDPOINT_PLUS_BPRIME_MONOTONICITY_V1",
+                  "BLOCAL_L3_BPRIME_EXTENSION_DOMAIN_AUDIT_V1",
+                  "INHERITED_STAGE1_ANALYTIC_BRANCH_GUARDS_V1",
+                  "direct_F_route_used", "float_proof_decision_used"):
+        need(token in l3 or token in (HERE/"blocal_v22_model.py").read_text(),
+             f"L3 Bprime binding token {token}")
 
     out = subprocess.run(
         [sys.executable, str(HERE/"blocal_v22_checker_test.py")],
         check=True, capture_output=True, text=True)
     need("ALL_BINDING_NEGATIVE_CONTROLS_PASS" in out.stdout,
          "negative controls")
+    l3out = subprocess.run(
+        [sys.executable, str(HERE/"blocal_v22_l3_bprime_test.py")],
+        check=True, capture_output=True, text=True)
+    need("L3_BPRIME_BINDING_NEGATIVE_CONTROLS_PASS" in l3out.stdout,
+         "L3 Bprime negative controls")
 
     marker = (HERE/"READINESS_DRAFT").read_text()
     need("readiness_draft_revision=2" in marker, "readiness draft revision")
@@ -103,7 +119,7 @@ def main() -> int:
     need("config_materialized=false" in marker, "draft config boundary")
 
     print(json.dumps({
-        "schema": "blocal-v22-finite-static-v2",
+        "schema": "blocal-v22-finite-static-v3",
         "calculation_free": True,
         "kernel_imported": False,
         "symbolic_audit_exact": True,

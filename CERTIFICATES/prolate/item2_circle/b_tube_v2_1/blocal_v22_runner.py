@@ -17,6 +17,7 @@ DESIGN_COMMITS=[
     "9b62f3453e4878dae262c69f545f0ea8bac93d5f",
     "d608794d140426e49cafbe4279f48fb00fd1077a",
     "f21704b2cbd2954acb492ec2a58dbb0765773f1f",
+    "4752e7114d2c6b65fa7be749aad8561ab37791fc",
 ]
 CERTIFICATE_SCHEMA="blocal-certificate-v2-finite-routes"
 SUMMARY_SCHEMA="blocal-run-summary-v2-finite-routes"
@@ -62,7 +63,7 @@ def _load_adapter(root:Path,config:dict[str,Any])->Any:
     return provenance.load_pinned_module(root,{"path":config["adapter"]["path"],"sha256":config["adapter"]["source_sha256"]},
         "blocal_v22_pinned_adapter",("arb_ball_to_canonical_dyadic_interval","AdapterError"),{"ADAPTER_ID":model.ADAPTER_ID})
 
-def _load_aux(root:Path,config:dict[str,Any])->tuple[Any,Any,Any]:
+def _load_aux(root:Path,config:dict[str,Any])->tuple[Any,Any,Any,Any]:
     pins=config["implementation"]["sources_sha256"]
     route_path="CERTIFICATES/prolate/item2_circle/b_tube_v2_1/blocal_v22_boundary.py"
     route=provenance.load_pinned_module(root,{"path":route_path,"sha256":pins[route_path]},"blocal_v22_pinned_finite_route",
@@ -71,8 +72,15 @@ def _load_aux(root:Path,config:dict[str,Any])->tuple[Any,Any,Any]:
         "blocal_v22_pinned_symbolic_audit",("run_audit",),{"AUDIT_ID":model.SYMBOLIC_AUDIT_ID})
     checker=provenance.load_pinned_module(root,{"path":config["checker"]["path"],"sha256":config["checker"]["source_sha256"]},
         "blocal_v22_pinned_checker",("verify_records",),{"CHECKER_ID":model.CHECKER_ID})
+    lp=config["l3_bprime_route"]
+    l3=provenance.load_pinned_module(root,{"path":lp["path"],"sha256":lp["source_sha256"]},
+        "blocal_v22_pinned_l3_bprime",("prepare","certify_l3"),
+        {"ROUTE_ID":model.L3_BPRIME_ROUTE_ID,"POLICY_ID":model.L3_BPRIME_POLICY_ID,
+         "DOMAIN_AUDIT_ID":model.L3_BPRIME_DOMAIN_AUDIT_ID,
+         "BRANCH_GUARD_AUDIT_ID":model.L3_BPRIME_BRANCH_GUARD_AUDIT_ID,
+         "IDENTITY_ID":model.L3_BOUNDARY_IDENTITY_ID,"INFERENCE_ID":model.L3_MONOTONICITY_INFERENCE_ID})
     a=audit.run_audit();model.need(a.get("exact_algebra") is True and a.get("F_route_exact") is True and a.get("J_equals_rho_K") is True,"symbolic audit gate")
-    return route,audit,checker
+    return route,audit,checker,l3
 
 def _strict(iv:dict[str,Any],sign:str)->bool:
     lo,hi=model.interval_fractions(iv,"strict");return lo>0 if sign=="POS" else hi<0
@@ -211,7 +219,7 @@ def _build_j_start(candidate_index:int,lambda_start:Fraction,u_max:Fraction,conf
     return None,"J_START_MAX_BISECTIONS",f_count
 
 def _append_candidate(records:list[dict[str,Any]],previous:str,index:int,s_start:Fraction,u_max:Fraction,config:dict[str,Any],
-                      route:Any,kernel:Any,adapter:Any,acb:Any,arb:Any,fmpq:Any,
+                      route:Any,l3_route:Any,l3_prepared:Any,kernel:Any,adapter:Any,acb:Any,arb:Any,fmpq:Any,
                       progress:_ProgressJournal)->tuple[str,tuple|None,dict[str,int],int]:
     lam_start=model.LAMBDA_PLUS+s_start
     pair_started=time.monotonic()
@@ -233,16 +241,14 @@ def _append_candidate(records:list[dict[str,Any]],previous:str,index:int,s_start
         elapsed_seconds=f"{time.monotonic()-node_started:.6f}")
     node_started=time.monotonic();progress.append("NODE_START",candidate_index=index,node="L3",
         lambda_start=model.rational_json(lam_start),u_max=model.dyadic_json(u_max),evaluation_count=0)
-    l3=_certify_outer("L3",index,(Fraction(0),s_start),config,
-        lambda s0,s1:route.enclose_f(kernel,adapter,acb,arb,fmpq,config,Fraction(1),Fraction(1),model.LAMBDA_PLUS+s0,model.LAMBDA_PLUS+s1,"NEG"),"NEG")
-    progress.append("NODE_COMPLETE",candidate_index=index,node="L3",status="CERTIFIED" if l3[1] else "INCOMPLETE",
-        evaluation_count=l3[3],evaluation_scope="OUTER_CELLS",leaf_count=len(l3[0]),failure_reason=l3[2],
+    l3rec,l3ok,l3why,l3n=l3_route.certify_l3(l3_prepared,adapter,index,lam_start,s_start,config)
+    progress.append("NODE_COMPLETE",candidate_index=index,node="L3",status="CERTIFIED" if l3ok else "INCOMPLETE",
+        evaluation_count=l3n,evaluation_scope="BPRIME_INTERVAL_CALLS",leaf_count=len(l3rec["derivative_interval_records"]),failure_reason=l3why,
         elapsed_seconds=f"{time.monotonic()-node_started:.6f}")
-    results={"L1":l1,"L2":l2,"L3":l3};counts={};evals={};failure=None;allok=True
-    for node in ("L1","L2","L3"):
-        leaves,ok,why,n=results[node]
-        for rec in leaves:previous=model.append_record(records,previous,rec)
-        counts[node]=len(leaves);evals[node]=n;allok=allok and ok;failure=failure or why
+    counts={"L1":len(l1[0]),"L2":len(l2[0]),"L3":1};evals={"L1":l1[3],"L2":l2[3],"L3":l3n}
+    failure=l1[2] or l2[2] or l3why;allok=l1[1] and l2[1] and l3ok
+    for rec in l1[0]+l2[0]:previous=model.append_record(records,previous,rec)
+    previous=model.append_record(records,previous,l3rec)
     j=None;jn=0
     if allok:
         node_started=time.monotonic();progress.append("NODE_START",candidate_index=index,node="J_START",
@@ -256,9 +262,13 @@ def _append_candidate(records:list[dict[str,Any]],previous:str,index:int,s_start
         progress.append("NODE_SKIPPED",candidate_index=index,node="J_START",status="PREREQUISITE_INCOMPLETE",
             evaluation_count=0,evaluation_scope="F_POINT_OUTER_EVALUATIONS",failure_reason=failure)
     accepted=allok and j is not None
+    node_status={"L1":"CERTIFIED" if l1[1] else "INCOMPLETE",
+                 "L2":"CERTIFIED" if l2[1] else "INCOMPLETE",
+                 "L3":"CERTIFIED" if l3ok else "INCOMPLETE",
+                 "J_START":"CERTIFIED" if j else "NOT_CERTIFIED"}
     previous=model.append_record(records,previous,{"record_type":"CANDIDATE_SUMMARY","candidate_index":index,
         "lambda_start":model.rational_json(lam_start),"u_max":model.dyadic_json(u_max),"coverage_counts":counts,
-        "route_evaluations":{**evals,"J_START":jn},"node_status":{n:("CERTIFIED" if results[n][1] else "INCOMPLETE") for n in results}|{"J_START":"CERTIFIED" if j else "NOT_CERTIFIED"},
+        "route_evaluations":{**evals,"J_START":jn},"node_status":node_status,
         "candidate_accepted":accepted,"first_failure_reason":None if accepted else (failure or "CANDIDATE_INCOMPLETE")})
     progress.append("PAIR_COMPLETE",candidate_index=index,status="ACCEPTED" if accepted else "INCOMPLETE",
         evaluation_count=sum(evals.values())+jn,evaluation_scope="NODE_REPORTED_EVALUATIONS",
@@ -274,20 +284,20 @@ def run(config_path:Path,output_directory:Path)->dict[str,Any]:
     config_hash=model.sha256_bytes(raw);progress=_ProgressJournal(output_directory/PROGRESS_FILE)
     progress.append("RUN_START",source_head=source_head,blocal_run_config_sha256=config_hash,
                     lambda_candidate_count=len(config["lambda_candidates"]),u_max_candidate_count=len(config["u_max_candidates"]))
-    route,audit,checker=_load_aux(root,config);adapter=_load_adapter(root,config)
+    route,audit,checker,l3_route=_load_aux(root,config);adapter=_load_adapter(root,config)
     from flint import acb,arb,ctx,fmpq  # type: ignore[import-not-found]
     ctx.prec=config["precision"]["bits"]
     kernel=provenance.load_pinned_module(root,config["kernel"],"blocal_v22_pinned_kernel",tuple(config["kernel"]["required_api"]),{"FORMULA_STATE":config["kernel"]["formula_state"]})
-    helper=route.validate_helper_lemmas(arb,fmpq,config)
+    helper=route.validate_helper_lemmas(arb,fmpq,config);l3_prepared=l3_route.prepare(root,config)
     records=[];previous=model.chain_genesis(config_hash)
     previous=model.append_record(records,previous,{"record_type":"RUN_HEADER","schema":model.SCHEMA,"design_version":model.DESIGN_VERSION,
         "source_head":source_head,"blocal_run_config_sha256":config_hash,"design_contracts":config["design_contracts"],"design_commits":DESIGN_COMMITS,
         "kernel_source_sha256":config["kernel"]["sha256"],"adapter_source_sha256":config["adapter"]["source_sha256"],
-        "helper_lemma_validation":helper,"route_policies":config["route_policies"],"geometry":config["geometry"],"budgets":config["budgets"],
+        "helper_lemma_validation":helper,"route_policies":config["route_policies"],"l3_bprime_route":config["l3_bprime_route"],"geometry":config["geometry"],"budgets":config["budgets"],
         "chain_domain":model.CHAIN_DOMAIN,"chain_genesis":model.chain_genesis(config_hash)})
     totals={"L1":0,"L2":0,"L3":0};selected=None;attempted=0;jtotal=0
     for idx,(s,u) in enumerate(_schedule(config)):
-        previous,here,counts,jc=_append_candidate(records,previous,idx,s,u,config,route,kernel,adapter,acb,arb,fmpq,progress)
+        previous,here,counts,jc=_append_candidate(records,previous,idx,s,u,config,route,l3_route,l3_prepared,kernel,adapter,acb,arb,fmpq,progress)
         for k in totals:totals[k]+=counts[k]
         attempted+=1;jtotal+=jc
         if here is not None:selected=here;break
@@ -299,7 +309,8 @@ def run(config_path:Path,output_directory:Path)->dict[str,Any]:
     check=checker.verify_records(records,config,config_hash);model.need(check["valid"] is True,"checker gate")
     machine={"schema":MACHINE_SCHEMA,"status":model.COMPLETE if selected else model.INCOMPLETE,"selected_candidate_index":selected[0] if selected else None,
              "lambda_start":model.rational_json(selected[1]) if selected else None,"u_max":model.dyadic_json(selected[2]) if selected else None,
-             "start_root_interval":selected[3]["r_interval"] if selected else None,"all_F_Fr_consumers_finite_routes":True}
+             "start_root_interval":selected[3]["r_interval"] if selected else None,"all_F_Fr_consumers_finite_routes":True,
+             "l3_boundary_monotonicity_route":True,"all_required_consumers_authorized_routes":True}
     certificate={"schema":CERTIFICATE_SCHEMA,"design_version":model.DESIGN_VERSION,"status":machine["status"],"source_head":source_head,
         "design_commits":DESIGN_COMMITS,"design_contracts":config["design_contracts"],"blocal_run_config_sha256":config_hash,
         "kernel_source_sha256":config["kernel"]["sha256"],"selected_candidate_index":machine["selected_candidate_index"],"lambda_start":machine["lambda_start"],

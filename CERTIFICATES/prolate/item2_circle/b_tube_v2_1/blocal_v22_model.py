@@ -8,13 +8,36 @@ import blocal_v22_policy as policy
 
 SCHEMA = "blocal-run-config-v2"
 DESIGN_VERSION = "2.2"
-CHECKER_ID = "BLOCAL_V22_FINITE_ROUTES_CHECKER_V2"
+CHECKER_ID = "BLOCAL_V22_FINITE_ROUTES_CHECKER_V3"
 SYMBOLIC_AUDIT_ID = "BLOCAL_V22_FINITE_ROUTES_SYMBOLIC_AUDIT_V2"
 CHAIN_DOMAIN = "BLOCAL-COVERAGE-CHAIN-v2.2-finite-routes"
 COMPLETE = "BLOCAL_COMPLETE"
 INCOMPLETE = "BLOCAL_INCOMPLETE"
 PATCH_TYPE = "EXACT_DYADIC_SQUARE"
 REGULARIZATION_METHOD = "TWO_TRIANGLE_DUFFY_AFTER_SYMBOLIC_CANCELLATION_V2"
+L3_BPRIME_ROUTE_ID = "BLOCAL_L3_STAGE1_ENDPOINT_PLUS_BPRIME_MONOTONICITY_V1"
+L3_BPRIME_POLICY_ID = "BLOCAL_L3_BPRIME_STAGE1_POLICY_V1"
+L3_BPRIME_DOMAIN_AUDIT_ID = "BLOCAL_L3_BPRIME_EXTENSION_DOMAIN_AUDIT_V1"
+L3_BPRIME_BRANCH_GUARD_AUDIT_ID = "INHERITED_STAGE1_ANALYTIC_BRANCH_GUARDS_V1"
+L3_BOUNDARY_IDENTITY_ID = "BLOCAL_L3_BOUNDARY_IDENTITY_B_EQ_F_R1_V1"
+L3_MONOTONICITY_INFERENCE_ID = "BLOCAL_L3_MONOTONICITY_FROM_ENDPOINT_V1"
+L3_BPRIME_DESIGN_SHA256 = "e726cb3ebd3c10209bac179d50fe9066b5c79d2701fcb3de1ab2e5f3c048cb01"
+L3_BPRIME_SOURCE_PATH = "CERTIFICATES/prolate/item2_circle/b_tube_v2_1/blocal_v22_l3_bprime.py"
+STAGE1_BPRIME_SOURCE_SHA256 = "f5f2fe68773423e7ff037e4be9e31094a4ceff5489abd5aff8b14fc1361cd671"
+STAGE1_VERIFY_CHANGE_SHA256 = "ee77ba15192a288491eb8b0fe9ecfac5ce0275808ac83f65a36503dc27cc1233"
+STAGE1_BPLUS_LO = Fraction(-1989245103410365999127431, 10**30)
+STAGE1_BPLUS_HI = Fraction(-346352715755865908388961, 25*10**28)
+
+def rational_interval_json(lower: Fraction, upper: Fraction) -> dict[str, Any]:
+    need(lower <= upper, "reversed rational interval")
+    return {"lo": rational_json(lower), "hi": rational_json(upper)}
+
+def rational_interval_fractions(value: Any, where: str = "rational interval") -> tuple[Fraction, Fraction]:
+    obj = exact_keys(value, {"lo", "hi"}, where)
+    lower = fraction_from_rational(obj["lo"], f"{where}.lo")
+    upper = fraction_from_rational(obj["hi"], f"{where}.hi")
+    need(lower <= upper, f"{where}: reversed")
+    return lower, upper
 
 need = v21.need
 sha256_bytes = v21.sha256_bytes
@@ -103,7 +126,7 @@ def validate_config(config: dict[str, Any]) -> None:
         "candidate_order", "precision", "budgets", "route_policies", "canonicalizer_id",
         "adapter", "outputs", "terminal_state_before_run", "geometry", "checker",
         "symbolic_audit", "base_v21", "design_contracts",
-        "lambda_candidate_reduction",
+        "lambda_candidate_reduction", "l3_bprime_route",
     }, "config")
     need(config["schema"] == SCHEMA and config["design_version"] == DESIGN_VERSION,
          "config identity")
@@ -129,6 +152,29 @@ def validate_config(config: dict[str, Any]) -> None:
     need(config["kernel"]["single_supply"] is True, "single supply")
     need(config["kernel"]["import_policy"] == "HASH_BEFORE_IMPORT_ORIGIN_MATCH_REHASH_AFTER_IMPORT",
          "kernel import")
+    l3=config["l3_bprime_route"]
+    exact_keys(l3, {
+        "id","policy_id","path","source_sha256","stage1_bprime_member_sha256",
+        "stage1_verify_change_of_variables_sha256","identity_id","inference_id",
+        "domain_audit_id","branch_guard_audit_id","python_flint","dps","bands",
+        "rel_tol","eval_limit","depth_limit","max_interval_calls",
+        "max_subdivision_depth","subdivision_enabled","endpoint_evidence",
+    }, "l3_bprime_route")
+    need(l3["id"]==L3_BPRIME_ROUTE_ID and l3["policy_id"]==L3_BPRIME_POLICY_ID, "L3 Bprime route ids")
+    need(l3["path"]==L3_BPRIME_SOURCE_PATH and l3["source_sha256"]==pins.get(L3_BPRIME_SOURCE_PATH), "L3 Bprime source pin")
+    need(l3["stage1_bprime_member_sha256"]==STAGE1_BPRIME_SOURCE_SHA256, "Stage-1 Bprime member pin")
+    need(l3["stage1_verify_change_of_variables_sha256"]==STAGE1_VERIFY_CHANGE_SHA256, "Stage-1 identity source pin")
+    need(l3["identity_id"]==L3_BOUNDARY_IDENTITY_ID and l3["inference_id"]==L3_MONOTONICITY_INFERENCE_ID, "L3 identity/inference ids")
+    need(l3["domain_audit_id"]==L3_BPRIME_DOMAIN_AUDIT_ID and l3["branch_guard_audit_id"]==L3_BPRIME_BRANCH_GUARD_AUDIT_ID, "L3 audit ids")
+    need(l3["python_flint"]=="0.9.0" and l3["dps"]==18 and l3["bands"]==4, "L3 Bprime runtime policy")
+    need(fraction_from_dyadic(l3["rel_tol"])==Fraction(1,1<<18), "L3 Bprime rel_tol")
+    need(l3["eval_limit"]==8000 and l3["depth_limit"]==22, "L3 Bprime integral budgets")
+    need(l3["max_interval_calls"]==1 and l3["max_subdivision_depth"]==0 and l3["subdivision_enabled"] is False, "L3 Bprime outer policy")
+    ep=l3["endpoint_evidence"]
+    exact_keys(ep,{"evaluation_key","enclosure"},"L3 endpoint evidence")
+    need(ep["evaluation_key"]=="B(206539/100000)","L3 endpoint key")
+    elo,ehi=rational_interval_fractions(ep["enclosure"],"L3 endpoint enclosure")
+    need((elo,ehi)==(STAGE1_BPLUS_LO,STAGE1_BPLUS_HI) and ehi<0,"L3 endpoint enclosure pin")
     need(fraction_from_rational(config["lambda_plus"]) == LAMBDA_PLUS, "lambda_plus")
     need(fraction_from_dyadic(config["s_neg"]) == S_NEG, "s_neg")
     increments=[fraction_from_dyadic(x) for x in config["lambda_candidates"]]
@@ -177,4 +223,5 @@ def validate_config(config: dict[str, Any]) -> None:
         "f5":"cf64fcfee14e73e3784c6b4af1027b53e7d24cf605631ec396fcf28a3dbe9e41",
         "method_selection_addendum":"7fafe5f465f9f38e61831b804a4bc95090af41b8fe31347897e7b2f40bf3d316",
         "c1_floor_spec":"8492755d298ace4c09f5118993eb2f2fa968d55ae5d04b81ff20c2c856fc90d3",
+        "l3_bprime":L3_BPRIME_DESIGN_SHA256,
     }, "design contract hashes")
