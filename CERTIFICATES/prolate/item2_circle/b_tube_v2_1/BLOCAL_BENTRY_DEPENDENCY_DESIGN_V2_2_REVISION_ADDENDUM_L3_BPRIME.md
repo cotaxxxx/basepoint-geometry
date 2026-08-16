@@ -80,7 +80,10 @@ provided that all of the following are verified:
 1. the exact coordinate identity `H(0,s)=F(1,lambda_plus+s)` is reconstructed from the B-LOCAL model;
 2. the Stage-1 boundary function is the pinned `B(lambda)=F(1,lambda)` object from the audited independent re-derivation;
 3. the Stage-1 certificate, source head, manifest, and payload pins match the committed dependency descriptor;
-4. no alternate boundary implementation, sampled function, floating surrogate, or vendor-only approximation is substituted.
+4. the exact contact-centred change-of-variables identities used by Stage-1 are replayed from the pinned symbolic audit source or an independently pinned equivalent audit;
+5. no alternate boundary implementation, sampled function, floating surrogate, or vendor-only approximation is substituted.
+
+The identity audit is algebraic in `lambda`; it is not licensed merely by the old numerical Stage-1 bracket. Before production, the release audit must verify that every denominator/radical/domain hypothesis needed to use the identity is valid on the actual extended candidate domain required by Section 4.1.
 
 Failure of any identity/provenance prerequisite makes L3 fail closed.
 
@@ -89,6 +92,10 @@ Failure of any identity/provenance prerequisite makes L3 fail closed.
 The normative L3 route ID is
 
 `BLOCAL_L3_STAGE1_ENDPOINT_PLUS_BPRIME_MONOTONICITY_V1`.
+
+The normative inference ID is
+
+`BLOCAL_L3_MONOTONICITY_FROM_ENDPOINT_V1`.
 
 For one candidate with exact
 
@@ -142,7 +149,56 @@ accepts a general lambda ball. The old Stage-1 bracket is fixed only by its stan
 
 A production wrapper must set the pinned runtime precision, initialize module constants with `_init_consts()`, construct the exact candidate interval ball, call the unmodified `Bprime`, and pass the rigorous real enclosure to the canonical outward interval-record path.
 
+### 4.1 Mandatory extended-domain validity audit
+
+Reusing an audited function on a wider lambda interval is not justified merely because the callable accepts a wider ball or because a diagnostic run returned a finite answer.
+
+The release prerequisite therefore includes the audit ID
+
+`BLOCAL_L3_BPRIME_EXTENSION_DOMAIN_AUDIT_V1`.
+
+For each maximal lambda domain that will be admitted by a production config, this audit must verify the hypotheses of the pinned contact-centred B/B-prime formulas on
+
+`t in [0,1]`, `psi in [0,pi/2]`, `lambda in [lambda_plus,lambda_max]`.
+
+At minimum it must establish, by exact algebra and/or rigorous Arb enclosure as appropriate:
+
+- `lambda > 1` on the full domain;
+- positivity and nonvanishing of every denominator/radical argument used by the contact-centred formula, including the required `A` and `W` factors;
+- validity of the real angle-data domain and every analytic branch assumption used to evaluate `h`, `h'`, and `h''`;
+- validity of the exact change-of-variables identities connecting the Stage-1 B integrand to `F(1,lambda)`;
+- absence of a new singularity or branch crossing on the extended lambda interval.
+
+The existing symbolic `verify_change_of_variables.py` identities are admissible provenance for the algebraic equalities because they are symbolic in positive `lambda`, but their domain hypotheses must still be checked on the newly admitted interval.
+
+A finite diagnostic B-prime result cannot substitute for this domain audit. Failure of the audit prevents the derivative route from being used as certificate evidence.
+
+### 4.2 Inherited Stage-1 float branch guards
+
+The pinned `bprime_independent.py` contains Python `float` conversions in narrow internal control-flow guards used to select between rigorous analytic representations of the angle data and to reject unresolved branch-cut separation. Those bytes are part of the already audited Stage-1 payload and are not modified here.
+
+This addendum admits those **inherited guards only**, under the audit ID
+
+`INHERITED_STAGE1_ANALYTIC_BRANCH_GUARDS_V1`.
+
+They may influence only which rigorous representation is attempted. They may not supply or round:
+
+- lambda interval endpoints;
+- B or B-prime enclosure endpoints;
+- derivative sign decisions;
+- candidate selection;
+- coverage decisions;
+- canonical record values.
+
+The wrapper and all new v2.2 L3 code are forbidden from introducing any new binary-float numeric path into those proof decisions. The final strict sign is judged only from the rigorous `acb/arb` enclosure converted outward through the canonical interval path.
+
+The release audit must verify from the pinned source bytes that the admitted float use is limited to the inherited representation/branch guards and that no float-derived quantity is used as proof evidence. Any new float path or any use of a float result to assert `B'<0` is rejected.
+
 ## 5. Fixed derivative policy and candidate domain
+
+The derivative policy ID is
+
+`BLOCAL_L3_BPRIME_STAGE1_POLICY_V1`.
 
 For the first implementation attempt under this design, the derivative policy is inherited from the certified Stage-1 B-prime run unless a later audited config revision changes it explicitly:
 
@@ -178,19 +234,20 @@ in a **single process**.
 The run must:
 
 1. verify the pinned Stage-1 archive/dependency member bytes before import;
-2. set the required `ctx.dps`;
-3. call `_init_consts()` before `Bprime`;
-4. construct the exact interval endpoints without binary-float parsing;
-5. execute all four psi bands in one process under the fixed policy;
-6. preserve every band enclosure and the final summed enclosure;
-7. require the final rigorous upper endpoint to be strictly `< 0`;
-8. record wall time and the exact runtime dependency versions;
-9. record source SHA-256, Stage-1 descriptor SHA-256, exact lambda domain, and policy parameters;
-10. mark the artifact as readiness/design evidence, not yet as a B-LOCAL production certificate.
+2. verify `BLOCAL_L3_BPRIME_EXTENSION_DOMAIN_AUDIT_V1` for the admitted readiness interval;
+3. set the required `ctx.dps`;
+4. call `_init_consts()` before `Bprime`;
+5. construct the exact interval endpoints without binary-float parsing;
+6. execute all four psi bands in one process under `BLOCAL_L3_BPRIME_STAGE1_POLICY_V1`;
+7. preserve every band enclosure and the final summed enclosure;
+8. require the final rigorous upper endpoint to be strictly `< 0`;
+9. record wall time and the exact runtime dependency versions;
+10. record source SHA-256, Stage-1 descriptor SHA-256, exact lambda domain, policy parameters, and admitted branch-guard audit ID;
+11. mark the artifact as readiness/design evidence, not yet as a B-LOCAL production certificate.
 
 The earlier split-process diagnostic is sufficient to motivate this design but is not the production proof artifact.
 
-If the one-process readiness result is non-finite, unresolved, or has upper endpoint `>=0`, implementation promotion stops and the project returns to design review.
+If the one-process readiness result is non-finite, unresolved, has upper endpoint `>=0`, or fails the extended-domain validity audit, implementation promotion stops and the project returns to design review.
 
 ## 7. Production L3 record structure
 
@@ -201,6 +258,7 @@ The top-level L3 record must include at least:
 - `node = "L3"`;
 - route ID `BLOCAL_L3_STAGE1_ENDPOINT_PLUS_BPRIME_MONOTONICITY_V1`;
 - identity lemma ID `BLOCAL_L3_BOUNDARY_IDENTITY_B_EQ_F_R1_V1`;
+- inference ID `BLOCAL_L3_MONOTONICITY_FROM_ENDPOINT_V1`;
 - candidate index;
 - exact `lambda_plus`;
 - exact `s_start`;
@@ -212,11 +270,12 @@ The top-level L3 record must include at least:
 - exact certified endpoint enclosure for `B(lambda_plus)`;
 - derivative source SHA-256;
 - derivative policy ID and exact parameters;
+- extended-domain audit ID/result;
+- inherited branch-guard audit ID/result;
 - exact derivative proof domain `[lambda_plus,lambda_start]`;
 - ordered derivative interval proof records, one when no subdivision is used;
 - final rigorous derivative enclosure or exact hull of the complete derivative partition;
 - explicit predicate `Bprime_upper < 0`;
-- exact monotonicity inference ID;
 - final claim `H(0,s)<0 on [0,s_start]`;
 - certified state and first fail-closed reason when false.
 
@@ -251,14 +310,16 @@ The independent checker must verify at least all of the following before L3 PASS
 4. the Stage-1 dependency has status `STAGE1_CONTENT_AUDITED` and all pinned source/certificate/manifest identities match;
 5. the inherited endpoint evidence proves a strict negative upper bound for `B(lambda_plus)`;
 6. the boundary identity lemma applies to the exact B-LOCAL and Stage-1 quantities;
-7. the derivative source is the pinned `bprime_independent.py` dependency member;
-8. the derivative proof domain exactly covers `[lambda_plus,lambda_start]`;
-9. every derivative proof enclosure is finite and has strict upper endpoint `<0`;
-10. the complete derivative partition, if any, has exact closed-union coverage with no gap;
-11. the monotonicity inference is applied in the correct direction: `B' < 0` and `lambda >= lambda_plus` imply `B(lambda) <= B(lambda_plus)`;
-12. the final L3 claim is the unchanged `H(0,s)<0` on the complete closed interval `[0,s_start]`;
-13. no direct F-route sign result is required or silently substituted for a missing endpoint or derivative prerequisite;
-14. no float, sampled derivative, finite difference, or manually inserted sign flag is accepted as L3 proof evidence.
+7. `BLOCAL_L3_BPRIME_EXTENSION_DOMAIN_AUDIT_V1` covers the full derivative domain;
+8. the derivative source is the pinned `bprime_independent.py` dependency member;
+9. only the inherited branch guards admitted by `INHERITED_STAGE1_ANALYTIC_BRANCH_GUARDS_V1` are present; no new float proof path exists;
+10. the derivative proof domain exactly covers `[lambda_plus,lambda_start]`;
+11. every derivative proof enclosure is finite and has strict upper endpoint `<0`;
+12. the complete derivative partition, if any, has exact closed-union coverage with no gap;
+13. the monotonicity inference is applied in the correct direction: `B' < 0` and `lambda >= lambda_plus` imply `B(lambda) <= B(lambda_plus)`;
+14. the final L3 claim is the unchanged `H(0,s)<0` on the complete closed interval `[0,s_start]`;
+15. no direct F-route sign result is required or silently substituted for a missing endpoint or derivative prerequisite;
+16. no sampled derivative, finite difference, float-derived sign/enclosure endpoint, or manually inserted sign flag is accepted as L3 proof evidence.
 
 A valid-looking top-level L3 summary without reconstructible endpoint and derivative evidence is rejected.
 
@@ -270,20 +331,23 @@ The release test suite must demonstrate rejection of at least these mutations:
 2. Stage-1 endpoint enclosure whose upper endpoint is `>=0`;
 3. wrong Stage-1 certificate, source head, manifest, or payload pin;
 4. missing or wrong `B(lambda)=F(1,lambda)` identity/provenance record;
-5. derivative proof domain beginning at a value strictly greater than `lambda_plus`;
-6. derivative proof domain ending before the candidate's exact `lambda_start`;
-7. derivative interval with upper endpoint `>=0`;
-8. one missing derivative subdivision leaf;
-9. a gap between derivative subdivision leaves;
-10. an unauthorized overlap with inconsistent duplicate interior coverage;
-11. reuse of derivative evidence from a smaller candidate for a larger uncovered candidate;
-12. candidate index or `lambda_start` mismatch;
-13. sampled or finite-difference B-prime evidence;
-14. source bytes differing from the pinned `bprime_independent.py` member;
-15. omission of required `_init_consts()`/runtime initialization provenance in a production wrapper record;
-16. monotonicity inference with the inequality direction reversed;
-17. replacement of `[0,s_start]` by `[s_min,s_start]` with `s_min>0`;
-18. direct insertion of a final L3 PASS flag without complete endpoint/derivative evidence.
+5. missing or failing extended-domain validity audit;
+6. derivative proof domain beginning at a value strictly greater than `lambda_plus`;
+7. derivative proof domain ending before the candidate's exact `lambda_start`;
+8. derivative interval with upper endpoint `>=0`;
+9. one missing derivative subdivision leaf;
+10. a gap between derivative subdivision leaves;
+11. an unauthorized overlap with inconsistent duplicate interior coverage;
+12. reuse of derivative evidence from a smaller candidate for a larger uncovered candidate;
+13. candidate index or `lambda_start` mismatch;
+14. sampled or finite-difference B-prime evidence;
+15. source bytes differing from the pinned `bprime_independent.py` member;
+16. omission of required `_init_consts()`/runtime initialization provenance in a production wrapper record;
+17. introduction of any new float-valued proof-decision path outside the byte-identical inherited Stage-1 representation/branch guards;
+18. use of an inherited float guard value itself as a B-prime sign or enclosure endpoint;
+19. monotonicity inference with the inequality direction reversed;
+20. replacement of `[0,s_start]` by `[s_min,s_start]` with `s_min>0`;
+21. direct insertion of a final L3 PASS flag without complete endpoint/derivative evidence.
 
 A negative-control test passes only when the checker rejects the mutation for the intended reason.
 
