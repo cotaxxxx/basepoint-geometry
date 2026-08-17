@@ -24,6 +24,7 @@ K_ROUTE_ID = policy.K_ROUTE_ID
 HELPER_VALIDATION_ID = policy.HELPER_VALIDATION_ID
 METHOD_SELECTION_ADDENDUM_SHA256 = "7fafe5f465f9f38e61831b804a4bc95090af41b8fe31347897e7b2f40bf3d316"
 C1_FLOOR_SPEC_SHA256 = "8492755d298ace4c09f5118993eb2f2fa968d55ae5d04b81ff20c2c856fc90d3"
+GAMMA_BOUND_BASIS_ID = "GAMMA_UNIT_INTERVAL_SOS_V1"
 HALF = Fraction(1, 2)
 PI_LO = Fraction(333, 106)
 PI_HI = Fraction(355, 113)
@@ -476,11 +477,22 @@ def _angle4_one(adapter: Any, acb_type: Any, arb_type: Any,
                  for k,v in enumerate((h,h1,h2,h3,h4)))  # type: ignore[return-value]
 
 
+def _gamma_exact_unit_intersection(
+    lo: Fraction, hi: Fraction
+) -> tuple[Fraction, Fraction]:
+    model.need(lo <= hi, "gamma canonical interval order")
+    lo = max(Fraction(0), lo)
+    hi = min(Fraction(1), hi)
+    model.need(lo <= hi, "gamma exact clamp intersection")
+    return lo, hi
+
+
 def _angle4_adaptive(adapter: Any, acb_type: Any, arb_type: Any,
                      gamma: Any, max_bin_depth: int, where: str
                      ) -> tuple[tuple[Any,Any,Any,Any,Any],list[dict[str,Any]]]:
     clipped=gamma.max(arb_type(0)).min(arb_type(1))
     lo,hi=model.interval_fractions(_canonical(adapter,clipped,where+".clamp"),where+".clamp")
+    lo,hi=_gamma_exact_unit_intersection(lo,hi)
     leaves:list[tuple[Fraction,Fraction,int,tuple[Any,Any,Any,Any,Any]]]=[]
     def ball(a:Fraction,b:Fraction)->Any:
         return (arb_type(a.numerator)/a.denominator).union(arb_type(b.numerator)/b.denominator)
@@ -496,7 +508,8 @@ def _angle4_adaptive(adapter: Any, acb_type: Any, arb_type: Any,
     cuts=[leaves[0][0]]+[x[1] for x in leaves]
     records=[{"initial_interval":model.interval_json(lo,hi),
         "cuts":[model.rational_json(x) for x in cuts],"bin_count":len(leaves),
-        "max_bin_depth":max(x[2] for x in leaves),"use_count":1}]
+        "max_bin_depth":max(x[2] for x in leaves),"use_count":1,
+        "degenerate":lo==hi}]
     return (out[0],out[1],out[2],out[3],out[4]),records
 
 
@@ -608,6 +621,7 @@ def _geometry_jet(quantity:str,kernel:Any,adapter:Any,acb_type:Any,arb_type:Any,
             "sqrt_policy":policy.SQRT_POLICY_ID,"measure_identity":policy.MEASURE_ID,
             "gamma_policy":policy.GAMMA_POLICY_ID,"gamma_subdivisions":[],"gamma_fallback_used":False,
             "gamma_clamp":"[0,1]","gamma_clamp_fail_closed":True,
+            "gamma_bound_basis":GAMMA_BOUND_BASIS_ID,
             "effective_floor_record_sha256":ids,"taylor_order":2,"gamma_lemma":"SOS_GAMMA_IN_0_1"}
     if c1dig is not None:detail.update({"c1_floor_record_sha256":c1dig,
         "c1_q_floor_source":"C1_A_W2_B" if not c1rec["component_dropped"] else "C1_COMPONENT_DROPPED"})
@@ -695,7 +709,9 @@ def _regular_eval(quantity: str, kernel: Any, adapter: Any, acb_type: Any,
         "denominator_policy":policy.DENOMINATOR_POLICY_ID,
         "sqrt_policy":policy.SQRT_POLICY_ID,
         "gamma_policy":policy.GAMMA_POLICY_ID,"gamma_subdivisions":gsplits,
-        "gamma_fallback_used":bool(gsplits),"measure_identity":policy.MEASURE_ID,
+        "gamma_fallback_used":bool(gsplits),"gamma_clamp":"[0,1]",
+        "gamma_clamp_fail_closed":True,"gamma_bound_basis":GAMMA_BOUND_BASIS_ID,
+        "measure_identity":policy.MEASURE_ID,
     }
     if cell.region=="R2":
         assert r2_w_lo is not None and r2_cos_hi is not None
@@ -797,6 +813,7 @@ def _duffy_eval(quantity: str, kernel: Any, adapter: Any, acb_type: Any,
         "gamma_policy":policy.GAMMA_POLICY_ID,"gamma_subdivisions":gsplits,
         "gamma_fallback_used":any(x["bin_count"]>1 for x in gsplits),"gamma_fallback_class":"corner" if corner else "non_corner",
         "gamma_clamp":"[0,1]","gamma_clamp_fail_closed":True,
+        "gamma_bound_basis":GAMMA_BOUND_BASIS_ID,
         "sqrt_policy":policy.SQRT_POLICY_ID,
         "bounded_extensions":{"y_h":"[0,1]" if corner else "CHILD_DIRECT",
                               "v":"[-1,1]" if corner else "CHILD_DIRECT",

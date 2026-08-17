@@ -180,12 +180,86 @@ def _gamma_detail() -> dict:
     return {
         "gamma_policy": policy.GAMMA_POLICY_ID,
         "gamma_subdivisions": [{"initial_interval":model.interval_json(0,1),
-            "cuts":[model.rational_json(0),model.rational_json(1)],"bin_count":1,"max_bin_depth":0,"use_count":1}],
+            "cuts":[model.rational_json(0),model.rational_json(1)],"bin_count":1,"max_bin_depth":0,"use_count":1,
+            "degenerate":False}],
         "gamma_fallback_used": False,
         "gamma_clamp":"[0,1]","gamma_clamp_fail_closed":True,
+        "gamma_bound_basis":"GAMMA_UNIT_INTERVAL_SOS_V1",
         "sqrt_policy": policy.SQRT_POLICY_ID,
         "measure_identity": policy.MEASURE_ID,
     }
+
+
+def check_gamma_exact_unit_intersection() -> None:
+    eps = Fraction(1, 1 << 32)
+
+    lo,hi=boundary._gamma_exact_unit_intersection(
+        Fraction(-11,1 << 32),Fraction((1 << 32)+5,1 << 32))
+    model.need((lo,hi)==(Fraction(0),Fraction(1)),"gamma clamp observed outward excess")
+
+    lo,hi=boundary._gamma_exact_unit_intersection(Fraction(3,4),Fraction(1)+eps)
+    model.need((lo,hi)==(Fraction(3,4),Fraction(1)),"gamma clamp upper excess")
+
+    rejects(lambda:boundary._gamma_exact_unit_intersection(Fraction(1)+eps,Fraction(1)+2*eps),
+            "gamma interval wholly above one")
+    rejects(lambda:boundary._gamma_exact_unit_intersection(-2*eps,-eps),
+            "gamma interval wholly below zero")
+
+    class FakeBall:
+        def __init__(self, lo=0, hi=None):
+            self.lo=Fraction(lo);self.hi=self.lo if hi is None else Fraction(hi)
+        def __truediv__(self, n):
+            return FakeBall(self.lo/Fraction(n),self.hi/Fraction(n))
+        def union(self, other):
+            return FakeBall(min(self.lo,other.lo),max(self.hi,other.hi))
+        def max(self, other):
+            return self
+        def min(self, other):
+            return self
+
+    class FakeOut:
+        def union(self, other):
+            return self
+
+    def exercise(raw_lo:Fraction,raw_hi:Fraction,expected:Fraction)->None:
+        old_canonical=boundary._canonical
+        old_angle=boundary._angle4_one
+        calls=[]
+        try:
+            boundary._canonical=lambda *args,**kwargs:model.interval_json(raw_lo,raw_hi)
+            def fake_angle(*args,**kwargs):
+                calls.append(1)
+                return tuple(FakeOut() for _ in range(5))
+            boundary._angle4_one=fake_angle
+            _,rows=boundary._angle4_adaptive(
+                object(),object(),FakeBall,FakeBall(raw_lo,raw_hi),12,"gamma-test")
+        finally:
+            boundary._canonical=old_canonical
+            boundary._angle4_one=old_angle
+        model.need(len(calls)==1 and len(rows)==1,"gamma degenerate one leaf")
+        row=rows[0]
+        rlo,rhi=model.interval_fractions(row["initial_interval"],"gamma regression")
+        cuts=[model.fraction_from_rational(x) for x in row["cuts"]]
+        model.need((rlo,rhi)==(expected,expected),"gamma degenerate interval")
+        model.need(row["degenerate"] is True and row["bin_count"]==1
+                   and row["max_bin_depth"]==0 and cuts==[expected,expected],
+                   "gamma degenerate record normal form")
+
+        detail=_gamma_detail()
+        detail["gamma_subdivisions"]=rows
+        detail["gamma_fallback_used"]=False
+        checker._check_gamma_detail(detail)
+
+    exercise(-eps,Fraction(0),Fraction(0))
+    exercise(Fraction(1),Fraction(1)+eps,Fraction(1))
+
+    bad=_gamma_detail()
+    bad["gamma_bound_basis"]="UNPROVED_CLAMP"
+    rejects(lambda:checker._check_gamma_detail(bad),"gamma exact bound basis mismatch")
+
+    bad=_gamma_detail()
+    bad["gamma_subdivisions"][0]["degenerate"]=True
+    rejects(lambda:checker._check_gamma_detail(bad),"false gamma degenerate marker")
 
 
 def proof(cfg: dict, quantity: str, value: Fraction,
@@ -442,6 +516,7 @@ def main() -> int:
     cfg = config()
     model.validate_config(cfg)
     check_j_start_f_routing()
+    check_gamma_exact_unit_intersection()
     with tempfile.TemporaryDirectory() as td:
         progress_path = runner.Path(td)/runner.PROGRESS_FILE
         journal = runner._ProgressJournal(progress_path)

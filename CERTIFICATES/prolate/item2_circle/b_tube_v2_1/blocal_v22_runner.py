@@ -306,6 +306,9 @@ def run(config_path:Path,output_directory:Path)->dict[str,Any]:
         "lambda_start":model.rational_json(selected[1]) if selected else None,"u_max":model.dyadic_json(selected[2]) if selected else None,
         "start_root_interval":selected[3]["r_interval"] if selected else None,"exact_counts":{"attempted_candidates":attempted,"j_start_records":jtotal,**totals},
         "records_chain_tip_sha256":chain_tip,"terminal_state":model.COMPLETE if selected else model.INCOMPLETE})
+    out=config["outputs"]
+    records_raw=b"\n".join(model.canonical_json_bytes(r) for r in records)
+    (output_directory/out["records"]).write_bytes(records_raw)
     check=checker.verify_records(records,config,config_hash);model.need(check["valid"] is True,"checker gate")
     machine={"schema":MACHINE_SCHEMA,"status":model.COMPLETE if selected else model.INCOMPLETE,"selected_candidate_index":selected[0] if selected else None,
              "lambda_start":model.rational_json(selected[1]) if selected else None,"u_max":model.dyadic_json(selected[2]) if selected else None,
@@ -316,10 +319,10 @@ def run(config_path:Path,output_directory:Path)->dict[str,Any]:
         "kernel_source_sha256":config["kernel"]["sha256"],"selected_candidate_index":machine["selected_candidate_index"],"lambda_start":machine["lambda_start"],
         "u_max":machine["u_max"],"j_start":selected[3] if selected else None,"counts":totals,"budgets":config["budgets"],"machine_conclusion":machine,
         "scope":"B-LOCAL/B-ENTRY only; workflow/tag/production remain separately unauthorized."}
-    records_raw=b"\n".join(model.canonical_json_bytes(r) for r in records);cert_raw=model.canonical_json_bytes(certificate)
+    cert_raw=model.canonical_json_bytes(certificate)
     summary={"schema":SUMMARY_SCHEMA,"terminal_state":machine["status"],"blocal_run_config_sha256":config_hash,"source_head":source_head,
              "records_sha256":model.sha256_bytes(records_raw),"certificate_sha256":model.sha256_bytes(cert_raw),"calibration_started":False,"tag_created":False}
-    out=config["outputs"];(output_directory/out["records"]).write_bytes(records_raw);(output_directory/out["certificate"]).write_bytes(cert_raw);(output_directory/out["summary"]).write_bytes(model.canonical_json_bytes(summary))
+    (output_directory/out["certificate"]).write_bytes(cert_raw);(output_directory/out["summary"]).write_bytes(model.canonical_json_bytes(summary))
     progress.append("RUN_COMPLETE",status=machine["status"],selected_candidate_index=machine["selected_candidate_index"])
     return summary
 

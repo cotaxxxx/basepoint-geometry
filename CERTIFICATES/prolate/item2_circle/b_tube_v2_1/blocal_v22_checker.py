@@ -69,12 +69,21 @@ def _check_gamma_detail(detail: dict[str, Any]) -> None:
     model.need(splits,"gamma bin record required")
     model.need(detail["gamma_fallback_used"] is any(x["bin_count"]>1 for x in splits), "gamma fallback marker")
     model.need(detail["gamma_clamp"]=="[0,1]" and detail["gamma_clamp_fail_closed"] is True,"gamma clamp")
+    model.need(detail["gamma_bound_basis"]=="GAMMA_UNIT_INTERVAL_SOS_V1","gamma exact bound basis")
     for row in splits:
         lo,hi=model.interval_fractions(row["initial_interval"],"gamma initial")
         cuts=[model.fraction_from_rational(x) for x in row["cuts"]]
         model.need(Fraction(0)<=lo<=hi<=1 and cuts[0]==lo and cuts[-1]==hi,"gamma range/endpoints")
-        model.need(all(cuts[i]<cuts[i+1] for i in range(len(cuts)-1)),"gamma ordered cuts")
+        degenerate=lo==hi
+        model.need(row["degenerate"] is degenerate,"gamma degenerate marker")
         model.need(row["bin_count"]==len(cuts)-1 and row["bin_count"]>=1,"gamma bin count")
+        if degenerate:
+            model.need(len(cuts)==2 and cuts[0]==cuts[1]==lo
+                       and row["bin_count"]==1 and row["max_bin_depth"]==0,
+                       "gamma degenerate single bin")
+        else:
+            model.need(all(cuts[i]<cuts[i+1] for i in range(len(cuts)-1)),
+                       "gamma ordered cuts")
         model.need(0<=row["max_bin_depth"]<=12 and row["use_count"]>0,"gamma depth/use")
 
 
