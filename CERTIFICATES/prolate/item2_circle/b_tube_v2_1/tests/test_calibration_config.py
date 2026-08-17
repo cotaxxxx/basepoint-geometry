@@ -9,6 +9,11 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 import calibration
+import calibration_config
+import calibration_delivery
+import calibration_receipt
+import calibration_runner
+import calibration_verify
 from numeric_schema import Rational, canonical_json_bytes
 
 
@@ -35,6 +40,48 @@ class CalibrationConfigTests(unittest.TestCase):
             "status": calibration.BLOCAL_UNPINNED_STATUS,
         }
         return config
+
+    def test_effective_provenance_namespaces_match_active_config(self):
+        config = self._config()
+        modules = (
+            calibration_config,
+            calibration_runner,
+            calibration_verify,
+            calibration_delivery,
+            calibration_receipt,
+            calibration,
+        )
+        expected = {
+            "AUDITED_SOURCE_COMMIT": config["audited_source_commit"],
+            "DESIGN_COMMIT": config["design_commit"],
+            "CONFIG_SCHEMA": config["schema"],
+            "DESIGN_VERSION": config["design_version"],
+        }
+        for module in modules:
+            for name, value in expected.items():
+                self.assertEqual(
+                    getattr(module, name), value,
+                    f"{module.__name__}.{name} stale after star-import rebinding",
+                )
+
+    def test_source_manifest_provenance_mismatch_rejected(self):
+        config = self._config()
+        manifest = {
+            "audited_source_commit": "0" * 40,
+            "binding_to_final_lambda_start": config["binding_to_final_lambda_start"],
+            "design_commit": config["design_commit"],
+            "kernel_path": calibration.KERNEL_RELATIVE.as_posix(),
+            "kernel_sha256": calibration.KERNEL_SHA256,
+            "mode": config["mode"],
+            "schema": "btube-calibration-source-manifest-v1",
+        }
+        with tempfile.TemporaryDirectory() as temporary:
+            out = Path(temporary)
+            (out / "SOURCE_MANIFEST.json").write_bytes(canonical_json_bytes(manifest))
+            with self.assertRaisesRegex(
+                calibration.CalibrationError, "audited-source provenance mismatch"
+            ):
+                calibration_verify._verify_source_manifest(out, config)
 
     def test_valid_binding_profile_and_precision_equality(self):
         config, raw = calibration.load_config()

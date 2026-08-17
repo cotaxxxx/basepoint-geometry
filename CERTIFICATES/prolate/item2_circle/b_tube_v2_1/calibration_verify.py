@@ -34,6 +34,32 @@ def _verifier_candidate_pairs(config: dict[str, Any]) -> list[tuple[Dyadic, Dyad
     return pairs
 
 
+def _verify_source_manifest(out_dir: Path, config: dict[str, Any]) -> dict[str, Any]:
+    manifest = parse_canonical_json_bytes(
+        (out_dir / "SOURCE_MANIFEST.json").read_bytes(), allow_display=False,
+    )
+    _require_exact_keys(manifest, {
+        "audited_source_commit", "binding_to_final_lambda_start", "design_commit",
+        "kernel_path", "kernel_sha256", "mode", "schema",
+    }, "source manifest")
+    assert_result_namespace(manifest)
+    if manifest["schema"] != "btube-calibration-source-manifest-v1":
+        raise CalibrationError("source manifest schema mismatch")
+    if manifest["audited_source_commit"] != config["audited_source_commit"]:
+        raise CalibrationError("source manifest audited-source provenance mismatch")
+    if manifest["design_commit"] != config["design_commit"]:
+        raise CalibrationError("source manifest design provenance mismatch")
+    if manifest["binding_to_final_lambda_start"] is not config["binding_to_final_lambda_start"]:
+        raise CalibrationError("source manifest binding flag mismatch")
+    if manifest["mode"] != config["mode"]:
+        raise CalibrationError("source manifest mode mismatch")
+    if manifest["kernel_sha256"] != KERNEL_SHA256:
+        raise CalibrationError("source manifest kernel mismatch")
+    if manifest["kernel_path"] != KERNEL_RELATIVE.as_posix():
+        raise CalibrationError("source manifest kernel path mismatch")
+    return manifest
+
+
 def _verify_records(out_dir: Path):
     config, config_raw = load_config(out_dir / "config.calibration.json")
     parsed = parse_canonical_jsonl((out_dir / "calibration_records.jsonl").read_bytes())
@@ -103,6 +129,7 @@ def verify_pre(out_dir: Path, source_head: str) -> int:
     assert_workflow_security()
     config, summary, config_raw = _verify_records(out_dir)
     require_blocal_dependency(config)
+    _verify_source_manifest(out_dir, config)
     load_production_kernel()
     report = {
         "config_sha256": sha256_hex(config_raw),
