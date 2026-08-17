@@ -12,6 +12,21 @@ from numeric_schema import parse_canonical_json_bytes, sha256_hex
 
 
 class CalibrationGuardTests(unittest.TestCase):
+    def _diagnostic_profile(self):
+        config = calibration.load_config()[0]
+        config["mode"] = calibration.CALIBRATION_MODE
+        config["binding_to_final_lambda_start"] = False
+        config["blocal_dependency"] = {
+            "artifact_zip_sha256": None,
+            "certificate_sha256": None,
+            "config_sha256": None,
+            "lambda_start": None,
+            "machine_conclusion": None,
+            "source_head": None,
+            "status": calibration.BLOCAL_UNPINNED_STATUS,
+        }
+        return config
+
     def test_all_repository_python_sources_self_scan_clean(self):
         calibration.assert_clean_source_tree()
 
@@ -48,18 +63,18 @@ class CalibrationGuardTests(unittest.TestCase):
             with self.assertRaises(calibration.CalibrationError):
                 calibration._assert_repo_regular_file(link, root)
 
-    def test_binding_calibration_run_blocked_until_blocal_is_pinned(self):
-        with tempfile.TemporaryDirectory() as temporary:
-            out = Path(temporary) / "run"
-            with self.assertRaisesRegex(
-                calibration.CalibrationError, "B-LOCAL/B-ENTRY dependency is not pinned"
-            ):
-                calibration.run_calibration(out)
-            self.assertFalse(out.exists())
-
-    def test_diagnostic_mode_is_explicit_and_nonbinding(self):
+    def test_binding_dependency_gate_is_now_open_only_for_exact_pin(self):
         config = calibration.load_config()[0]
-        self.assertEqual(calibration.require_diagnostic_mode(config), calibration.Rational(21, 10))
+        calibration.require_blocal_dependency(config)
+        self.assertEqual(config["mode"], calibration.BINDING_MODE)
+        self.assertIs(config["binding_to_final_lambda_start"], True)
+
+    def test_diagnostic_mode_requires_explicit_unpinned_profile(self):
+        config = self._diagnostic_profile()
+        self.assertEqual(
+            calibration.require_diagnostic_mode(config),
+            calibration.Rational(21, 10),
+        )
         self.assertIs(config["binding_to_final_lambda_start"], False)
 
     def test_affine_rule_is_frozen(self):
@@ -69,7 +84,7 @@ class CalibrationGuardTests(unittest.TestCase):
     def test_workflow_has_tag_head_guard_and_no_dispatch(self):
         calibration.assert_workflow_security()
 
-    def test_workflow_has_independent_unpinned_binding_gate(self):
+    def test_workflow_has_independent_binding_gate(self):
         text = calibration.WORKFLOW_PATH.read_text(encoding="utf-8")
         marker = "B-LOCAL/B-ENTRY unpinned: workflow binding run prohibited"
         self.assertIn(marker, text)

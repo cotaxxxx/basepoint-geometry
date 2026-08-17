@@ -48,8 +48,30 @@ from numeric_schema import (  # noqa: E402
 CONFIG_SCHEMA = "btube-calibration-config-v1"
 DESIGN_VERSION = "btube-calibration-design-v1"
 CALIBRATION_MODE = "DIAGNOSTIC_ONLY"
-BLOCAL_STATUS = "UNPINNED"
+BINDING_MODE = "BINDING"
+BLOCAL_UNPINNED_STATUS = "UNPINNED"
+BLOCAL_PINNED_STATUS = "PINNED"
+BLOCAL_STATUS = BLOCAL_PINNED_STATUS
 BLOCAL_STAGE1_UPPER = Rational(206539, 100000)
+BLOCAL_ARTIFACT_SHA256 = "7c1748148470426648dd03a483a076b043ed70558258358834671451267e64dc"
+BLOCAL_CERTIFICATE_SHA256 = "b8d27c01d63f3ea53bfeb165f7e140d739fab6b3949115e0aac3fd64b2d05cb6"
+BLOCAL_CONFIG_SHA256 = "dab371fa62ed10a00029cd31b0002e503952277ef072fb8f5d7fd5222965d469"
+BLOCAL_SOURCE_HEAD = "a8997d11850dbd5b63e3064560a1c311e5c9c267"
+BLOCAL_LAMBDA_START = Rational(3307749, 1600000)
+BLOCAL_MACHINE_CONCLUSION = {
+    "all_F_Fr_consumers_finite_routes": True,
+    "all_required_consumers_authorized_routes": True,
+    "l3_boundary_monotonicity_route": True,
+    "lambda_start": {"p": "3307749", "q": "1600000"},
+    "schema": "btube-blocal-machine-conclusion-v2-finite-routes",
+    "selected_candidate_index": 0,
+    "start_root_interval": {
+        "hi": {"e": 0, "m": "1"},
+        "lo": {"e": 11, "m": "2047"},
+    },
+    "status": "BLOCAL_COMPLETE",
+    "u_max": {"e": 8, "m": "1"},
+}
 KERNEL_SHA256 = "77e7a93c594ba66ac7d98df29ec3c03107b0c63962a5aa60f8503559082c10ac"
 AUDITED_SOURCE_COMMIT = "dbff78474399c47011906631de9cde75992b6d25"
 DESIGN_COMMIT = "4a1b12a2a1e4f89712c33bc554646b44190f6f5b"

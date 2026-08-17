@@ -17,6 +17,8 @@ jobs:
     if: startsWith(github.ref_name, 'btube-v2-1-calibration-approved-')
     runs-on: ubuntu-24.04
     timeout-minutes: 360
+    env:
+      CALIBRATION_CONFIG_SHA256: 2a3c7211a244876276182ab316f49881842b90c07dfd755f7f9235dc424c9f75
     steps:
       - name: Verify approved tag names the exact run head
         shell: bash
@@ -50,16 +52,40 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          test "$(sha256sum config.calibration.json | awk '{print $1}')" = "${CALIBRATION_CONFIG_SHA256}"
+          test "$(wc -c < config.calibration.json)" -eq 2196
           python - <<'PY'
           import json
           from pathlib import Path
 
           config = json.loads(Path("config.calibration.json").read_text(encoding="utf-8"))
-          dependency = config.get("blocal_dependency")
+          expected_machine = {
+              "all_F_Fr_consumers_finite_routes": True,
+              "all_required_consumers_authorized_routes": True,
+              "l3_boundary_monotonicity_route": True,
+              "lambda_start": {"p": "3307749", "q": "1600000"},
+              "schema": "btube-blocal-machine-conclusion-v2-finite-routes",
+              "selected_candidate_index": 0,
+              "start_root_interval": {
+                  "hi": {"e": 0, "m": "1"},
+                  "lo": {"e": 11, "m": "2047"},
+              },
+              "status": "BLOCAL_COMPLETE",
+              "u_max": {"e": 8, "m": "1"},
+          }
+          expected_dependency = {
+              "artifact_zip_sha256": "7c1748148470426648dd03a483a076b043ed70558258358834671451267e64dc",
+              "certificate_sha256": "b8d27c01d63f3ea53bfeb165f7e140d739fab6b3949115e0aac3fd64b2d05cb6",
+              "config_sha256": "dab371fa62ed10a00029cd31b0002e503952277ef072fb8f5d7fd5222965d469",
+              "lambda_start": {"p": "3307749", "q": "1600000"},
+              "machine_conclusion": expected_machine,
+              "source_head": "a8997d11850dbd5b63e3064560a1c311e5c9c267",
+              "status": "PINNED",
+          }
           if (
-              config.get("binding_to_final_lambda_start") is not True
-              or not isinstance(dependency, dict)
-              or dependency.get("status") != "PINNED"
+              config.get("mode") != "BINDING"
+              or config.get("binding_to_final_lambda_start") is not True
+              or config.get("blocal_dependency") != expected_dependency
           ):
               raise SystemExit(
                   "B-LOCAL/B-ENTRY unpinned: workflow binding run prohibited"

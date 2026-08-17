@@ -6,8 +6,8 @@ def _validate_unpinned_blocal(config: dict[str, Any]) -> dict[str, Any]:
     dependency = _require_exact_keys(
         config["blocal_dependency"], EXPECTED_BLOCAL_KEYS, "blocal_dependency"
     )
-    if dependency["status"] != BLOCAL_STATUS:
-        raise CalibrationError("config: B-LOCAL status mismatch")
+    if dependency["status"] != BLOCAL_UNPINNED_STATUS:
+        raise CalibrationError("config: B-LOCAL diagnostic status mismatch")
     for key in (
         "artifact_zip_sha256", "certificate_sha256", "config_sha256",
         "lambda_start", "machine_conclusion", "source_head",
@@ -16,6 +16,42 @@ def _validate_unpinned_blocal(config: dict[str, Any]) -> dict[str, Any]:
             raise CalibrationError(f"config: unpinned B-LOCAL field must be null: {key}")
     if config["binding_to_final_lambda_start"] is not False:
         raise CalibrationError("config: diagnostic profile must not bind final lambda_start")
+    return dependency
+
+
+def _expected_pinned_blocal() -> dict[str, Any]:
+    return {
+        "artifact_zip_sha256": BLOCAL_ARTIFACT_SHA256,
+        "certificate_sha256": BLOCAL_CERTIFICATE_SHA256,
+        "config_sha256": BLOCAL_CONFIG_SHA256,
+        "lambda_start": BLOCAL_LAMBDA_START.to_json(),
+        "machine_conclusion": BLOCAL_MACHINE_CONCLUSION,
+        "source_head": BLOCAL_SOURCE_HEAD,
+        "status": BLOCAL_PINNED_STATUS,
+    }
+
+
+def _validate_pinned_blocal(config: dict[str, Any]) -> dict[str, Any]:
+    dependency = _require_exact_keys(
+        config["blocal_dependency"], EXPECTED_BLOCAL_KEYS, "blocal_dependency"
+    )
+    if config["binding_to_final_lambda_start"] is not True:
+        raise CalibrationError("config: binding profile must bind final lambda_start")
+    expected = _expected_pinned_blocal()
+    if dependency != expected:
+        raise CalibrationError("config: pinned B-LOCAL tuple mismatch")
+    start = Rational.from_json(dependency["lambda_start"], "blocal_dependency.lambda_start")
+    if start != BLOCAL_LAMBDA_START:
+        raise CalibrationError("config: B-LOCAL lambda_start mismatch")
+    machine = _require_exact_keys(
+        dependency["machine_conclusion"],
+        set(BLOCAL_MACHINE_CONCLUSION),
+        "blocal_dependency.machine_conclusion",
+    )
+    if machine != BLOCAL_MACHINE_CONCLUSION:
+        raise CalibrationError("config: B-LOCAL machine conclusion mismatch")
+    if machine["lambda_start"] != dependency["lambda_start"]:
+        raise CalibrationError("config: B-LOCAL machine/config lambda mismatch")
     return dependency
 
 
@@ -35,18 +71,32 @@ def load_config(path: Path = CONFIG_PATH) -> tuple[dict[str, Any], bytes]:
         raise CalibrationError("config: chain domain mismatch")
     if obj["q_evaluation_rule"] != Q_RULE:
         raise CalibrationError("config: affine evaluation rule mismatch")
-    if obj["mode"] != CALIBRATION_MODE:
+
+    mode = obj["mode"]
+    if mode == CALIBRATION_MODE:
+        dependency = _validate_unpinned_blocal(obj)
+    elif mode == BINDING_MODE:
+        dependency = _validate_pinned_blocal(obj)
+    else:
         raise CalibrationError("config: calibration mode mismatch")
-    _validate_unpinned_blocal(obj)
 
     diagnostic_start = Rational.from_json(
         obj["diagnostic_lambda_start"], "diagnostic_lambda_start"
     )
+    if diagnostic_start != Rational(21, 10):
+        raise CalibrationError("config: diagnostic endpoint mismatch")
     end = Rational.from_json(obj["lambda_end"], "lambda_end")
-    if not BLOCAL_STAGE1_UPPER < diagnostic_start:
-        raise CalibrationError("config: diagnostic start must be above Stage-1 upper bracket")
-    if end != CG_LAMBDA or not diagnostic_start < end:
-        raise CalibrationError("config: diagnostic/terminal endpoint ordering mismatch")
+    if end != CG_LAMBDA:
+        raise CalibrationError("config: terminal endpoint mismatch")
+    if mode == CALIBRATION_MODE:
+        if not BLOCAL_STAGE1_UPPER < diagnostic_start < end:
+            raise CalibrationError("config: diagnostic/terminal endpoint ordering mismatch")
+    else:
+        start = Rational.from_json(
+            dependency["lambda_start"], "blocal_dependency.lambda_start"
+        )
+        if not BLOCAL_STAGE1_UPPER < start < end:
+            raise CalibrationError("config: B-LOCAL/terminal endpoint ordering mismatch")
 
     dps = _positive_int(obj["dps"], "dps")
     checker_dps = _positive_int(obj["checker_dps"], "checker_dps")
@@ -78,15 +128,12 @@ def load_config(path: Path = CONFIG_PATH) -> tuple[dict[str, Any], bytes]:
 
 
 def require_blocal_dependency(config: dict[str, Any]) -> None:
-    dependency = _require_exact_keys(
-        config.get("blocal_dependency"), EXPECTED_BLOCAL_KEYS, "blocal_dependency"
-    )
-    if (dependency.get("status") != "PINNED"
+    if (config.get("mode") != BINDING_MODE
             or config.get("binding_to_final_lambda_start") is not True):
         raise CalibrationError(
             "B-LOCAL/B-ENTRY dependency is not pinned; binding calibration is disabled"
         )
-    raise CalibrationError("B-LOCAL/B-ENTRY pinned tuple validation is not implemented")
+    _validate_pinned_blocal(config)
 
 
 def require_diagnostic_mode(config: dict[str, Any]) -> Rational:

@@ -25,8 +25,24 @@ def _rechain(records: list[dict]) -> tuple[list[dict], str]:
 
 
 class CalibrationRecordTests(unittest.TestCase):
+    def _diagnostic_config(self):
+        config = calibration.load_config()[0]
+        config["mode"] = calibration.CALIBRATION_MODE
+        config["binding_to_final_lambda_start"] = False
+        config["blocal_dependency"] = {
+            "artifact_zip_sha256": None,
+            "certificate_sha256": None,
+            "config_sha256": None,
+            "lambda_start": None,
+            "machine_conclusion": None,
+            "source_head": None,
+            "status": calibration.BLOCAL_UNPINNED_STATUS,
+        }
+        return config
+
     def _write_case(self, directory: Path, passes: list[bool]):
-        config, config_raw = calibration.load_config()
+        config = self._diagnostic_config()
+        config_raw = canonical_json_bytes(config)
         pairs = calibration._candidate_pairs(config)
         self.assertEqual(len(passes), len(pairs))
         start = calibration.require_diagnostic_mode(config).as_fraction()
@@ -77,7 +93,7 @@ class CalibrationRecordTests(unittest.TestCase):
             "chain_tip": previous,
             "coverage_claim": False,
             "machine_conclusion": {"real_analytic": False},
-            "mode": "DIAGNOSTIC_ONLY",
+            "mode": calibration.CALIBRATION_MODE,
             "recommendation": None,
             "record_count": len(records),
             "schema": "btube-calibration-summary-v1",
