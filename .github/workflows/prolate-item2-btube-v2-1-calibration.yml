@@ -19,6 +19,8 @@ jobs:
     timeout-minutes: 360
     env:
       CALIBRATION_CONFIG_SHA256: 47d8b88e57298b0434c5ee2912879a088fd508b6da376f2bdce0da70b0532852
+      PYTHONDONTWRITEBYTECODE: "1"
+      PYTHONPYCACHEPREFIX: ${{ runner.temp }}/btube-pycache
     steps:
       - name: Verify approved tag names the exact run head
         shell: bash
@@ -156,7 +158,9 @@ jobs:
             --source-head "${GITHUB_SHA}" \
             --archive "${GITHUB_WORKSPACE}/btube-calibration-delivery/btube-v2-1-calibration.zip" \
             --receipt "${GITHUB_WORKSPACE}/btube-calibration-delivery/DELIVERY_RECEIPT.json"
-          test -z "$(git status --porcelain)"
+          LEFTOVER="$(git status --porcelain \
+            | grep -vE '^\?\? btube-calibration-(run|delivery)/$' || true)"
+          test -z "$LEFTOVER"
 
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
@@ -165,4 +169,15 @@ jobs:
             btube-calibration-delivery/btube-v2-1-calibration.zip
             btube-calibration-delivery/DELIVERY_RECEIPT.json
           if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload calibration diagnostics on failure
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: btube-v2-1-calibration-${{ github.sha }}-diagnostics
+          path: |
+            btube-calibration-run
+            btube-calibration-delivery
+          if-no-files-found: warn
           retention-days: 14
