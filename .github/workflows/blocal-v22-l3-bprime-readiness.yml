@@ -7,17 +7,34 @@ on:
     paths:
       - ".github/workflows/blocal-v22-l3-bprime-readiness.yml"
       - "CERTIFICATES/prolate/item2_circle/b_tube_v2_1/diagnostics/blocal_l3_bprime_readiness.py"
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
   readiness:
+    if: github.ref_name == 'agent/blocal-v22-l3-bprime-design'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
+      - name: Guard readiness branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${GITHUB_REF_NAME}" = "agent/blocal-v22-l3-bprime-design"
+
       - name: Checkout readiness head
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Verify immutable checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
 
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
