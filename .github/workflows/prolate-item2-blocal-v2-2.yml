@@ -20,7 +20,7 @@ jobs:
     env:
       BLOCAL_DIR: CERTIFICATES/prolate/item2_circle/b_tube_v2_1
       CONFIG: CERTIFICATES/prolate/item2_circle/b_tube_v2_1/config.blocal-v2.2-run.json
-      CONFIG_SHA256: 72ab2355f83131fc4282a57da5eb3a397e7e78d2190193e26a5aed0f08492e90
+      CONFIG_SHA256: dab371fa62ed10a00029cd31b0002e503952277ef072fb8f5d7fd5222965d469
     steps:
       - name: Verify tag suffix equals commit SHA
         shell: bash
