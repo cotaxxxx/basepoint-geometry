@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 360
     env:
-      CALIBRATION_CONFIG_SHA256: 2a3c7211a244876276182ab316f49881842b90c07dfd755f7f9235dc424c9f75
+      CALIBRATION_CONFIG_SHA256: 47d8b88e57298b0434c5ee2912879a088fd508b6da376f2bdce0da70b0532852
     steps:
       - name: Verify approved tag names the exact run head
         shell: bash

@@ -1,6 +1,11 @@
 """Canonical calibration configuration and B-LOCAL gate."""
 from calibration_context import *
 
+CONFIG_SCHEMA = "btube-calibration-config-v2"
+DESIGN_VERSION = "btube-calibration-design-v2"
+AUDITED_SOURCE_COMMIT = "ddcffbfb8b8d057241f36a7522a1756cc1874ab8"
+DESIGN_COMMIT = "f2c2765774d4cad2906bc5d8ee7d637f07a7efb9"
+
 
 def _validate_unpinned_blocal(config: dict[str, Any]) -> dict[str, Any]:
     dependency = _require_exact_keys(
