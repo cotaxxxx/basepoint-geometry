@@ -1,0 +1,178 @@
+name: B-KERNEL NaN frontier diagnostic
+
+on:
+  push:
+    branches:
+      - "agent/bkernel-nan-frontier-main-diagnostic"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bkernel-nan-frontier-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  diagnostic:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+          fetch-depth: 1
+
+      - uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38
+        with:
+          python-version: "3.12"
+
+      - name: Install pinned diagnostic dependency
+        run: python -m pip install python-flint==0.9.0
+
+      - name: Verify pinned production kernel bytes
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "77e7a93c594ba66ac7d98df29ec3c03107b0c63962a5aa60f8503559082c10ac  CERTIFICATES/prolate/item2_circle/vendor/prolate_circle_F_cleanroom.py" | sha256sum -c -
+
+      - name: Measure finite/nonfinite frontier at lambda_start
+        working-directory: CERTIFICATES/prolate/item2_circle/cleanroom
+        shell: bash
+        env:
+          PYTHONPATH: ../vendor
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from __future__ import annotations
+          import json, time
+          from fractions import Fraction
+          from pathlib import Path
+          from flint import arb, ctx
+          import prolate_circle_F_cleanroom as kernel
+
+          ctx.dps = 60
+          LAM = Fraction(3307749, 1600000)
+          TOL = "1e-20"
+          DEPTH = 12
+          LIMIT = 200000
+
+          def exact(x: Fraction):
+              return arb(str(x.numerator)) / arb(str(x.denominator))
+
+          cache = {}
+
+          def evaluate(name: str, r: Fraction):
+              key = (name, r)
+              if key in cache:
+                  return cache[key]
+              started = time.time()
+              try:
+                  value = getattr(kernel, name)(
+                      exact(r), exact(LAM), tol=TOL, depth=DEPTH, limit=LIMIT
+                  )
+                  text = str(value)
+                  low = text.lower()
+                  finite = "nan" not in low and "inf" not in low
+                  rec = {
+                      "status": "finite" if finite else "nonfinite",
+                      "value": text[:500],
+                      "elapsed_s": round(time.time() - started, 6),
+                  }
+              except Exception as exc:
+                  rec = {
+                      "status": "exception",
+                      "exception": type(exc).__name__,
+                      "message": str(exc)[:500],
+                      "elapsed_s": round(time.time() - started, 6),
+                  }
+              cache[key] = rec
+              print("NAN_FRONTIER_POINT " + json.dumps({
+                  "function": name,
+                  "r": f"{r.numerator}/{r.denominator}",
+                  **rec,
+              }, separators=(",", ":")), flush=True)
+              return rec
+
+          def both_finite(r: Fraction):
+              f = evaluate("F_arb", r)
+              d = evaluate("dFdr_arb", r)
+              return f["status"] == "finite" and d["status"] == "finite"
+
+          report = {
+              "schema": "btube-bkernel-nan-frontier-diagnostic-v1",
+              "kernel_sha256": "77e7a93c594ba66ac7d98df29ec3c03107b0c63962a5aa60f8503559082c10ac",
+              "lambda_start": "3307749/1600000",
+              "settings": {"dps": 60, "tol": TOL, "depth": DEPTH, "limit": LIMIT},
+              "coarse": [],
+              "special": [],
+              "refined_combined_frontier": None,
+          }
+
+          previous_finite = None
+          first_nonfinite = None
+          for k in range(1, 15):
+              r = Fraction((1 << k) - 1, 1 << k)
+              ok = both_finite(r)
+              report["coarse"].append({
+                  "k": k,
+                  "r": f"{r.numerator}/{r.denominator}",
+                  "both_finite": ok,
+              })
+              if ok:
+                  previous_finite = r
+              else:
+                  first_nonfinite = r
+                  break
+
+          for label, r in (
+              ("observed_decimal_0.999", Fraction(999, 1000)),
+              ("A0_lo", Fraction(2047, 2048)),
+              ("A0_midpoint", Fraction(16379, 16384)),
+              ("A0_hi", Fraction(8191, 8192)),
+          ):
+              ok = both_finite(r)
+              report["special"].append({
+                  "label": label,
+                  "r": f"{r.numerator}/{r.denominator}",
+                  "both_finite": ok,
+              })
+
+          if previous_finite is not None and first_nonfinite is not None:
+              lo, hi = previous_finite, first_nonfinite
+              refinement = []
+              for _ in range(8):
+                  mid = (lo + hi) / 2
+                  ok = both_finite(mid)
+                  refinement.append({
+                      "r": f"{mid.numerator}/{mid.denominator}",
+                      "both_finite": ok,
+                  })
+                  if ok:
+                      lo = mid
+                  else:
+                      hi = mid
+              report["refined_combined_frontier"] = {
+                  "last_observed_both_finite": f"{lo.numerator}/{lo.denominator}",
+                  "first_observed_nonfinite": f"{hi.numerator}/{hi.denominator}",
+                  "width": f"{(hi-lo).numerator}/{(hi-lo).denominator}",
+                  "refinement": refinement,
+              }
+
+          report["evaluations"] = [
+              {"function": name, "r": f"{r.numerator}/{r.denominator}", **rec}
+              for (name, r), rec in cache.items()
+          ]
+          Path("nan_frontier.json").write_text(
+              json.dumps(report, separators=(",", ":")), encoding="utf-8"
+          )
+          print("NAN_FRONTIER_RESULT " + json.dumps(report, separators=(",", ":")), flush=True)
+          PY
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: bkernel-nan-frontier-${{ github.sha }}
+          path: CERTIFICATES/prolate/item2_circle/cleanroom/nan_frontier.json
+          if-no-files-found: warn
+          retention-days: 14
