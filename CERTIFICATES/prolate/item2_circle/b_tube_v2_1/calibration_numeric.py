@@ -93,8 +93,8 @@ def _load_a0_start_interval(path: Path = A0_CERTIFICATE_PATH) -> tuple[DyadicInt
     if Dyadic.from_json(cert["delta_start_dyadic_floor"], "A0.delta_floor") != A0_DELTA_FLOOR:
         raise CalibrationError("A0 dyadic floor mismatch")
     delta = Rational.from_json(cert["delta_start_exact"], "A0.delta_exact").as_fraction()
-    if not A0_DELTA_FLOOR.as_fraction() < delta:
-        raise CalibrationError("A0 exact delta does not exceed 2^-13")
+    if not A0_DELTA_FLOOR.as_fraction() < delta <= A0_DELTA_CEILING.as_fraction():
+        raise CalibrationError("A0 exact delta violates (2^-13,2^-11] consistency invariant")
     interval = DyadicInterval.from_json(
         cert["operational_refined_start_root_interval"], "A0.operational_root"
     )

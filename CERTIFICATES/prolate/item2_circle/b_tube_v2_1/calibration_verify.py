@@ -2,6 +2,7 @@
 from calibration_context import *
 from calibration_config import *
 from calibration_security import *
+from a0b_start_anchor_verify import verify_a0b_start_anchors
 
 
 def _verifier_candidate_pairs(config: dict[str, Any]) -> list[tuple[Dyadic, Dyadic]]:
@@ -129,9 +130,11 @@ def verify_pre(out_dir: Path, source_head: str) -> int:
     assert_workflow_security()
     config, summary, config_raw = _verify_records(out_dir)
     require_blocal_dependency(config)
+    verify_a0b_start_anchors(out_dir, config)
     _verify_source_manifest(out_dir, config)
     load_production_kernel()
     report = {
+        "a0b_start_anchor_verifier": "PASS",
         "config_sha256": sha256_hex(config_raw),
         "kernel_sha256": KERNEL_SHA256,
         "record_chain_tip": summary["chain_tip"],

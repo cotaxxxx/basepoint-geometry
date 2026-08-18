@@ -4,6 +4,7 @@ from calibration_candidate import *
 from calibration_config import *
 from calibration_numeric import *
 from calibration_security import *
+from a0b_start_anchor import *
 
 
 def run_calibration(out_dir: Path, *, diagnostic: bool = False) -> int:
@@ -23,6 +24,11 @@ def run_calibration(out_dir: Path, *, diagnostic: bool = False) -> int:
     ctx.dps = config["dps"]
     out_dir.mkdir(parents=True)
     (out_dir / "config.calibration.json").write_bytes(config_raw)
+    if not diagnostic:
+        a0b = build_a0b_start_anchor_certificate(config, kernel, arb)
+        (out_dir / "A0B_START_ANCHORS.json").write_bytes(canonical_json_bytes(a0b))
+        if a0b["all_passed"] is not True:
+            raise CalibrationError("A0B first-cross-section point Krawczyk gate failed")
     records = []
     previous = chain_genesis(CHAIN_DOMAIN)
     first_passing = None

@@ -77,6 +77,7 @@ A0_SCHEMA = "btube-a0-boundary-distance-v1"
 A0_STATUS = "A0_CERTIFIED"
 A0_OPERATIONAL_ROOT = DyadicInterval(Dyadic(2047, 11), Dyadic(8191, 13))
 A0_DELTA_FLOOR = Dyadic(1, 13)
+A0_DELTA_CEILING = Dyadic(1, 11)
 ADAPTIVE_SIGMA = Dyadic(1, 1)
 ADAPTIVE_RADIUS_RULE = "exact_dyadic_min_boundary_margin_v1"
 ANCHOR_MODE = "BLOCAL_A0_FORWARD_V1"
@@ -96,6 +97,8 @@ SOURCE_FILE_LIST = (
     "A0_BOUNDARY_DISTANCE_CERTIFICATE.json",
     "a0_boundary_distance.py",
     "a0_boundary_distance_verify.py",
+    "a0b_start_anchor.py",
+    "a0b_start_anchor_verify.py",
     "CALIBRATION_ONLY_WORKFLOW_DESIGN.md",
     "affine_geometry.py",
     "calibration.py",
@@ -114,6 +117,7 @@ SOURCE_FILE_LIST = (
     "record_layout_verifier.py",
     "requirements-calibration.txt",
     "tests/test_a0_boundary_distance.py",
+    "tests/test_a0b_start_anchor.py",
     "tests/test_adaptive_a1.py",
     "tests/test_calibration.py",
     "tests/test_calibration_config.py",

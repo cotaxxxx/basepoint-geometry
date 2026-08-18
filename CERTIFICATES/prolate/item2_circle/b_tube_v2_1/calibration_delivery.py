@@ -3,9 +3,9 @@ from calibration_context import *
 from calibration_config import *
 from calibration_security import *
 from calibration_verify import *
-
 def _payload_files(run_dir: Path) -> dict[str, Path]:
     files = {
+        "A0B_START_ANCHORS.json": run_dir / "A0B_START_ANCHORS.json",
         "CALIBRATION_SUMMARY.json": run_dir / "CALIBRATION_SUMMARY.json",
         "CHECKER_REPORT.json": run_dir / "CHECKER_REPORT.json",
         "SOURCE_MANIFEST.json": run_dir / "SOURCE_MANIFEST.json",
@@ -17,7 +17,6 @@ def _payload_files(run_dir: Path) -> dict[str, Path]:
     for relative in SOURCE_FILE_LIST:
         files[f"source/CERTIFICATES/prolate/item2_circle/b_tube_v2_1/{relative}"] = BTUBE_ROOT / relative
     return files
-
 def _build_deterministic_zip(payload_dir: Path, archive_path: Path) -> None:
     with zipfile.ZipFile(archive_path, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as archive:
         for path in sorted(item for item in payload_dir.rglob("*") if item.is_file()):
@@ -26,14 +25,16 @@ def _build_deterministic_zip(payload_dir: Path, archive_path: Path) -> None:
             info.compress_type = zipfile.ZIP_DEFLATED
             info.external_attr = 0o100644 << 16
             archive.writestr(info, path.read_bytes())
-
 def deliver(run_dir: Path, delivery_dir: Path, source_head: str) -> int:
     if delivery_dir.exists():
         raise CalibrationError("delivery directory must not exist")
     config, summary, config_raw = _verify_records(run_dir)
     require_blocal_dependency(config)
+    verify_a0b_start_anchors(run_dir, config)
     checker = parse_canonical_json_bytes((run_dir / "CHECKER_REPORT.json").read_bytes())
-    if checker.get("verifier") != "PASS" or checker.get("source_head") != source_head:
+    if (checker.get("verifier") != "PASS"
+            or checker.get("a0b_start_anchor_verifier") != "PASS"
+            or checker.get("source_head") != source_head):
         raise CalibrationError("pre-verifier report mismatch")
     delivery_dir.mkdir(parents=True)
     with tempfile.TemporaryDirectory(prefix="btube-calibration-payload-") as temporary:

@@ -34,14 +34,14 @@ def reconstruct(path:Path):
     need(j.get("certified") is True and j.get("claim")=="J_START_UNIQUE_NONDEGENERATE_ROOT" and rat(j["lambda_start"])==LS and dy(j["r_interval"]["lo"])==RLO and dy(j["r_interval"]["hi"])==1,"J_START")
     d=j["condition5_derivative_record"]; need(d.get("record_id")=="J-DERIVATIVE-FULL" and dy(d["r_interval"]["lo"])<=RLO and dy(d["r_interval"]["hi"])>=1,"derivative domain")
     flo=dy(d["F_r"]["lo"]); fhi=dy(d["F_r"]["hi"]); need(flo<=fhi<0,"derivative sign"); M=max(abs(flo),abs(fhi)); gap=LS-LP; need(gap==Q(1,512),"lambda gap")
-    bu=bhi+gap*bphi; need(bu<0,"B start sign"); al=-bu; delta=al/M; need(delta>Q(1,8192),"delta floor"); rhi=1-delta; need(RLO<rhi<Q(8191,8192),"refined bracket")
+    bu=bhi+gap*bphi; need(bu<0,"B start sign"); al=-bu; delta=al/M; need(delta>Q(1,8192),"delta floor"); need(delta<=Q(1,2048),"delta exceeds B-LOCAL bracket width"); rhi=1-delta; need(RLO<rhi<Q(8191,8192),"refined bracket")
     return {"B_lambda_plus_enclosure":ep["enclosure"],"B_lambda_start_abs_lower":rj(al),"B_lambda_start_upper":rj(bu),"Bprime_enclosure":bp,"F_r_enclosure":d["F_r"],"M_abs_F_r_upper":rj(M),"blocal_artifact_sha256":ART,"blocal_certificate_sha256":BCERT,"blocal_config_sha256":CFG,"blocal_records_sha256":REC,"blocal_source_head":SRC,"boundary_identity_id":ID,"claim":"1-r_*(lambda_start)>=delta_start_exact>2^-13","delta_start_dyadic_floor":dj(1,13),"delta_start_exact":rj(delta),"derivative_domain_r":d["r_interval"],"derivative_record_id":d["record_id"],"lambda_gap":dj(1,9),"lambda_plus":rj(LP),"lambda_start":rj(LS),"operational_refined_start_root_interval":{"hi":dj(8191,13),"lo":dj(2047,11)},"refined_start_root_upper_exact":rj(rhi),"schema":"btube-a0-boundary-distance-v1","stage1_artifact_sha256":S1A,"stage1_certificate_sha256":S1C,"stage1_source_head":S1S,"status":"A0_CERTIFIED","target_start_root_interval":j["r_interval"]}
 
 def algebra(c):
     need(c.get("schema")=="btube-a0-boundary-distance-v1" and c.get("status")=="A0_CERTIFIED","schema/status"); gap=dy(c["lambda_gap"]); need(rat(c["lambda_plus"])==LP and rat(c["lambda_start"])==LS and gap==Q(1,512),"lambda tuple")
     bu=rat(c["B_lambda_plus_enclosure"]["hi"])+gap*dy(c["Bprime_enclosure"]["hi"]); need(bu<0 and rat(c["B_lambda_start_upper"])==bu and rat(c["B_lambda_start_abs_lower"])==-bu,"B arithmetic")
     flo=dy(c["F_r_enclosure"]["lo"]); fhi=dy(c["F_r_enclosure"]["hi"]); M=max(abs(flo),abs(fhi)); need(flo<=fhi<0 and rat(c["M_abs_F_r_upper"])==M,"M arithmetic")
-    delta=(-bu)/M; need(delta>Q(1,8192) and rat(c["delta_start_exact"])==delta and dy(c["delta_start_dyadic_floor"])==Q(1,8192),"delta arithmetic")
+    delta=(-bu)/M; need(delta>Q(1,8192) and delta<=Q(1,2048) and rat(c["delta_start_exact"])==delta and dy(c["delta_start_dyadic_floor"])==Q(1,8192),"delta arithmetic")
     need(rat(c["refined_start_root_upper_exact"])==1-delta and dy(c["operational_refined_start_root_interval"]["lo"])==RLO and dy(c["operational_refined_start_root_interval"]["hi"])==Q(8191,8192),"refined bracket"); return True
 
 verify_certificate_algebra=algebra
