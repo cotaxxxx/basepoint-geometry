@@ -56,11 +56,13 @@ def krawczyk_image(
     preconditioner: Dyadic,
     domain: DyadicInterval,
 ) -> DyadicInterval:
+    """Exact 1D Krawczyk image with C=preconditioner approximating 1/F_r."""
     if preconditioner == D_ZERO:
         raise SchemaError("Krawczyk preconditioner is zero")
+    c = DyadicInterval.point(preconditioner)
     m_point = DyadicInterval.point(m)
-    first = m_point - residual.div_dyadic(preconditioner)
-    multiplier = DyadicInterval.point(D_ONE) - slope.div_dyadic(preconditioner)
+    first = m_point - residual * c
+    multiplier = DyadicInterval.point(D_ONE) - slope * c
     centered_domain = domain - m_point
     return first + multiplier * centered_domain
 

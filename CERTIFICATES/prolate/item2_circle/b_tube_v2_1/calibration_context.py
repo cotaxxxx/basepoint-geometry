@@ -20,6 +20,7 @@ VENDOR_DIR = REPO_ROOT / "CERTIFICATES/prolate/item2_circle/vendor"
 WORKFLOW_PATH = REPO_ROOT / ".github/workflows/prolate-item2-btube-v2-1-calibration.yml"
 CONFIG_PATH = HERE / "config.calibration.json"
 KERNEL_RELATIVE = Path("CERTIFICATES/prolate/item2_circle/vendor/prolate_circle_F_cleanroom.py")
+A0_CERTIFICATE_PATH = HERE / "A0_BOUNDARY_DISTANCE_CERTIFICATE.json"
 
 sys.path.insert(0, str(BTUBE_ROOT))
 
@@ -29,8 +30,10 @@ from affine_geometry import (  # noqa: E402
     exact_join_intersection,
     krawczyk_image,
     physical_tube,
+    shifted,
 )
 from numeric_schema import (  # noqa: E402
+    D_ONE,
     D_ZERO,
     Dyadic,
     DyadicInterval,
@@ -70,6 +73,13 @@ BLOCAL_MACHINE_CONCLUSION = {
     "status": "BLOCAL_COMPLETE",
     "u_max": {"e": 8, "m": "1"},
 }
+A0_SCHEMA = "btube-a0-boundary-distance-v1"
+A0_STATUS = "A0_CERTIFIED"
+A0_OPERATIONAL_ROOT = DyadicInterval(Dyadic(2047, 11), Dyadic(8191, 13))
+A0_DELTA_FLOOR = Dyadic(1, 13)
+ADAPTIVE_SIGMA = Dyadic(1, 1)
+ADAPTIVE_RADIUS_RULE = "exact_dyadic_min_boundary_margin_v1"
+ANCHOR_MODE = "BLOCAL_A0_FORWARD_V1"
 KERNEL_SHA256 = "77e7a93c594ba66ac7d98df29ec3c03107b0c63962a5aa60f8503559082c10ac"
 CG_ARTIFACT_SHA256 = "c0f624a955657f906c09c45b016a92f7bcdfa70d26c2508efeb3f06dd7d27381"
 CG_SOURCE_HEAD = "1e0f671c91798b9c044c04c7a4224a21e1e67830"
@@ -81,14 +91,44 @@ CHAIN_DOMAIN = "B-TUBE-CALIBRATION-RECORD-CHAIN-v1"
 TERMINAL_STATES = {"CALIBRATION_COMPLETE", "CALIBRATION_INCOMPLETE", "CALIBRATION_FAILED"}
 FORBIDDEN_RESULT_PREFIX = "CERT" + "IFIED_"
 FORBIDDEN_RESULT_KEYS = {"verdict", "certified", "production_match"}
-SOURCE_FILE_LIST = ('CALIBRATION_ONLY_WORKFLOW_DESIGN.md', 'affine_geometry.py', 'calibration.py', 'calibration_context.py', 'calibration_config.py', 'calibration_security.py', 'calibration_numeric.py', 'calibration_candidate.py', 'calibration_runner.py', 'calibration_verify.py', 'calibration_delivery.py', 'calibration_receipt.py', 'config.calibration.json', 'numeric_schema.py', 'record_layout_contract.py', 'record_layout_verifier.py', 'requirements-calibration.txt', 'tests/test_calibration.py', 'tests/test_calibration_config.py', 'tests/test_calibration_guards.py', 'tests/test_calibration_records.py', 'tests/test_selftest.py')
+SOURCE_FILE_LIST = (
+    "ADAPTIVE_TUBE_DESIGN_V1.md",
+    "A0_BOUNDARY_DISTANCE_CERTIFICATE.json",
+    "a0_boundary_distance.py",
+    "a0_boundary_distance_verify.py",
+    "CALIBRATION_ONLY_WORKFLOW_DESIGN.md",
+    "affine_geometry.py",
+    "calibration.py",
+    "calibration_context.py",
+    "calibration_config.py",
+    "calibration_security.py",
+    "calibration_numeric.py",
+    "calibration_candidate.py",
+    "calibration_runner.py",
+    "calibration_verify.py",
+    "calibration_delivery.py",
+    "calibration_receipt.py",
+    "config.calibration.json",
+    "numeric_schema.py",
+    "record_layout_contract.py",
+    "record_layout_verifier.py",
+    "requirements-calibration.txt",
+    "tests/test_a0_boundary_distance.py",
+    "tests/test_adaptive_a1.py",
+    "tests/test_calibration.py",
+    "tests/test_calibration_config.py",
+    "tests/test_calibration_guards.py",
+    "tests/test_calibration_records.py",
+    "tests/test_selftest.py",
+)
 EXPECTED_CONFIG_KEYS = {
-    "audited_source_commit", "binding_to_final_lambda_start", "blocal_dependency",
-    "candidate_lambda_widths", "candidate_tube_radii", "cg_match_dependency",
-    "checker_dps", "design_commit", "design_version", "diagnostic_lambda_start", "dps",
-    "evaluation_budget", "lambda_end", "max_cells", "max_subdivisions", "mode",
-    "predictor_refresh", "production_kernel_sha256", "q_evaluation_rule",
-    "record_chain_genesis_domain", "schema",
+    "adaptive_safety_factor", "audited_source_commit", "binding_to_final_lambda_start",
+    "blocal_dependency", "candidate_lambda_widths", "candidate_tube_radii",
+    "cg_match_dependency", "checker_dps", "design_commit", "design_version",
+    "diagnostic_lambda_start", "dps", "evaluation_budget", "lambda_end",
+    "max_cells", "max_subdivisions", "mode", "predictor_refresh",
+    "production_kernel_sha256", "q_evaluation_rule", "record_chain_genesis_domain",
+    "schema",
 }
 EXPECTED_BLOCAL_KEYS = {
     "artifact_zip_sha256", "certificate_sha256", "config_sha256", "lambda_start",

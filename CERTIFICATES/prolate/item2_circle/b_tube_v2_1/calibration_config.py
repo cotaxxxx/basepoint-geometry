@@ -1,10 +1,10 @@
 """Canonical calibration configuration and B-LOCAL gate."""
 from calibration_context import *
 
-CONFIG_SCHEMA = "btube-calibration-config-v2"
-DESIGN_VERSION = "btube-calibration-design-v2"
-AUDITED_SOURCE_COMMIT = "ddcffbfb8b8d057241f36a7522a1756cc1874ab8"
-DESIGN_COMMIT = "f2c2765774d4cad2906bc5d8ee7d637f07a7efb9"
+CONFIG_SCHEMA = "btube-calibration-config-v3-adaptive"
+DESIGN_VERSION = "btube-calibration-design-v3-adaptive"
+AUDITED_SOURCE_COMMIT = "99fc7ea08c526a72556b0b50b5b07689f7680e87"
+DESIGN_COMMIT = "88b30db7a103236423f82cbd21b3633fddec7214"
 
 
 def _validate_unpinned_blocal(config: dict[str, Any]) -> dict[str, Any]:
@@ -76,6 +76,9 @@ def load_config(path: Path = CONFIG_PATH) -> tuple[dict[str, Any], bytes]:
         raise CalibrationError("config: chain domain mismatch")
     if obj["q_evaluation_rule"] != Q_RULE:
         raise CalibrationError("config: affine evaluation rule mismatch")
+    sigma = Dyadic.from_json(obj["adaptive_safety_factor"], "adaptive_safety_factor")
+    if sigma != ADAPTIVE_SIGMA:
+        raise CalibrationError("config: adaptive safety factor must be exactly 1/2")
 
     mode = obj["mode"]
     if mode == CALIBRATION_MODE:
