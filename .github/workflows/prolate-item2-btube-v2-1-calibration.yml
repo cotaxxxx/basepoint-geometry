@@ -20,7 +20,6 @@ jobs:
     env:
       CALIBRATION_CONFIG_SHA256: 47d8b88e57298b0434c5ee2912879a088fd508b6da376f2bdce0da70b0532852
       PYTHONDONTWRITEBYTECODE: "1"
-      PYTHONPYCACHEPREFIX: ${{ runner.temp }}/btube-pycache
     steps:
       - name: Verify approved tag names the exact run head
         shell: bash
@@ -106,6 +105,8 @@ jobs:
       - name: Compile and run static controls
         working-directory: CERTIFICATES/prolate/item2_circle/b_tube_v2_1
         shell: bash
+        env:
+          PYTHONPYCACHEPREFIX: ${{ runner.temp }}/btube-pycache
         run: |
           set -euo pipefail
           find . -name '*.py' -print0 | sort -z | xargs -0 python -m py_compile
