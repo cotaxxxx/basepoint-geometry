@@ -9,6 +9,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
 import calibration
+from a0b_start_anchor_verify import verify_a0b_start_anchors
 from numeric_schema import (
     D_ONE, D_ZERO, Dyadic, DyadicInterval, Rational, canonical_json_bytes,
     chain_genesis, parse_canonical_json_bytes, parse_canonical_jsonl, sha256_hex,
@@ -69,8 +70,11 @@ def _layout_a0_interval(config: dict) -> DyadicInterval:
         raise calibration.CalibrationError("layout verifier: A0/B-LOCAL provenance mismatch")
     floor = Dyadic.from_json(cert["delta_start_dyadic_floor"], "A0.delta_floor")
     exact = Rational.from_json(cert["delta_start_exact"], "A0.delta_exact").as_fraction()
-    if floor != Dyadic(1, 13) or not floor.as_fraction() < exact:
-        raise calibration.CalibrationError("layout verifier: A0 delta lower bound mismatch")
+    if (
+        floor != Dyadic(1, 13)
+        or not floor.as_fraction() < exact <= Rational(1, 2048).as_fraction()
+    ):
+        raise calibration.CalibrationError("layout verifier: A0 delta consistency mismatch")
     interval = DyadicInterval.from_json(
         cert["operational_refined_start_root_interval"], "A0.operational_root"
     )
@@ -135,6 +139,19 @@ def _layout_intersection(left_center: Dyadic, left_rho: Dyadic,
     return left.intersection(right)
 
 
+def _verify_zero_evaluation(record: dict, center: Dyadic, where: str) -> None:
+    zero_interval = DyadicInterval.point(D_ZERO).to_json()
+    if (
+        record.get("krawczyk_image") != DyadicInterval.point(center).to_json()
+        or record.get("left_margin") != D_ZERO.to_json()
+        or record.get("right_margin") != D_ZERO.to_json()
+        or record.get("preconditioner") != D_ZERO.to_json()
+        or record.get("residual") != zero_interval
+        or record.get("slope") != zero_interval
+    ):
+        raise calibration.CalibrationError(f"layout verifier: {where} skipped fields mismatch")
+
+
 def _verify_binding_candidate(config, candidate_index, width, cap, cells,
                               candidate_start, cell_records, join_records, candidate_end):
     sigma = Dyadic.from_json(config["adaptive_safety_factor"], "adaptive_safety_factor")
@@ -164,7 +181,15 @@ def _verify_binding_candidate(config, candidate_index, width, cap, cells,
             raise calibration.CalibrationError("layout verifier: forward predictor discontinuity")
         previous_q_right = q_right
         q_hull = DyadicInterval.hull([q_left, q_right])
-        rho, d_left, d_right, domain = _layout_adaptive(q_hull, cap, sigma)
+        adaptive_ok = True
+        try:
+            rho, d_left, d_right, domain = _layout_adaptive(q_hull, cap, sigma)
+        except calibration.CalibrationError:
+            adaptive_ok = False
+            rho = D_ZERO
+            d_left = D_ZERO
+            d_right = D_ZERO
+            domain = DyadicInterval.point(q_left)
         if record.get("radius_rule") != "exact_dyadic_min_boundary_margin_v1":
             raise calibration.CalibrationError("layout verifier: adaptive radius rule mismatch")
         if record.get("adaptive_radius") != rho.to_json():
@@ -175,9 +200,10 @@ def _verify_binding_candidate(config, candidate_index, width, cap, cells,
             raise calibration.CalibrationError("layout verifier: right boundary margin mismatch")
         if record.get("tube_interval") != domain.to_json():
             raise calibration.CalibrationError("layout verifier: physical tube mismatch")
-        if index == 0 and not a0.contains(_layout_shift(rho, q_left)):
-            raise calibration.CalibrationError("layout verifier: first section escapes A0 bracket")
-        parsed.append((q_left, q_right, rho, domain))
+        start_section_inside = True
+        if index == 0 and adaptive_ok:
+            start_section_inside = a0.contains(_layout_shift(rho, q_left))
+        parsed.append((q_left, q_right, rho, domain, adaptive_ok, start_section_inside))
 
     join_expected = []
     for index, record in enumerate(join_records):
@@ -188,46 +214,65 @@ def _verify_binding_candidate(config, candidate_index, width, cap, cells,
         if record.get("right_radius") != qr[2].to_json():
             raise calibration.CalibrationError("layout verifier: JOIN right radius mismatch")
         intersection = _layout_intersection(ql[1], ql[2], qr[0], qr[2])
+        geometry_failure = None
         if intersection is None or not intersection.positive_width():
-            raise calibration.CalibrationError("layout verifier: adaptive JOIN geometry invalid")
+            intersection = DyadicInterval.point(D_ZERO)
+            width_value = D_ZERO
+            geometry_failure = "join_empty_or_zero_width"
+        else:
+            width_value = intersection.hi - intersection.lo
         if record.get("intersection") != intersection.to_json():
             raise calibration.CalibrationError("layout verifier: JOIN intersection mismatch")
-        width_value = intersection.hi - intersection.lo
         if record.get("width") != width_value.to_json():
             raise calibration.CalibrationError("layout verifier: JOIN width mismatch")
-        join_expected.append(intersection)
+        join_expected.append((intersection, geometry_failure))
 
     evaluation_count = 0
     continuation = True
     cell_pass_flags = []
     join_pass_flags = []
     for index, record in enumerate(cell_records):
+        q_left, _, _, domain, adaptive_ok, start_section_inside = parsed[index]
         failure = record.get("failure_reason")
-        if not continuation:
-            if failure != "branch_anchor_lost" or record.get("passed") is not False:
-                raise calibration.CalibrationError("layout verifier: lost branch not fail-closed")
+        if not adaptive_ok:
+            reason = "adaptive_radius_or_physical_domain_invalid"
             expected_pass = False
+            _verify_zero_evaluation(record, q_left, "cell adaptive-failure")
+        elif not continuation:
+            reason = "branch_anchor_lost"
+            expected_pass = False
+            _verify_zero_evaluation(record, q_left, "cell branch-lost")
+        elif index == 0 and not start_section_inside:
+            reason = "start_anchor_section_outside_a0_bracket"
+            expected_pass = False
+            _verify_zero_evaluation(record, q_left, "cell start-section")
         else:
-            image, lm, rm, reason, expected_pass = _layout_krawczyk(parsed[index][3], record)
+            image, lm, rm, reason, expected_pass = _layout_krawczyk(domain, record)
             evaluation_count += 3
             if record.get("krawczyk_image") != image.to_json():
                 raise calibration.CalibrationError("layout verifier: cell Krawczyk image mismatch")
             if record.get("left_margin") != lm.to_json() or record.get("right_margin") != rm.to_json():
                 raise calibration.CalibrationError("layout verifier: cell Krawczyk margin mismatch")
-            if failure != reason or record.get("passed") is not expected_pass:
-                raise calibration.CalibrationError("layout verifier: cell pass/reason mismatch")
+        if failure != reason or record.get("passed") is not expected_pass:
+            raise calibration.CalibrationError("layout verifier: cell pass/reason mismatch")
         if record.get("evaluation_count") != evaluation_count:
             raise calibration.CalibrationError("layout verifier: cell evaluation count mismatch")
         cell_pass_flags.append(expected_pass)
 
         if index > 0:
             join_record = join_records[index - 1]
-            if not (cell_pass_flags[index - 1] and cell_pass_flags[index]):
+            intersection, geometry_failure = join_expected[index - 1]
+            if geometry_failure is not None:
+                join_reason = geometry_failure
+                join_pass = False
+                _verify_zero_evaluation(join_record, D_ZERO, "JOIN geometry-failure")
+            elif not (cell_pass_flags[index - 1] and cell_pass_flags[index]):
                 join_reason = "adjacent_cell_failed"
                 join_pass = False
+                _verify_zero_evaluation(join_record, D_ZERO, "JOIN adjacent-failure")
             else:
                 image, lm, rm, join_reason, join_pass = _layout_krawczyk(
-                    join_expected[index - 1], join_record
+                    intersection, join_record
                 )
                 evaluation_count += 3
                 if join_record.get("krawczyk_image") != image.to_json():
@@ -322,14 +367,11 @@ def verify_record_layout(out_dir: Path, *, source_head: str | None = None,
     if allow_unbound_fixture:
         start_rational = calibration.require_diagnostic_mode(config)
     else:
-        if config["mode"] == calibration.CALIBRATION_MODE:
-            start_rational = calibration.require_diagnostic_mode(config)
-        else:
-            calibration.require_blocal_dependency(config)
-            start_rational = Rational.from_json(
-                config["blocal_dependency"]["lambda_start"],
-                "blocal_dependency.lambda_start",
-            )
+        calibration.require_blocal_dependency(config)
+        start_rational = Rational.from_json(
+            config["blocal_dependency"]["lambda_start"],
+            "blocal_dependency.lambda_start",
+        )
     parsed_jsonl = parse_canonical_jsonl((out_dir / "calibration_records.jsonl").read_bytes())
     records = [record for record, _ in parsed_jsonl]
 
@@ -450,7 +492,16 @@ def verify_record_layout(out_dir: Path, *, source_head: str | None = None,
         raise calibration.CalibrationError("layout verifier: summary chain/count mismatch")
     if summary.get("candidate_count") != len(pairs):
         raise calibration.CalibrationError("layout verifier: summary candidate count mismatch")
-    first = next((index for index, passed in enumerate(pass_flags) if passed), None)
+
+    effective_pass_flags = list(pass_flags)
+    if binding_deep:
+        a0b = verify_a0b_start_anchors(out_dir, config)
+        gate_flags = [entry.get("passed") for entry in a0b["entries"]]
+        if len(gate_flags) != len(pass_flags) or any(not isinstance(flag, bool) for flag in gate_flags):
+            raise calibration.CalibrationError("layout verifier: A0B candidate gate vector mismatch")
+        effective_pass_flags = [chain and gate for chain, gate in zip(pass_flags, gate_flags)]
+
+    first = next((index for index, passed in enumerate(effective_pass_flags) if passed), None)
     first_passing = None
     if first is not None:
         width, radius = pairs[first]

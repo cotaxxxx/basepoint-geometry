@@ -87,6 +87,21 @@ def _krawczyk(domain: DyadicInterval, entry: dict[str, Any]):
     return image, left_margin, right_margin, None, True
 
 
+def _zero_gate(center: Dyadic, reason: str):
+    zero_interval = DyadicInterval.point(D_ZERO)
+    return {
+        "evaluation_count": 0,
+        "failure_reason": reason,
+        "krawczyk_image": DyadicInterval.point(center),
+        "left_margin": D_ZERO,
+        "passed": False,
+        "preconditioner": D_ZERO,
+        "residual": zero_interval,
+        "right_margin": D_ZERO,
+        "slope": zero_interval,
+    }
+
+
 def verify_a0b_start_anchors(out_dir: Path, config: dict[str, Any]) -> dict[str, Any]:
     require_blocal_dependency(config)
     raw = (out_dir / A0B_PATH_NAME).read_bytes()
@@ -174,11 +189,17 @@ def verify_a0b_start_anchors(out_dir: Path, config: dict[str, Any]) -> dict[str,
             raise CalibrationError("A0B verifier: producer/first-cell predictor mismatch")
 
         q_hull = DyadicInterval.hull([q_left, q_right])
-        rho, d_left, d_right, tube = _adaptive(q_hull, cap, sigma)
-        if entry.get("adaptive_radius") != rho.to_json():
+        adaptive_ok = True
+        try:
+            rho, d_left, d_right, tube = _adaptive(q_hull, cap, sigma)
+        except CalibrationError:
+            adaptive_ok = False
+            rho = D_ZERO
+            d_left = D_ZERO
+            d_right = D_ZERO
+            tube = DyadicInterval.point(q_left)
+        if entry.get("adaptive_radius") != rho.to_json() or first.get("adaptive_radius") != rho.to_json():
             raise CalibrationError("A0B verifier: adaptive radius mismatch")
-        if first.get("adaptive_radius") != rho.to_json():
-            raise CalibrationError("A0B verifier: first-cell adaptive radius mismatch")
         if entry.get("boundary_margin_left") != d_left.to_json():
             raise CalibrationError("A0B verifier: left boundary margin mismatch")
         if entry.get("boundary_margin_right") != d_right.to_json():
@@ -186,29 +207,52 @@ def verify_a0b_start_anchors(out_dir: Path, config: dict[str, Any]) -> dict[str,
         if entry.get("tube_interval") != tube.to_json() or first.get("tube_interval") != tube.to_json():
             raise CalibrationError("A0B verifier: physical tube mismatch")
 
-        section = DyadicInterval(q_left - rho, q_left + rho)
-        if not a0.contains(section):
-            raise CalibrationError("A0B verifier: first cross-section escapes A0 bracket")
+        section = DyadicInterval.point(q_left) if not adaptive_ok else DyadicInterval(
+            q_left - rho, q_left + rho
+        )
         if entry.get("start_section") != section.to_json():
             raise CalibrationError("A0B verifier: first cross-section mismatch")
-        if not tube.contains(section):
-            raise CalibrationError("A0B verifier: first cross-section not contained in first cell")
 
-        image, lm, rm, reason, passed = _krawczyk(section, entry)
-        if entry.get("krawczyk_image") != image.to_json():
-            raise CalibrationError("A0B verifier: Krawczyk image mismatch")
-        if entry.get("left_margin") != lm.to_json() or entry.get("right_margin") != rm.to_json():
-            raise CalibrationError("A0B verifier: Krawczyk margin mismatch")
-        if entry.get("failure_reason") != reason or entry.get("passed") is not passed:
-            raise CalibrationError("A0B verifier: Krawczyk pass/reason mismatch")
-        if entry.get("evaluation_count") != 3:
+        if not adaptive_ok:
+            expected = _zero_gate(q_left, "adaptive_radius_or_physical_domain_invalid")
+            if first.get("failure_reason") != expected["failure_reason"] or first.get("passed") is not False:
+                raise CalibrationError("A0B verifier: first-cell adaptive failure mismatch")
+        elif not a0.contains(section):
+            expected = _zero_gate(section.midpoint(), "start_anchor_section_outside_a0_bracket")
+            if first.get("failure_reason") != expected["failure_reason"] or first.get("passed") is not False:
+                raise CalibrationError("A0B verifier: first-cell A0-section failure mismatch")
+        else:
+            if not tube.contains(section):
+                raise CalibrationError("A0B verifier: first cross-section not contained in first cell")
+            image, lm, rm, reason, passed = _krawczyk(section, entry)
+            expected = {
+                "evaluation_count": 3,
+                "failure_reason": reason,
+                "krawczyk_image": image,
+                "left_margin": lm,
+                "passed": passed,
+                "preconditioner": Dyadic.from_json(entry["preconditioner"], "A0B.preconditioner"),
+                "residual": DyadicInterval.from_json(entry["residual"], "A0B.residual"),
+                "right_margin": rm,
+                "slope": DyadicInterval.from_json(entry["slope"], "A0B.slope"),
+            }
+
+        if entry.get("evaluation_count") != expected["evaluation_count"]:
             raise CalibrationError("A0B verifier: point gate evaluation count mismatch")
-        if not passed:
-            raise CalibrationError("A0B verifier: first-cross-section point Krawczyk failed")
-        pass_flags.append(passed)
+        if entry.get("failure_reason") != expected["failure_reason"] or entry.get("passed") is not expected["passed"]:
+            raise CalibrationError("A0B verifier: Krawczyk pass/reason mismatch")
+        if entry.get("krawczyk_image") != expected["krawczyk_image"].to_json():
+            raise CalibrationError("A0B verifier: Krawczyk image mismatch")
+        if entry.get("left_margin") != expected["left_margin"].to_json() or entry.get("right_margin") != expected["right_margin"].to_json():
+            raise CalibrationError("A0B verifier: Krawczyk margin mismatch")
+        if entry.get("preconditioner") != expected["preconditioner"].to_json():
+            raise CalibrationError("A0B verifier: Krawczyk preconditioner mismatch")
+        if entry.get("residual") != expected["residual"].to_json() or entry.get("slope") != expected["slope"].to_json():
+            raise CalibrationError("A0B verifier: Krawczyk residual/slope mismatch")
+        pass_flags.append(expected["passed"])
 
-    if cert["all_passed"] is not all(pass_flags) or cert["all_passed"] is not True:
-        raise CalibrationError("A0B verifier: all-passed policy mismatch")
+    if cert["all_passed"] is not all(pass_flags):
+        raise CalibrationError("A0B verifier: all-passed aggregate mismatch")
     return cert
 
 

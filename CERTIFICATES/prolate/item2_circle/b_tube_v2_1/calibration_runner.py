@@ -7,6 +7,12 @@ from calibration_security import *
 from a0b_start_anchor import *
 
 
+def _effective_candidate_pass(chain_passed: bool, start_gate_passed: bool) -> bool:
+    if not isinstance(chain_passed, bool) or not isinstance(start_gate_passed, bool):
+        raise CalibrationError("candidate pass gates must be bool")
+    return chain_passed and start_gate_passed
+
+
 def run_calibration(out_dir: Path, *, diagnostic: bool = False) -> int:
     assert_no_stale_inputs(out_dir)
     assert_clean_source_tree()
@@ -24,11 +30,11 @@ def run_calibration(out_dir: Path, *, diagnostic: bool = False) -> int:
     ctx.dps = config["dps"]
     out_dir.mkdir(parents=True)
     (out_dir / "config.calibration.json").write_bytes(config_raw)
+    a0b_entries = None
     if not diagnostic:
         a0b = build_a0b_start_anchor_certificate(config, kernel, arb)
         (out_dir / "A0B_START_ANCHORS.json").write_bytes(canonical_json_bytes(a0b))
-        if a0b["all_passed"] is not True:
-            raise CalibrationError("A0B first-cross-section point Krawczyk gate failed")
+        a0b_entries = a0b["entries"]
     records = []
     previous = chain_genesis(CHAIN_DOMAIN)
     first_passing = None
@@ -39,7 +45,8 @@ def run_calibration(out_dir: Path, *, diagnostic: bool = False) -> int:
             width=width, radius=radius, candidate_index=candidate_index,
             records=records, previous=previous,
         )
-        if passed and first_passing is None:
+        start_gate_passed = True if diagnostic else a0b_entries[candidate_index]["passed"]
+        if _effective_candidate_pass(passed, start_gate_passed) and first_passing is None:
             first_passing = candidate
 
     if diagnostic:

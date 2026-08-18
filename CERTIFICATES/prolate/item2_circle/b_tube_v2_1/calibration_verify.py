@@ -97,7 +97,18 @@ def _verify_records(out_dir: Path):
         raise CalibrationError("candidate completeness mismatch")
     if [record.get("candidate_index") for record in ends] != list(range(len(pairs))):
         raise CalibrationError("candidate order/index mismatch")
-    passing = [record["candidate_index"] for record in ends if record.get("passed") is True]
+    if config["mode"] == CALIBRATION_MODE:
+        a0b_pass_flags = [True] * len(pairs)
+    else:
+        a0b = verify_a0b_start_anchors(out_dir, config)
+        a0b_pass_flags = [entry["passed"] for entry in a0b["entries"]]
+        if len(a0b_pass_flags) != len(pairs) or any(not isinstance(flag, bool) for flag in a0b_pass_flags):
+            raise CalibrationError("A0B candidate gate vector mismatch")
+    passing = [
+        record["candidate_index"]
+        for record, gate in zip(ends, a0b_pass_flags)
+        if record.get("passed") is True and gate
+    ]
     first_passing = None
     if passing:
         first = passing[0]
@@ -130,7 +141,6 @@ def verify_pre(out_dir: Path, source_head: str) -> int:
     assert_workflow_security()
     config, summary, config_raw = _verify_records(out_dir)
     require_blocal_dependency(config)
-    verify_a0b_start_anchors(out_dir, config)
     _verify_source_manifest(out_dir, config)
     load_production_kernel()
     report = {

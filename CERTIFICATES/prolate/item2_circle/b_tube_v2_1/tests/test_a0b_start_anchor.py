@@ -33,6 +33,11 @@ class A0BStartAnchorTests(unittest.TestCase):
         self.assertGreater(left, D_ZERO)
         self.assertGreater(right, D_ZERO)
 
+    def test_candidate_start_gate_is_candidate_local(self):
+        self.assertTrue(calibration._effective_candidate_pass(True, True))
+        self.assertFalse(calibration._effective_candidate_pass(True, False))
+        self.assertFalse(calibration._effective_candidate_pass(False, True))
+
     def test_a0b_schema_and_gate_are_normative(self):
         self.assertEqual(a0bv.A0B_SCHEMA, "btube-a0b-start-anchors-v1")
         self.assertEqual(a0bv.A0B_PATH_NAME, "A0B_START_ANCHORS.json")

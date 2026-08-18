@@ -84,12 +84,18 @@ def build_a0b_start_anchor_certificate(config, kernel, arb_type) -> dict[str, An
             tol=tol, depth=depth, limit=limit,
         )
         q_hull = DyadicInterval.hull([anchor, q_right])
-        rho, d_left, d_right, domain = _adaptive_radius(q_hull, cap, sigma)
-        section = shifted(DyadicInterval(-rho, rho), anchor)
-        if not a0_interval.contains(section):
+        rho = D_ZERO
+        d_left = D_ZERO
+        d_right = D_ZERO
+        domain = DyadicInterval.point(anchor)
+        section = DyadicInterval.point(anchor)
+        try:
+            rho, d_left, d_right, domain = _adaptive_radius(q_hull, cap, sigma)
+            section = shifted(DyadicInterval(-rho, rho), anchor)
+        except CalibrationError:
             result = {
-                "failure_reason": "start_anchor_section_outside_a0_bracket",
-                "krawczyk_image": DyadicInterval.point(section.midpoint()).to_json(),
+                "failure_reason": "adaptive_radius_or_physical_domain_invalid",
+                "krawczyk_image": DyadicInterval.point(anchor).to_json(),
                 "left_margin": D_ZERO.to_json(),
                 "passed": False,
                 "preconditioner": D_ZERO.to_json(),
@@ -99,11 +105,24 @@ def build_a0b_start_anchor_certificate(config, kernel, arb_type) -> dict[str, An
             }
             evaluations = 0
         else:
-            result = _evaluate_point(
-                kernel=kernel, arb_type=arb_type, domain=section, lam=start,
-                tol=tol, depth=depth, limit=limit,
-            )
-            evaluations = 3
+            if not a0_interval.contains(section):
+                result = {
+                    "failure_reason": "start_anchor_section_outside_a0_bracket",
+                    "krawczyk_image": DyadicInterval.point(section.midpoint()).to_json(),
+                    "left_margin": D_ZERO.to_json(),
+                    "passed": False,
+                    "preconditioner": D_ZERO.to_json(),
+                    "residual": DyadicInterval.point(D_ZERO).to_json(),
+                    "right_margin": D_ZERO.to_json(),
+                    "slope": DyadicInterval.point(D_ZERO).to_json(),
+                }
+                evaluations = 0
+            else:
+                result = _evaluate_point(
+                    kernel=kernel, arb_type=arb_type, domain=section, lam=start,
+                    tol=tol, depth=depth, limit=limit,
+                )
+                evaluations = 3
         entry = {
             "adaptive_radius": rho.to_json(),
             "adaptive_safety_factor": sigma.to_json(),
