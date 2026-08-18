@@ -253,14 +253,43 @@ def _verify_binding_candidate(config, candidate_index, width, cap, cells,
     )
     terminal = _layout_shift(parsed[-1][2], parsed[-1][1])
     overlap = terminal.intersection(cg)
-    terminal_pass = (
+    terminal_attempt = (
         overlap is not None
         and overlap.positive_width()
         and cell_pass_flags[-1]
     )
-    expected_overlap = overlap if terminal_pass else DyadicInterval.point(D_ZERO)
+    terminal_pass = False
+    expected_overlap = DyadicInterval.point(D_ZERO)
+    if terminal_attempt:
+        expected_overlap = overlap
+        terminal_record = {
+            "residual": candidate_end.get("terminal_residual"),
+            "slope": candidate_end.get("terminal_slope"),
+            "preconditioner": candidate_end.get("terminal_preconditioner"),
+        }
+        image, lm, rm, terminal_reason, terminal_pass = _layout_krawczyk(
+            overlap, terminal_record
+        )
+        evaluation_count += 3
+        if candidate_end.get("terminal_krawczyk_image") != image.to_json():
+            raise calibration.CalibrationError("layout verifier: terminal Krawczyk image mismatch")
+        if (candidate_end.get("terminal_left_margin") != lm.to_json()
+                or candidate_end.get("terminal_right_margin") != rm.to_json()):
+            raise calibration.CalibrationError("layout verifier: terminal Krawczyk margin mismatch")
+    else:
+        terminal_reason = "terminal_cg_overlap_missing"
+        zero_interval = DyadicInterval.point(D_ZERO).to_json()
+        if (candidate_end.get("terminal_krawczyk_image") != zero_interval
+                or candidate_end.get("terminal_residual") != zero_interval
+                or candidate_end.get("terminal_slope") != zero_interval
+                or candidate_end.get("terminal_preconditioner") != D_ZERO.to_json()
+                or candidate_end.get("terminal_left_margin") != D_ZERO.to_json()
+                or candidate_end.get("terminal_right_margin") != D_ZERO.to_json()):
+            raise calibration.CalibrationError("layout verifier: terminal skipped fields mismatch")
     if candidate_end.get("terminal_cg_intersection") != expected_overlap.to_json():
         raise calibration.CalibrationError("layout verifier: terminal C-G intersection mismatch")
+    if candidate_end.get("terminal_failure_reason") != terminal_reason:
+        raise calibration.CalibrationError("layout verifier: terminal failure reason mismatch")
     if candidate_end.get("terminal_match_passed") is not terminal_pass:
         raise calibration.CalibrationError("layout verifier: terminal C-G match mismatch")
 

@@ -236,16 +236,15 @@ def _candidate_run_binding(*, config, kernel, arb_type, start, width, radius,
             "reason": None, "residual": DyadicInterval.point(D_ZERO),
             "right_margin": D_ZERO, "slope": DyadicInterval.point(D_ZERO),
         }
-        if not continuation_valid:
+        try:
+            rho, boundary_left, boundary_right, domain = _adaptive_radius(
+                predictor.range_hull(), radius, sigma
+            )
+            y_box = DyadicInterval(-rho, rho)
+        except CalibrationError:
+            failure = "adaptive_radius_or_physical_domain_invalid"
+        if failure is None and not continuation_valid:
             failure = "branch_anchor_lost"
-        else:
-            try:
-                rho, boundary_left, boundary_right, domain = _adaptive_radius(
-                    predictor.range_hull(), radius, sigma
-                )
-                y_box = DyadicInterval(-rho, rho)
-            except CalibrationError:
-                failure = "adaptive_radius_or_physical_domain_invalid"
 
         if failure is None and cell_index == 0:
             start_section = shifted(y_box, q_left)
@@ -355,13 +354,26 @@ def _candidate_run_binding(*, config, kernel, arb_type, start, width, radius,
 
     terminal_intersection = DyadicInterval.point(D_ZERO)
     terminal_match = False
+    terminal_failure = "terminal_cg_overlap_missing"
+    terminal_eval = {
+        "image": DyadicInterval.point(D_ZERO),
+        "left_margin": D_ZERO, "passed": False, "preconditioner": D_ZERO,
+        "reason": None, "residual": DyadicInterval.point(D_ZERO),
+        "right_margin": D_ZERO, "slope": DyadicInterval.point(D_ZERO),
+    }
     if cell_sections:
         predictor, y_box, _, last_passed, _, _ = cell_sections[-1]
         terminal_section = shifted(y_box, predictor.q_right)
         overlap = terminal_section.intersection(_cg_root_dyadic_interval())
         if overlap is not None and overlap.positive_width() and last_passed:
             terminal_intersection = overlap
-            terminal_match = True
+            terminal_eval = _evaluate_krawczyk(
+                kernel=kernel, arb_type=arb_type, domain=overlap,
+                lam_lo=end, lam_hi=end, tol=tol, depth=depth, limit=limit,
+            )
+            evaluation_count += 3
+            terminal_failure = terminal_eval["reason"]
+            terminal_match = terminal_failure is None and terminal_eval["passed"]
 
     joins_pass = all(record["passed"] for record in join_results)
     passed = (
@@ -379,7 +391,14 @@ def _candidate_run_binding(*, config, kernel, arb_type, start, width, radius,
         "passed": passed,
         "record_type": "candidate_end",
         "terminal_cg_intersection": terminal_intersection.to_json(),
+        "terminal_failure_reason": terminal_failure,
+        "terminal_krawczyk_image": terminal_eval["image"].to_json(),
+        "terminal_left_margin": terminal_eval["left_margin"].to_json(),
         "terminal_match_passed": terminal_match,
+        "terminal_preconditioner": terminal_eval["preconditioner"].to_json(),
+        "terminal_residual": terminal_eval["residual"].to_json(),
+        "terminal_right_margin": terminal_eval["right_margin"].to_json(),
+        "terminal_slope": terminal_eval["slope"].to_json(),
     })
     return passed, previous, {
         "candidate_index": candidate_index,
