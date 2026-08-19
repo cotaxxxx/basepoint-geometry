@@ -1,0 +1,68 @@
+name: B-KERNEL internal nonfinite diagnostic
+
+on:
+  push:
+    branches:
+      - "agent/bkernel-internal-nonfinite-diagnostic"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bkernel-internal-nonfinite-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  diagnostic:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+          fetch-depth: 1
+
+      - uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38
+        with:
+          python-version: "3.12"
+
+      - name: Install pinned diagnostic dependency
+        run: python -m pip install python-flint==0.9.0
+
+      - name: Verify pinned production kernel bytes before probe
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "77e7a93c594ba66ac7d98df29ec3c03107b0c63962a5aa60f8503559082c10ac  CERTIFICATES/prolate/item2_circle/vendor/prolate_circle_F_cleanroom.py" | sha256sum -c -
+
+      - name: Static compile diagnostic source
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m py_compile CERTIFICATES/prolate/item2_circle/cleanroom/bkernel_internal_nonfinite_diagnostic.py
+
+      - name: Probe A B C internal balls
+        working-directory: CERTIFICATES/prolate/item2_circle/cleanroom
+        shell: bash
+        run: |
+          set -euo pipefail
+          python bkernel_internal_nonfinite_diagnostic.py 2>&1 | tee internal_nonfinite_diagnostic.log
+
+      - name: Verify pinned production kernel bytes after probe
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "77e7a93c594ba66ac7d98df29ec3c03107b0c63962a5aa60f8503559082c10ac  CERTIFICATES/prolate/item2_circle/vendor/prolate_circle_F_cleanroom.py" | sha256sum -c -
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: bkernel-internal-nonfinite-${{ github.sha }}
+          path: |
+            CERTIFICATES/prolate/item2_circle/cleanroom/internal_nonfinite_diagnostic.json
+            CERTIFICATES/prolate/item2_circle/cleanroom/internal_nonfinite_diagnostic.log
+            CERTIFICATES/prolate/item2_circle/cleanroom/bkernel_internal_nonfinite_diagnostic.py
+          if-no-files-found: warn
+          retention-days: 14
