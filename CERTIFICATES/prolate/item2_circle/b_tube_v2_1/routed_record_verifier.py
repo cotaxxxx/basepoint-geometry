@@ -7,13 +7,66 @@ from pathlib import Path
 from typing import Any
 
 from calibration_context import *
-from calibration_config import _expected_routed_contract
-from routed_evaluator import (
-    exact_straddle_children,
-    routed_bundle_pins,
-    selector_for_r_interval,
-    trace_genesis,
-)
+
+
+def verifier_contract() -> dict[str, Any]:
+    """Reconstruct the routed contract without importing producer routing code."""
+    return {
+        "boundary_adapter_sha256": ROUTED_BOUNDARY_FILE_SHA256["blocal_arb_adapter.py"],
+        "boundary_config_sha256": ROUTED_BOUNDARY_CONFIG_SHA256,
+        "boundary_model_sha256": ROUTED_BOUNDARY_FILE_SHA256["blocal_v22_model.py"],
+        "boundary_phase4_model_sha256": ROUTED_BOUNDARY_FILE_SHA256["blocal_phase4_model.py"],
+        "boundary_policy_sha256": ROUTED_BOUNDARY_FILE_SHA256["blocal_v22_policy.py"],
+        "boundary_route_id": ROUTED_F_ROUTE_ID,
+        "boundary_source_sha256": ROUTED_BOUNDARY_FILE_SHA256["blocal_v22_boundary.py"],
+        "boundary_symbolic_audit_sha256": ROUTED_BOUNDARY_FILE_SHA256[
+            "blocal_v22_symbolic_audit.py"
+        ],
+        "contract_id": ROUTED_CONTRACT_ID,
+        "derivative_route_id": ROUTED_HU_ROUTE_ID,
+        "interior_kernel_sha256": KERNEL_SHA256,
+        "interior_route_id": ROUTED_INTERIOR_ROUTE_ID,
+        "negation_rule_id": ROUTED_NEGATION_RULE_ID,
+        "selector_r": ROUTED_SELECTOR.to_json(),
+        "straddle_route_id": ROUTED_STRADDLE_ROUTE_ID,
+    }
+
+
+def verifier_bundle_pins() -> dict[str, Any]:
+    """Reconstruct every bundle pin independently of routed_evaluator.py."""
+    return {
+        "boundary_files_sha256": dict(sorted(ROUTED_BOUNDARY_FILE_SHA256.items())),
+        "boundary_config_sha256": ROUTED_BOUNDARY_CONFIG_SHA256,
+        "boundary_source_head": ROUTED_BOUNDARY_SOURCE_HEAD,
+        "contract": verifier_contract(),
+        "design_commit": ROUTED_DESIGN_COMMIT,
+        "interior_kernel_sha256": KERNEL_SHA256,
+    }
+
+
+def verifier_selector_for_r_interval(domain: DyadicInterval) -> str:
+    if domain.lo < D_ZERO or D_ONE < domain.hi:
+        raise CalibrationError("routed verifier: r domain outside [0,1]")
+    if domain.hi <= ROUTED_SELECTOR:
+        return ROUTED_INTERIOR_ROUTE_ID
+    if ROUTED_SELECTOR < domain.lo:
+        return ROUTED_BOUNDARY_ROUTE_ID
+    return ROUTED_STRADDLE_ROUTE_ID
+
+
+def verifier_straddle_children(
+    domain: DyadicInterval,
+) -> tuple[DyadicInterval, DyadicInterval]:
+    if verifier_selector_for_r_interval(domain) != ROUTED_STRADDLE_ROUTE_ID:
+        raise CalibrationError("routed verifier: non-straddle domain")
+    return (
+        DyadicInterval(domain.lo, ROUTED_SELECTOR),
+        DyadicInterval(ROUTED_SELECTOR, domain.hi),
+    )
+
+
+def verifier_trace_genesis() -> str:
+    return sha256_hex((ROUTED_CONTRACT_ID + "\0TRACE_V1").encode("ascii"))
 
 
 def _trace_hash(record: dict[str, Any]) -> str:
@@ -21,8 +74,9 @@ def _trace_hash(record: dict[str, Any]) -> str:
     return sha256_hex(canonical_json_bytes(body))
 
 
-def _verify_trace_record(record: dict[str, Any], previous: str, sequence: int,
-                         cumulative: int) -> tuple[str, int]:
+def _verify_trace_record(
+    record: dict[str, Any], previous: str, sequence: int, cumulative: int
+) -> tuple[str, int]:
     required = {
         "boundary_route_evaluation_count_delta", "boundary_route_evaluation_count_total",
         "children", "contract_id", "detail", "enclosure", "lambda_interval", "phase",
@@ -42,19 +96,20 @@ def _verify_trace_record(record: dict[str, Any], previous: str, sequence: int,
         raise CalibrationError("routed trace: contract mismatch")
     if record["selector_r"] != ROUTED_SELECTOR.to_json():
         raise CalibrationError("routed trace: selector mismatch")
-    if record["pins"] != routed_bundle_pins():
+    if record["pins"] != verifier_bundle_pins():
         raise CalibrationError("routed trace: source/pin mismatch")
     if record["post_failure_fallback"] is not False:
         raise CalibrationError("routed trace: post-failure fallback forbidden")
     if record["quantity"] not in {"F", "F_r"}:
         raise CalibrationError("routed trace: quantity mismatch")
+
     r_iv = DyadicInterval.from_json(record["r_interval"], "routed trace r")
-    lam_iv = DyadicInterval.from_json(record["lambda_interval"], "routed trace lambda")
-    del lam_iv
+    DyadicInterval.from_json(record["lambda_interval"], "routed trace lambda")
     enclosure = DyadicInterval.from_json(record["enclosure"], "routed trace enclosure")
-    expected_route = selector_for_r_interval(r_iv)
+    expected_route = verifier_selector_for_r_interval(r_iv)
     if record["route_id"] != expected_route:
         raise CalibrationError("routed trace: route/domain mismatch")
+
     delta = record["boundary_route_evaluation_count_delta"]
     total = record["boundary_route_evaluation_count_total"]
     if not isinstance(delta, int) or isinstance(delta, bool) or delta < 0:
@@ -68,27 +123,33 @@ def _verify_trace_record(record: dict[str, Any], previous: str, sequence: int,
     cumulative += delta
     if total != cumulative:
         raise CalibrationError("routed trace: cumulative boundary accounting mismatch")
+
     children = record["children"]
     if not isinstance(children, list):
         raise CalibrationError("routed trace: children must be a list")
     if expected_route == ROUTED_STRADDLE_ROUTE_ID:
         if len(children) != 2:
             raise CalibrationError("routed trace: straddle child count mismatch")
-        left, right = exact_straddle_children(r_iv)
+        left, right = verifier_straddle_children(r_iv)
         expected_children = (
             (ROUTED_INTERIOR_ROUTE_ID, left),
             (ROUTED_BOUNDARY_ROUTE_ID, right),
         )
         hull_values: list[Dyadic] = []
         for child, (route_id, domain) in zip(children, expected_children):
+            if not isinstance(child, dict):
+                raise CalibrationError("routed trace: straddle child object required")
             if child.get("route_id") != route_id or child.get("r_interval") != domain.to_json():
                 raise CalibrationError("routed trace: straddle split/route mismatch")
-            child_iv = DyadicInterval.from_json(child.get("enclosure"), "straddle child enclosure")
+            child_iv = DyadicInterval.from_json(
+                child.get("enclosure"), "straddle child enclosure"
+            )
             hull_values.extend((child_iv.lo, child_iv.hi))
         if DyadicInterval.hull(hull_values) != enclosure:
             raise CalibrationError("routed trace: straddle hull mismatch")
     elif children:
         raise CalibrationError("routed trace: non-straddle children forbidden")
+
     if expected_route == ROUTED_BOUNDARY_ROUTE_ID:
         boundary_detail = record["detail"]
     elif expected_route == ROUTED_STRADDLE_ROUTE_ID:
@@ -111,6 +172,7 @@ def _verify_trace_record(record: dict[str, Any], previous: str, sequence: int,
             or boundary_detail.get("transform") != expected_transform
         ):
             raise CalibrationError("routed trace: boundary quantity/negation contract mismatch")
+
     phase = record["phase"]
     if not isinstance(phase, str) or not phase:
         raise CalibrationError("routed trace: phase missing")
@@ -119,10 +181,9 @@ def _verify_trace_record(record: dict[str, Any], previous: str, sequence: int,
     return record["trace_record_sha256"], cumulative
 
 
-def verify_routed_trace(out_dir: Path, config: dict[str, Any]) -> dict[str, Any]:
-    path = out_dir / ROUTED_TRACE_NAME
-    parsed = parse_canonical_jsonl(path.read_bytes())
-    previous = trace_genesis()
+def verify_routed_trace_bytes(data: bytes, config: dict[str, Any]) -> dict[str, Any]:
+    parsed = parse_canonical_jsonl(data)
+    previous = verifier_trace_genesis()
     cumulative = 0
     a0b_count = 0
     for index, (record, _) in enumerate(parsed):
@@ -138,6 +199,10 @@ def verify_routed_trace(out_dir: Path, config: dict[str, Any]) -> dict[str, Any]
         "record_count": len(parsed),
         "trace_chain_tip": previous,
     }
+
+
+def verify_routed_trace(out_dir: Path, config: dict[str, Any]) -> dict[str, Any]:
+    return verify_routed_trace_bytes((out_dir / ROUTED_TRACE_NAME).read_bytes(), config)
 
 
 def _expected_bridge_points() -> list[tuple[Fraction, Fraction]]:
@@ -178,7 +243,7 @@ def verify_route_consistency_certificate_structure(
         or certificate["grid_id"] != ROUTE_CONSISTENCY_GRID_ID
     ):
         raise CalibrationError("route consistency certificate: identity/status mismatch")
-    if certificate["pins"] != routed_bundle_pins():
+    if certificate["pins"] != verifier_bundle_pins():
         raise CalibrationError("route consistency certificate: source/pin mismatch")
     source_head = certificate["implementation_source_head"]
     if (
@@ -189,6 +254,7 @@ def verify_route_consistency_certificate_structure(
         raise CalibrationError("route consistency certificate: source head format")
     if expected_source_head is not None and source_head != expected_source_head:
         raise CalibrationError("route consistency certificate: source head mismatch")
+
     settings = certificate["producer_settings"]
     _require_exact_keys(settings, {"depth", "dps", "limit", "tol"}, "bridge settings")
     if (
@@ -200,14 +266,20 @@ def verify_route_consistency_certificate_structure(
         or settings["dps"] <= 0
     ):
         raise CalibrationError("route consistency certificate: settings mismatch")
+
     points = _expected_bridge_points()
-    if certificate["row_count"] != len(points) or certificate["grid_sha256"] != bridge_grid_sha256():
+    if (
+        certificate["row_count"] != len(points)
+        or certificate["grid_sha256"] != bridge_grid_sha256()
+    ):
         raise CalibrationError("route consistency certificate: grid summary mismatch")
     rows = certificate["rows"]
     if not isinstance(rows, list) or len(rows) != len(points):
         raise CalibrationError("route consistency certificate: row completeness mismatch")
     for index, (row, (r, lam)) in enumerate(zip(rows, points)):
-        _require_exact_keys(row, {"F", "F_r", "index", "lambda", "r"}, f"bridge row {index}")
+        _require_exact_keys(
+            row, {"F", "F_r", "index", "lambda", "r"}, f"bridge row {index}"
+        )
         if (
             row["index"] != index
             or row["r"] != Rational.from_fraction(r).to_json()
@@ -217,13 +289,17 @@ def verify_route_consistency_certificate_structure(
         for quantity in ("F", "F_r"):
             item = row[quantity]
             _require_exact_keys(
-                item, {"boundary", "interior", "intersection"}, f"bridge row {index}.{quantity}"
+                item,
+                {"boundary", "interior", "intersection"},
+                f"bridge row {index}.{quantity}",
             )
             interior = DyadicInterval.from_json(item["interior"], "bridge interior")
             boundary = DyadicInterval.from_json(item["boundary"], "bridge boundary")
             intersection = interior.intersection(boundary)
             if intersection is None or item["intersection"] != intersection.to_json():
-                raise CalibrationError("route consistency certificate: empty/tampered intersection")
+                raise CalibrationError(
+                    "route consistency certificate: empty/tampered intersection"
+                )
     count = certificate["boundary_route_evaluation_count"]
     if not isinstance(count, int) or isinstance(count, bool) or count <= 0:
         raise CalibrationError("route consistency certificate: boundary evaluation count")
@@ -248,10 +324,9 @@ def require_route_consistency_certificate(config: dict[str, Any]) -> dict[str, A
     return verified
 
 
-def verify_routed_manifest(out_dir: Path, config: dict[str, Any]) -> dict[str, Any]:
-    manifest = parse_canonical_json_bytes(
-        (out_dir / ROUTED_MANIFEST_NAME).read_bytes(), allow_display=False
-    )
+def verify_routed_manifest_object(
+    manifest: dict[str, Any], trace: dict[str, Any], config: dict[str, Any]
+) -> dict[str, Any]:
     required = {
         "audited_source_commit", "boundary_route_evaluation_budget",
         "boundary_route_evaluation_count", "contract_id", "design_commit", "pins",
@@ -263,7 +338,7 @@ def verify_routed_manifest(out_dir: Path, config: dict[str, Any]) -> dict[str, A
         raise CalibrationError("routed manifest: schema mismatch")
     if manifest["contract_id"] != ROUTED_CONTRACT_ID:
         raise CalibrationError("routed manifest: contract mismatch")
-    if manifest["pins"] != routed_bundle_pins():
+    if manifest["pins"] != verifier_bundle_pins():
         raise CalibrationError("routed manifest: pin mismatch")
     if manifest["audited_source_commit"] != config["audited_source_commit"]:
         raise CalibrationError("routed manifest: audited source mismatch")
@@ -279,7 +354,6 @@ def verify_routed_manifest(out_dir: Path, config: dict[str, Any]) -> dict[str, A
         != config["route_consistency_certificate_sha256"]
     ):
         raise CalibrationError("routed manifest: bridge pin mismatch")
-    trace = verify_routed_trace(out_dir, config)
     if (
         manifest["boundary_route_evaluation_count"]
         != trace["boundary_route_evaluation_count"]
@@ -288,6 +362,14 @@ def verify_routed_manifest(out_dir: Path, config: dict[str, Any]) -> dict[str, A
     ):
         raise CalibrationError("routed manifest: trace summary mismatch")
     return manifest
+
+
+def verify_routed_manifest(out_dir: Path, config: dict[str, Any]) -> dict[str, Any]:
+    manifest = parse_canonical_json_bytes(
+        (out_dir / ROUTED_MANIFEST_NAME).read_bytes(), allow_display=False
+    )
+    trace = verify_routed_trace(out_dir, config)
+    return verify_routed_manifest_object(manifest, trace, config)
 
 
 def verify_routed_outputs(out_dir: Path, config: dict[str, Any]) -> dict[str, Any]:

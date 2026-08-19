@@ -174,6 +174,7 @@ SOURCE_FILE_LIST = (
     "tests/test_calibration_guards.py",
     "tests/test_calibration_records.py",
     "tests/test_routed_evaluator.py",
+    "tests/test_routed_verifier_independence.py",
     "tests/test_selftest.py",
 )
 EXPECTED_CONFIG_KEYS = {

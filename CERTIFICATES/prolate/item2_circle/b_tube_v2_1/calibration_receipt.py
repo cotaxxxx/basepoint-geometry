@@ -2,8 +2,11 @@
 from calibration_context import *
 from calibration_config import *
 from calibration_security import *
-from routed_evaluator import routed_bundle_pins
-from routed_record_verifier import verify_route_consistency_certificate_structure
+from routed_record_verifier import (
+    verify_route_consistency_certificate_structure,
+    verify_routed_manifest_object,
+    verify_routed_trace_bytes,
+)
 
 
 def verify_final(archive_path: Path, receipt_path: Path, source_head: str) -> int:
@@ -22,10 +25,14 @@ def verify_final(archive_path: Path, receipt_path: Path, source_head: str) -> in
         raise CalibrationError("receipt kernel mismatch")
     if receipt["state"] not in {"CALIBRATION_COMPLETE", "CALIBRATION_INCOMPLETE"}:
         raise CalibrationError("receipt terminal state invalid")
-    if receipt["archive_name"] != archive_path.name or sha256_hex(archive_path.read_bytes()) != receipt["archive_sha256"]:
+    if (
+        receipt["archive_name"] != archive_path.name
+        or sha256_hex(archive_path.read_bytes()) != receipt["archive_sha256"]
+    ):
         raise CalibrationError("archive byte mismatch")
     if sha256_hex(WORKFLOW_PATH.read_bytes()) != receipt["workflow_source_sha256"]:
         raise CalibrationError("workflow source mismatch")
+
     with zipfile.ZipFile(archive_path, "r") as archive:
         names = archive.namelist()
         if names != sorted(names) or len(names) != len(set(names)):
@@ -43,11 +50,13 @@ def verify_final(archive_path: Path, receipt_path: Path, source_head: str) -> in
         for relative, digest in manifest["files"].items():
             if sha256_hex(archive.read(relative)) != digest:
                 raise CalibrationError(f"archive payload digest mismatch: {relative}")
+
         config_raw = archive.read("config.calibration.json")
         if sha256_hex(config_raw) != receipt["configuration_sha256"]:
             raise CalibrationError("configuration digest mismatch")
         config = parse_canonical_json_bytes(config_raw, allow_display=False)
         require_blocal_dependency(config)
+
         bridge_raw = archive.read("ROUTE_CONSISTENCY_CERTIFICATE.json")
         bridge_pin = config.get("route_consistency_certificate_sha256")
         if bridge_pin is None or sha256_hex(bridge_raw) != bridge_pin:
@@ -56,18 +65,27 @@ def verify_final(archive_path: Path, receipt_path: Path, source_head: str) -> in
         verify_route_consistency_certificate_structure(
             bridge, expected_source_head=config["audited_source_commit"]
         )
+        if bridge["producer_settings"]["dps"] != config["checker_dps"]:
+            raise CalibrationError("archive route consistency checker precision mismatch")
+
+        trace = verify_routed_trace_bytes(archive.read(ROUTED_TRACE_NAME), config)
         routed_manifest = parse_canonical_json_bytes(
             archive.read(ROUTED_MANIFEST_NAME), allow_display=False
         )
+        verify_routed_manifest_object(routed_manifest, trace, config)
+
+        checker = parse_canonical_json_bytes(
+            archive.read("CHECKER_REPORT.json"), allow_display=False
+        )
         if (
-            routed_manifest.get("schema") != ROUTED_MANIFEST_SCHEMA
-            or routed_manifest.get("contract_id") != ROUTED_CONTRACT_ID
-            or routed_manifest.get("pins") != routed_bundle_pins()
-            or routed_manifest.get("route_consistency_certificate_sha256") != bridge_pin
-            or routed_manifest.get("boundary_route_evaluation_budget")
-            != config["boundary_route_evaluation_budget"]
+            checker.get("verifier") != "PASS"
+            or checker.get("routed_evaluator_verifier") != "PASS"
+            or checker.get("routed_boundary_evaluation_count")
+            != trace["boundary_route_evaluation_count"]
+            or checker.get("source_head") != source_head
         ):
-            raise CalibrationError("archive routed manifest mismatch")
+            raise CalibrationError("archive checker/routed trace mismatch")
+
         load_production_kernel()
         summary = parse_canonical_json_bytes(
             archive.read("CALIBRATION_SUMMARY.json"), allow_display=False
