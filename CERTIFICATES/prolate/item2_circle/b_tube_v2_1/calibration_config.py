@@ -1,10 +1,10 @@
-"""Canonical calibration configuration and B-LOCAL gate."""
+"""Canonical calibration configuration and B-LOCAL/routed-evaluator gates."""
 from calibration_context import *
 
-CONFIG_SCHEMA = "btube-calibration-config-v3-adaptive"
-DESIGN_VERSION = "btube-calibration-design-v3-adaptive"
+CONFIG_SCHEMA = "btube-calibration-config-v4-routed"
+DESIGN_VERSION = "btube-calibration-design-v4-routed"
 AUDITED_SOURCE_COMMIT = "99fc7ea08c526a72556b0b50b5b07689f7680e87"
-DESIGN_COMMIT = "88b30db7a103236423f82cbd21b3633fddec7214"
+DESIGN_COMMIT = ROUTED_DESIGN_COMMIT
 
 
 def _validate_unpinned_blocal(config: dict[str, Any]) -> dict[str, Any]:
@@ -60,6 +60,69 @@ def _validate_pinned_blocal(config: dict[str, Any]) -> dict[str, Any]:
     return dependency
 
 
+def _expected_routed_contract() -> dict[str, Any]:
+    return {
+        "boundary_adapter_sha256": ROUTED_BOUNDARY_FILE_SHA256["blocal_arb_adapter.py"],
+        "boundary_config_sha256": ROUTED_BOUNDARY_CONFIG_SHA256,
+        "boundary_model_sha256": ROUTED_BOUNDARY_FILE_SHA256["blocal_v22_model.py"],
+        "boundary_phase4_model_sha256": ROUTED_BOUNDARY_FILE_SHA256["blocal_phase4_model.py"],
+        "boundary_policy_sha256": ROUTED_BOUNDARY_FILE_SHA256["blocal_v22_policy.py"],
+        "boundary_route_id": ROUTED_F_ROUTE_ID,
+        "boundary_source_sha256": ROUTED_BOUNDARY_FILE_SHA256["blocal_v22_boundary.py"],
+        "boundary_symbolic_audit_sha256": ROUTED_BOUNDARY_FILE_SHA256[
+            "blocal_v22_symbolic_audit.py"
+        ],
+        "contract_id": ROUTED_CONTRACT_ID,
+        "derivative_route_id": ROUTED_HU_ROUTE_ID,
+        "interior_kernel_sha256": KERNEL_SHA256,
+        "interior_route_id": ROUTED_INTERIOR_ROUTE_ID,
+        "negation_rule_id": ROUTED_NEGATION_RULE_ID,
+        "selector_r": ROUTED_SELECTOR.to_json(),
+        "straddle_route_id": ROUTED_STRADDLE_ROUTE_ID,
+    }
+
+
+def _validate_routed_contract(config: dict[str, Any]) -> dict[str, Any]:
+    contract = _require_exact_keys(
+        config["routed_evaluator_contract"],
+        EXPECTED_ROUTED_CONTRACT_KEYS,
+        "routed_evaluator_contract",
+    )
+    if contract != _expected_routed_contract():
+        raise CalibrationError("config: routed evaluator contract/pin mismatch")
+    return contract
+
+
+def expected_boundary_route_evaluation_budget(config: dict[str, Any]) -> int:
+    widths = _dyadic_list(config["candidate_lambda_widths"], "candidate_lambda_widths")
+    radii = _dyadic_list(config["candidate_tube_radii"], "candidate_tube_radii")
+    max_cells = _positive_int(config["max_cells"], "max_cells")
+    refresh = _positive_int(config["predictor_refresh"], "predictor_refresh")
+    refresh_hits = (max_cells + refresh - 1) // refresh
+    # Binding worst case:
+    # A0B: 4 Newton iterations * (F,F_r) + one 3-call point Krawczyk = 11.
+    # Main candidate: predictor 2*(max_cells+3*refresh_hits), cells 3*max_cells,
+    # joins 3*(max_cells-1), terminal 3 = 8*max_cells+6*refresh_hits calls.
+    calls_per_pair = 11 + 8 * max_cells + 6 * refresh_hits
+    return (
+        len(widths)
+        * len(radii)
+        * calls_per_pair
+        * ROUTED_BOUNDARY_ROUTE_CALL_CAP
+    )
+
+
+def _validate_route_consistency_pin(value: Any) -> None:
+    if value is None:
+        return
+    if (
+        not isinstance(value, str)
+        or len(value) != 64
+        or any(ch not in "0123456789abcdef" for ch in value)
+    ):
+        raise CalibrationError("config: route consistency certificate pin format")
+
+
 def load_config(path: Path = CONFIG_PATH) -> tuple[dict[str, Any], bytes]:
     raw = path.read_bytes()
     obj = parse_canonical_json_bytes(raw, allow_display=False)
@@ -79,6 +142,8 @@ def load_config(path: Path = CONFIG_PATH) -> tuple[dict[str, Any], bytes]:
     sigma = Dyadic.from_json(obj["adaptive_safety_factor"], "adaptive_safety_factor")
     if sigma != ADAPTIVE_SIGMA:
         raise CalibrationError("config: adaptive safety factor must be exactly 1/2")
+    _validate_routed_contract(obj)
+    _validate_route_consistency_pin(obj["route_consistency_certificate_sha256"])
 
     mode = obj["mode"]
     if mode == CALIBRATION_MODE:
@@ -114,6 +179,11 @@ def load_config(path: Path = CONFIG_PATH) -> tuple[dict[str, Any], bytes]:
         _positive_int(obj[key], key)
     _dyadic_list(obj["candidate_lambda_widths"], "candidate_lambda_widths")
     _dyadic_list(obj["candidate_tube_radii"], "candidate_tube_radii")
+    boundary_budget = _positive_int(
+        obj["boundary_route_evaluation_budget"], "boundary_route_evaluation_budget"
+    )
+    if boundary_budget != expected_boundary_route_evaluation_budget(obj):
+        raise CalibrationError("config: boundary-route evaluation budget mismatch")
 
     cg = _require_exact_keys(obj["cg_match_dependency"], EXPECTED_CG_KEYS, "cg_match_dependency")
     if cg["artifact_zip_sha256"] != CG_ARTIFACT_SHA256:
@@ -129,19 +199,24 @@ def load_config(path: Path = CONFIG_PATH) -> tuple[dict[str, Any], bytes]:
     if Rational.from_json(cg["lambda"], "cg.lambda") != CG_LAMBDA:
         raise CalibrationError("config: C-G lambda mismatch")
     root = _require_exact_keys(cg["root_interval"], {"lo", "hi"}, "cg.root_interval")
-    if (Rational.from_json(root["lo"]) != CG_ROOT[0]
-            or Rational.from_json(root["hi"]) != CG_ROOT[1]):
+    if (
+        Rational.from_json(root["lo"]) != CG_ROOT[0]
+        or Rational.from_json(root["hi"]) != CG_ROOT[1]
+    ):
         raise CalibrationError("config: C-G root interval mismatch")
     return obj, raw
 
 
 def require_blocal_dependency(config: dict[str, Any]) -> None:
-    if (config.get("mode") != BINDING_MODE
-            or config.get("binding_to_final_lambda_start") is not True):
+    if (
+        config.get("mode") != BINDING_MODE
+        or config.get("binding_to_final_lambda_start") is not True
+    ):
         raise CalibrationError(
             "B-LOCAL/B-ENTRY dependency is not pinned; binding calibration is disabled"
         )
     _validate_pinned_blocal(config)
+    _validate_routed_contract(config)
 
 
 def require_diagnostic_mode(config: dict[str, Any]) -> Rational:

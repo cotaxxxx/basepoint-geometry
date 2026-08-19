@@ -1,8 +1,9 @@
-"""Independent record and pre-delivery verification."""
+"""Independent record, routed-evaluator, and pre-delivery verification."""
 from calibration_context import *
 from calibration_config import *
 from calibration_security import *
 from a0b_start_anchor_verify import verify_a0b_start_anchors
+from routed_record_verifier import verify_routed_outputs
 
 
 def _verifier_candidate_pairs(config: dict[str, Any]) -> list[tuple[Dyadic, Dyadic]]:
@@ -129,9 +130,11 @@ def _verify_records(out_dir: Path):
         expected = first_passing
         expected_state = "CALIBRATION_COMPLETE" if expected is not None else "CALIBRATION_INCOMPLETE"
         expected_coverage = expected is not None
-    if (summary["recommendation"] != expected
-            or summary["state"] != expected_state
-            or summary["coverage_claim"] is not expected_coverage):
+    if (
+        summary["recommendation"] != expected
+        or summary["state"] != expected_state
+        or summary["coverage_claim"] is not expected_coverage
+    ):
         raise CalibrationError("deterministic recommendation/state policy mismatch")
     return config, summary, config_raw
 
@@ -142,12 +145,15 @@ def verify_pre(out_dir: Path, source_head: str) -> int:
     config, summary, config_raw = _verify_records(out_dir)
     require_blocal_dependency(config)
     _verify_source_manifest(out_dir, config)
+    routed = verify_routed_outputs(out_dir, config)
     load_production_kernel()
     report = {
         "a0b_start_anchor_verifier": "PASS",
         "config_sha256": sha256_hex(config_raw),
         "kernel_sha256": KERNEL_SHA256,
         "record_chain_tip": summary["chain_tip"],
+        "routed_boundary_evaluation_count": routed["boundary_route_evaluation_count"],
+        "routed_evaluator_verifier": "PASS",
         "schema": "btube-calibration-checker-report-v1",
         "source_head": source_head,
         "state": summary["state"],

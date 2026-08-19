@@ -2,6 +2,9 @@
 from calibration_context import *
 from calibration_config import *
 from calibration_security import *
+from routed_evaluator import routed_bundle_pins
+from routed_record_verifier import verify_route_consistency_certificate_structure
+
 
 def verify_final(archive_path: Path, receipt_path: Path, source_head: str) -> int:
     receipt = parse_canonical_json_bytes(receipt_path.read_bytes(), allow_display=False)
@@ -45,23 +48,51 @@ def verify_final(archive_path: Path, receipt_path: Path, source_head: str) -> in
             raise CalibrationError("configuration digest mismatch")
         config = parse_canonical_json_bytes(config_raw, allow_display=False)
         require_blocal_dependency(config)
+        bridge_raw = archive.read("ROUTE_CONSISTENCY_CERTIFICATE.json")
+        bridge_pin = config.get("route_consistency_certificate_sha256")
+        if bridge_pin is None or sha256_hex(bridge_raw) != bridge_pin:
+            raise CalibrationError("archive route consistency certificate pin mismatch")
+        bridge = parse_canonical_json_bytes(bridge_raw, allow_display=False)
+        verify_route_consistency_certificate_structure(
+            bridge, expected_source_head=config["audited_source_commit"]
+        )
+        routed_manifest = parse_canonical_json_bytes(
+            archive.read(ROUTED_MANIFEST_NAME), allow_display=False
+        )
+        if (
+            routed_manifest.get("schema") != ROUTED_MANIFEST_SCHEMA
+            or routed_manifest.get("contract_id") != ROUTED_CONTRACT_ID
+            or routed_manifest.get("pins") != routed_bundle_pins()
+            or routed_manifest.get("route_consistency_certificate_sha256") != bridge_pin
+            or routed_manifest.get("boundary_route_evaluation_budget")
+            != config["boundary_route_evaluation_budget"]
+        ):
+            raise CalibrationError("archive routed manifest mismatch")
         load_production_kernel()
-        summary = parse_canonical_json_bytes(archive.read("CALIBRATION_SUMMARY.json"), allow_display=False)
+        summary = parse_canonical_json_bytes(
+            archive.read("CALIBRATION_SUMMARY.json"), allow_display=False
+        )
         if summary.get("state") != receipt["state"]:
             raise CalibrationError("receipt/summary state mismatch")
         assert_result_namespace(summary)
     return 0
+
 
 def assert_no_workflow_in_result_merge(changed_paths: Iterable[str]) -> None:
     workflow = ".github/workflows/prolate-item2-btube-v2-1-calibration.yml"
     if workflow in set(changed_paths):
         raise CalibrationError("temporary calibration workflow survives result merge")
 
+
 def verify_config_only() -> int:
-    load_config()
+    config, _ = load_config()
     assert_clean_source_tree()
     assert_workflow_security()
     load_production_kernel()
+    if config["mode"] == BINDING_MODE:
+        from routed_record_verifier import require_route_consistency_certificate
+        require_route_consistency_certificate(config)
     return 0
+
 
 __all__ = [name for name in globals() if not name.startswith("__")]

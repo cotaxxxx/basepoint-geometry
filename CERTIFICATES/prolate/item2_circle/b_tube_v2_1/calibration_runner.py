@@ -1,10 +1,12 @@
-"""Calibration runner with an explicit nonbinding diagnostic profile."""
+"""Calibration runner with routed boundary evaluation for the binding profile."""
 from calibration_context import *
 from calibration_candidate import *
 from calibration_config import *
 from calibration_numeric import *
 from calibration_security import *
 from a0b_start_anchor import *
+from routed_evaluator import RoutedEvaluator, routed_bundle_pins
+from routed_record_verifier import require_route_consistency_certificate
 
 
 def _effective_candidate_pass(chain_passed: bool, start_gate_passed: bool) -> bool:
@@ -13,25 +15,53 @@ def _effective_candidate_pass(chain_passed: bool, start_gate_passed: bool) -> bo
     return chain_passed and start_gate_passed
 
 
+def _write_routed_outputs(out_dir: Path, config: dict[str, Any], evaluator: RoutedEvaluator) -> None:
+    trace_raw = canonical_jsonl(evaluator.trace)
+    (out_dir / ROUTED_TRACE_NAME).write_bytes(trace_raw)
+    manifest = {
+        "audited_source_commit": AUDITED_SOURCE_COMMIT,
+        "boundary_route_evaluation_budget": config["boundary_route_evaluation_budget"],
+        "boundary_route_evaluation_count": evaluator.boundary_evaluation_count,
+        "contract_id": ROUTED_CONTRACT_ID,
+        "design_commit": DESIGN_COMMIT,
+        "pins": routed_bundle_pins(),
+        "route_consistency_certificate_sha256": config[
+            "route_consistency_certificate_sha256"
+        ],
+        "schema": ROUTED_MANIFEST_SCHEMA,
+        "trace_chain_tip": evaluator.trace_tip,
+        "trace_record_count": len(evaluator.trace),
+    }
+    (out_dir / ROUTED_MANIFEST_NAME).write_bytes(canonical_json_bytes(manifest))
+
+
 def run_calibration(out_dir: Path, *, diagnostic: bool = False) -> int:
     assert_no_stale_inputs(out_dir)
     assert_clean_source_tree()
     assert_workflow_security()
     config, config_raw = load_config()
+    routed: RoutedEvaluator | None = None
     if diagnostic:
         start = require_diagnostic_mode(config)
     else:
         require_blocal_dependency(config)
+        require_route_consistency_certificate(config)
         start = Rational.from_json(
             config["blocal_dependency"]["lambda_start"], "blocal_dependency.lambda_start"
         )
-    kernel, kernel_path = load_production_kernel()
+    raw_kernel, kernel_path = load_production_kernel()
     from flint import arb, ctx
     ctx.dps = config["dps"]
+    kernel = raw_kernel
+    if not diagnostic:
+        routed = RoutedEvaluator(raw_kernel, arb, config)
+        kernel = routed
     out_dir.mkdir(parents=True)
     (out_dir / "config.calibration.json").write_bytes(config_raw)
     a0b_entries = None
     if not diagnostic:
+        assert routed is not None
+        routed.set_phase("A0B")
         a0b = build_a0b_start_anchor_certificate(config, kernel, arb)
         (out_dir / "A0B_START_ANCHORS.json").write_bytes(canonical_json_bytes(a0b))
         a0b_entries = a0b["entries"]
@@ -40,6 +70,8 @@ def run_calibration(out_dir: Path, *, diagnostic: bool = False) -> int:
     first_passing = None
     pairs = _candidate_pairs(config)
     for candidate_index, (width, radius) in enumerate(pairs):
+        if routed is not None:
+            routed.set_phase(f"CANDIDATE:{candidate_index}")
         passed, previous, candidate = _candidate_run(
             config=config, kernel=kernel, arb_type=arb, start=start,
             width=width, radius=radius, candidate_index=candidate_index,
@@ -72,6 +104,8 @@ def run_calibration(out_dir: Path, *, diagnostic: bool = False) -> int:
     assert_result_namespace(summary)
     (out_dir / "calibration_records.jsonl").write_bytes(canonical_jsonl(records))
     (out_dir / "CALIBRATION_SUMMARY.json").write_bytes(canonical_json_bytes(summary))
+    if routed is not None:
+        _write_routed_outputs(out_dir, config, routed)
     source_manifest = {
         "audited_source_commit": AUDITED_SOURCE_COMMIT,
         "binding_to_final_lambda_start": config["binding_to_final_lambda_start"],

@@ -21,6 +21,12 @@ WORKFLOW_PATH = REPO_ROOT / ".github/workflows/prolate-item2-btube-v2-1-calibrat
 CONFIG_PATH = HERE / "config.calibration.json"
 KERNEL_RELATIVE = Path("CERTIFICATES/prolate/item2_circle/vendor/prolate_circle_F_cleanroom.py")
 A0_CERTIFICATE_PATH = HERE / "A0_BOUNDARY_DISTANCE_CERTIFICATE.json"
+ROUTED_DESIGN_PATH = HERE / "ROUTED_EVALUATOR_DESIGN_V1.md"
+ROUTE_CONSISTENCY_PATH = HERE / "ROUTE_CONSISTENCY_CERTIFICATE.json"
+ROUTED_TRACE_NAME = "ROUTED_EVALUATION_TRACE.jsonl"
+ROUTED_MANIFEST_NAME = "ROUTED_EVALUATOR_MANIFEST.json"
+ROUTED_BOUNDARY_DIR = HERE / "dependencies/blocal_v22_source"
+ROUTED_BOUNDARY_CONFIG_PATH = ROUTED_BOUNDARY_DIR / "config.blocal-v2.2-run.json"
 
 sys.path.insert(0, str(BTUBE_ROOT))
 
@@ -92,8 +98,41 @@ CHAIN_DOMAIN = "B-TUBE-CALIBRATION-RECORD-CHAIN-v1"
 TERMINAL_STATES = {"CALIBRATION_COMPLETE", "CALIBRATION_INCOMPLETE", "CALIBRATION_FAILED"}
 FORBIDDEN_RESULT_PREFIX = "CERT" + "IFIED_"
 FORBIDDEN_RESULT_KEYS = {"verdict", "certified", "production_match"}
+
+ROUTED_CONTRACT_ID = "EXACT_DOMAIN_ROUTED_DUAL_SUPPLY_V1"
+ROUTED_INTERIOR_ROUTE_ID = "INTERIOR_CLEANROOM_V1"
+ROUTED_BOUNDARY_ROUTE_ID = "BOUNDARY_BLOCAL_FINITE_V1"
+ROUTED_STRADDLE_ROUTE_ID = "EXACT_SPLIT_HULL_V1"
+ROUTED_SELECTOR = Dyadic(3, 2)
+ROUTED_F_ROUTE_ID = "BLOCAL_F_ROUTE_V2"
+ROUTED_HU_ROUTE_ID = "BLOCAL_K_ROUTE_V2"
+ROUTED_NEGATION_RULE_ID = "BLOCAL_INTERVAL_NEGATION_V1"
+ROUTED_BOUNDARY_ROUTE_CALL_CAP = 24000
+ROUTED_TRACE_SCHEMA = "btube-routed-evaluation-trace-v1"
+ROUTED_MANIFEST_SCHEMA = "btube-routed-evaluator-manifest-v1"
+ROUTE_CONSISTENCY_SCHEMA = "btube-route-consistency-certificate-v1"
+ROUTE_CONSISTENCY_GRID_ID = "R48_63_OVER_64_X_L6_V1"
+ROUTE_CONSISTENCY_TOL = "1e-12"
+ROUTE_CONSISTENCY_DEPTH = 12
+ROUTE_CONSISTENCY_LIMIT = 200000
+ROUTED_DESIGN_COMMIT = "cae2bcb08afc49be63002ae26f9b00e14bbcacf2"
+ROUTED_BOUNDARY_CONFIG_SHA256 = BLOCAL_CONFIG_SHA256
+ROUTED_BOUNDARY_SOURCE_HEAD = BLOCAL_SOURCE_HEAD
+ROUTED_BOUNDARY_FILE_SHA256 = {
+    "blocal_arb_adapter.py": "99e640fba88cfe353ea360190a03df7a9de8840637922f9f56fa6b7168d94e66",
+    "blocal_phase4_model.py": "92bc9010cbaf7e3c61a79aa6bb05e2f717a99486e1faac416e0f3dd3ee5f327a",
+    "blocal_v22_boundary.py": "aea768c02644fdb08c8c32455207efe7424c7dc34efe378ad545c3ab9418abf9",
+    "blocal_v22_model.py": "8e9bcb0d9519cd6feb2375486985dddde43735dcb327cded28e96a33c61acb16",
+    "blocal_v22_policy.py": "d8bac8535f5146f22906e8cdc604640edd909709998a41d7f377c9802ca7cc65",
+    "blocal_v22_symbolic_audit.py": "b75ce97c8ff1342c6472a744cf2b64bf3413a3112190a5ff6fed73f60b40d0a1",
+}
+ROUTED_BOUNDARY_DEPENDENCY_FILES = frozenset(
+    f"dependencies/blocal_v22_source/{name}" for name in ROUTED_BOUNDARY_FILE_SHA256
+)
+
 SOURCE_FILE_LIST = (
     "ADAPTIVE_TUBE_DESIGN_V1.md",
+    "ROUTED_EVALUATOR_DESIGN_V1.md",
     "A0_BOUNDARY_DISTANCE_CERTIFICATE.json",
     "a0_boundary_distance.py",
     "a0_boundary_distance_verify.py",
@@ -115,7 +154,18 @@ SOURCE_FILE_LIST = (
     "numeric_schema.py",
     "record_layout_contract.py",
     "record_layout_verifier.py",
+    "routed_evaluator.py",
+    "routed_record_verifier.py",
+    "route_consistency.py",
+    "route_consistency_verify.py",
     "requirements-calibration.txt",
+    "dependencies/blocal_v22_source/blocal_arb_adapter.py",
+    "dependencies/blocal_v22_source/blocal_phase4_model.py",
+    "dependencies/blocal_v22_source/blocal_v22_boundary.py",
+    "dependencies/blocal_v22_source/blocal_v22_model.py",
+    "dependencies/blocal_v22_source/blocal_v22_policy.py",
+    "dependencies/blocal_v22_source/blocal_v22_symbolic_audit.py",
+    "dependencies/blocal_v22_source/config.blocal-v2.2-run.json",
     "tests/test_a0_boundary_distance.py",
     "tests/test_a0b_start_anchor.py",
     "tests/test_adaptive_a1.py",
@@ -123,16 +173,18 @@ SOURCE_FILE_LIST = (
     "tests/test_calibration_config.py",
     "tests/test_calibration_guards.py",
     "tests/test_calibration_records.py",
+    "tests/test_routed_evaluator.py",
     "tests/test_selftest.py",
 )
 EXPECTED_CONFIG_KEYS = {
     "adaptive_safety_factor", "audited_source_commit", "binding_to_final_lambda_start",
-    "blocal_dependency", "candidate_lambda_widths", "candidate_tube_radii",
+    "blocal_dependency", "boundary_route_evaluation_budget",
+    "candidate_lambda_widths", "candidate_tube_radii",
     "cg_match_dependency", "checker_dps", "design_commit", "design_version",
     "diagnostic_lambda_start", "dps", "evaluation_budget", "lambda_end",
     "max_cells", "max_subdivisions", "mode", "predictor_refresh",
     "production_kernel_sha256", "q_evaluation_rule", "record_chain_genesis_domain",
-    "schema",
+    "route_consistency_certificate_sha256", "routed_evaluator_contract", "schema",
 }
 EXPECTED_BLOCAL_KEYS = {
     "artifact_zip_sha256", "certificate_sha256", "config_sha256", "lambda_start",
@@ -141,6 +193,13 @@ EXPECTED_BLOCAL_KEYS = {
 EXPECTED_CG_KEYS = {
     "artifact_zip_sha256", "b_kernel_sha256", "cg_kernel_sha256", "config_sha256",
     "lambda", "paper_lemma_id", "root_interval", "source_head",
+}
+EXPECTED_ROUTED_CONTRACT_KEYS = {
+    "boundary_adapter_sha256", "boundary_config_sha256", "boundary_model_sha256",
+    "boundary_phase4_model_sha256", "boundary_policy_sha256", "boundary_route_id",
+    "boundary_source_sha256", "boundary_symbolic_audit_sha256", "contract_id",
+    "derivative_route_id", "interior_kernel_sha256", "interior_route_id",
+    "negation_rule_id", "selector_r", "straddle_route_id",
 }
 
 class CalibrationError(RuntimeError):

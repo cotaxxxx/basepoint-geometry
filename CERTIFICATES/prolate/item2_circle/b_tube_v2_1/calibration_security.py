@@ -15,12 +15,45 @@ def _source_forbidden_code(source: str) -> list[str]:
     return [pattern for pattern in patterns if pattern in code]
 
 
+def assert_routed_boundary_dependency_bytes() -> dict[str, str]:
+    root = ROUTED_BOUNDARY_DIR
+    if root.is_symlink():
+        raise CalibrationError("routed boundary dependency directory is symlink")
+    resolved = root.resolve(strict=True)
+    expected_names = set(ROUTED_BOUNDARY_FILE_SHA256) | {"config.blocal-v2.2-run.json"}
+    actual_names = {path.name for path in resolved.iterdir() if path.is_file()}
+    if actual_names != expected_names:
+        raise CalibrationError("routed boundary dependency file set mismatch")
+    observed: dict[str, str] = {}
+    for name, expected in sorted(ROUTED_BOUNDARY_FILE_SHA256.items()):
+        path = _assert_repo_regular_file(resolved / name, REPO_ROOT)
+        digest = sha256_hex(path.read_bytes())
+        if digest != expected:
+            raise CalibrationError(f"routed boundary dependency SHA mismatch: {name}")
+        observed[name] = digest
+    config_path = _assert_repo_regular_file(
+        resolved / "config.blocal-v2.2-run.json", REPO_ROOT
+    )
+    config_digest = sha256_hex(config_path.read_bytes())
+    if config_digest != ROUTED_BOUNDARY_CONFIG_SHA256:
+        raise CalibrationError("routed boundary config SHA mismatch")
+    observed["config.blocal-v2.2-run.json"] = config_digest
+    return observed
+
+
 def assert_clean_source_tree(root: Path = BTUBE_ROOT) -> None:
+    if root.resolve() == BTUBE_ROOT.resolve():
+        assert_routed_boundary_dependency_bytes()
     offenders: dict[str, list[str]] = {}
     for path in sorted(root.rglob("*.py")):
+        relative = path.relative_to(root).as_posix()
+        # These exact files are frozen B-LOCAL proof dependencies.  Their bytes
+        # are checked independently before import.
+        if relative in ROUTED_BOUNDARY_DEPENDENCY_FILES:
+            continue
         hits = _source_forbidden_code(path.read_text(encoding="utf-8"))
         if hits:
-            offenders[path.relative_to(root).as_posix()] = hits
+            offenders[relative] = hits
     if offenders:
         raise CalibrationError(f"source scan failed: {offenders}")
 
@@ -51,6 +84,7 @@ def assert_no_stale_inputs(out_dir: Path) -> None:
     for name in {
         "resume.json", "checkpoint.json", "calibration_records.jsonl",
         "CALIBRATION_SUMMARY.json", "DELIVERY_RECEIPT.json",
+        ROUTED_TRACE_NAME, ROUTED_MANIFEST_NAME,
     }:
         if (HERE / name).exists():
             raise CalibrationError(f"stale calibration input present: {name}")
