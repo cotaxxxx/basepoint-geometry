@@ -63,7 +63,7 @@ Required canonical rules:
 
 1. `q > 0`.
 2. `gcd(|p|,q) = 1`.
-3. numerator and denominator use ASCII decimal digits only.
+3. the numerator may have a single leading `-` iff `p < 0`; after removing that optional sign, the numerator body and denominator consist only of ASCII decimal digits; the denominator has no sign.
 4. leading `+` is forbidden.
 5. leading zeroes are forbidden except the single string `"0"`.
 6. `"-0"` is forbidden.
