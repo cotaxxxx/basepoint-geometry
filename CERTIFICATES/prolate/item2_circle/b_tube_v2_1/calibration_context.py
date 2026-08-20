@@ -116,6 +116,7 @@ ROUTE_CONSISTENCY_TOL = "1e-12"
 ROUTE_CONSISTENCY_DEPTH = 12
 ROUTE_CONSISTENCY_LIMIT = 200000
 ROUTED_DESIGN_COMMIT = "cae2bcb08afc49be63002ae26f9b00e14bbcacf2"
+ROUTED_EXACT_LAMBDA_ADDENDUM_SHA256 = "deb672741e972a5d485d6477c8ff87d16d2dfb92d29dbd50511cb2ef8fc7d358"
 ROUTED_BOUNDARY_CONFIG_SHA256 = BLOCAL_CONFIG_SHA256
 ROUTED_BOUNDARY_SOURCE_HEAD = BLOCAL_SOURCE_HEAD
 ROUTED_BOUNDARY_FILE_SHA256 = {
@@ -185,7 +186,8 @@ EXPECTED_CONFIG_KEYS = {
     "diagnostic_lambda_start", "dps", "evaluation_budget", "lambda_end",
     "max_cells", "max_subdivisions", "mode", "predictor_refresh",
     "production_kernel_sha256", "q_evaluation_rule", "record_chain_genesis_domain",
-    "route_consistency_certificate_sha256", "routed_evaluator_contract", "schema",
+    "route_consistency_certificate_sha256", "routed_evaluator_contract",
+    "routed_evaluator_exact_lambda_addendum_sha256", "schema",
 }
 EXPECTED_BLOCAL_KEYS = {
     "artifact_zip_sha256", "certificate_sha256", "config_sha256", "lambda_start",
