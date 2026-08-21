@@ -5,6 +5,15 @@ from calibration_security import *
 from calibration_verify import *
 from routed_record_verifier import verify_routed_outputs
 
+EXACT_LAMBDA_SOURCE_FILES = (
+    "exact_lambda_contract.py",
+    "exact_lambda_transport.py",
+    "exact_lambda_verifier.py",
+    "exact_lambda_static.py",
+    "exact_lambda_controls.py",
+    "tests/test_exact_lambda_transport.py",
+)
+
 
 def _payload_files(run_dir: Path) -> dict[str, Path]:
     files = {
@@ -21,15 +30,27 @@ def _payload_files(run_dir: Path) -> dict[str, Path]:
         f"source/{KERNEL_RELATIVE.as_posix()}": REPO_ROOT / KERNEL_RELATIVE,
     }
     for relative in SOURCE_FILE_LIST:
-        files[f"source/CERTIFICATES/prolate/item2_circle/b_tube_v2_1/{relative}"] = BTUBE_ROOT / relative
+        files[
+            f"source/CERTIFICATES/prolate/item2_circle/b_tube_v2_1/{relative}"
+        ] = BTUBE_ROOT / relative
+    for relative in EXACT_LAMBDA_SOURCE_FILES:
+        files[
+            f"source/CERTIFICATES/prolate/item2_circle/b_tube_v2_1/{relative}"
+        ] = BTUBE_ROOT / relative
     return files
 
 
 def _build_deterministic_zip(payload_dir: Path, archive_path: Path) -> None:
-    with zipfile.ZipFile(archive_path, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as archive:
-        for path in sorted(item for item in payload_dir.rglob("*") if item.is_file()):
+    with zipfile.ZipFile(
+        archive_path, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9
+    ) as archive:
+        for path in sorted(
+            item for item in payload_dir.rglob("*") if item.is_file()
+        ):
             relative = path.relative_to(payload_dir).as_posix()
-            info = zipfile.ZipInfo(relative, date_time=(1980, 1, 1, 0, 0, 0))
+            info = zipfile.ZipInfo(
+                relative, date_time=(1980, 1, 1, 0, 0, 0)
+            )
             info.compress_type = zipfile.ZIP_DEFLATED
             info.external_attr = 0o100644 << 16
             archive.writestr(info, path.read_bytes())
@@ -43,7 +64,10 @@ def deliver(run_dir: Path, delivery_dir: Path, source_head: str) -> int:
     require_blocal_dependency(config)
     verify_a0b_start_anchors(run_dir, config)
     verify_routed_outputs(run_dir, config)
-    checker = parse_canonical_json_bytes((run_dir / "CHECKER_REPORT.json").read_bytes())
+    verify_exact_lambda_trace(run_dir)
+    checker = parse_canonical_json_bytes(
+        (run_dir / "CHECKER_REPORT.json").read_bytes()
+    )
     if (
         checker.get("verifier") != "PASS"
         or checker.get("a0b_start_anchor_verifier") != "PASS"
@@ -52,7 +76,9 @@ def deliver(run_dir: Path, delivery_dir: Path, source_head: str) -> int:
     ):
         raise CalibrationError("pre-verifier report mismatch")
     delivery_dir.mkdir(parents=True)
-    with tempfile.TemporaryDirectory(prefix="btube-calibration-payload-") as temporary:
+    with tempfile.TemporaryDirectory(
+        prefix="btube-calibration-payload-"
+    ) as temporary:
         payload_dir = Path(temporary) / "payload"
         payload_dir.mkdir()
         for relative, source in sorted(_payload_files(run_dir).items()):
@@ -61,8 +87,12 @@ def deliver(run_dir: Path, delivery_dir: Path, source_head: str) -> int:
             target.write_bytes(source.read_bytes())
         manifest = {
             "files": {
-                path.relative_to(payload_dir).as_posix(): sha256_hex(path.read_bytes())
-                for path in sorted(item for item in payload_dir.rglob("*") if item.is_file())
+                path.relative_to(payload_dir).as_posix(): sha256_hex(
+                    path.read_bytes()
+                )
+                for path in sorted(
+                    item for item in payload_dir.rglob("*") if item.is_file()
+                )
             },
             "schema": "btube-calibration-payload-manifest-v1",
         }
@@ -71,7 +101,9 @@ def deliver(run_dir: Path, delivery_dir: Path, source_head: str) -> int:
         manifest_path.write_bytes(manifest_raw)
         for relative, digest in manifest["files"].items():
             if sha256_hex((payload_dir / relative).read_bytes()) != digest:
-                raise CalibrationError("payload changed after manifest creation")
+                raise CalibrationError(
+                    "payload changed after manifest creation"
+                )
         if manifest_path.read_bytes() != manifest_raw:
             raise CalibrationError("payload manifest byte mismatch")
         archive_path = delivery_dir / "btube-v2-1-calibration.zip"
@@ -93,8 +125,13 @@ def deliver(run_dir: Path, delivery_dir: Path, source_head: str) -> int:
         receipt_path.write_bytes(receipt_raw)
         if receipt_path.read_bytes() != canonical_json_bytes(receipt):
             raise CalibrationError("receipt canonical-byte mismatch")
-        if sha256_hex(archive_path.read_bytes()) != receipt["archive_sha256"]:
-            raise CalibrationError("archive changed after receipt creation")
+        if (
+            sha256_hex(archive_path.read_bytes())
+            != receipt["archive_sha256"]
+        ):
+            raise CalibrationError(
+                "archive changed after receipt creation"
+            )
     return 0
 
 
