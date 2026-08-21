@@ -35,7 +35,7 @@ echo "GIT_CLEAN=PASS"
 
 step "Select Python ${PYTHON_VERSION}"
 command -v pyenv >/dev/null 2>&1 || die "pyenv is not available."
-pyenv shell "$PYTHON_VERSION"
+export PYENV_VERSION="$PYTHON_VERSION"
 python --version
 python -m pip --version
 [[ "$(python -c 'import sys; print(".".join(map(str,sys.version_info[:3])))')" == "$PYTHON_VERSION" ]] || die "Python version mismatch."
@@ -117,5 +117,4 @@ printf 'ROUTE_CERT_SHA256='
 sha256sum "$ROUTE_CERT" | awk '{print $1}'
 printf 'VERIFY_CONFIG_EXIT=%s\n' "$VERIFY_RC"
 printf 'LOG=%s\n' "$LOG"
-printf '=============================
-'
+printf '=============================\n'
