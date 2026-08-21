@@ -3,6 +3,7 @@ from calibration_context import *
 from calibration_config import *
 from calibration_security import *
 from a0b_start_anchor_verify import verify_a0b_start_anchors
+from exact_lambda_verifier import verify_exact_lambda_trace
 from routed_record_verifier import verify_routed_outputs
 
 
@@ -27,31 +28,48 @@ def _verifier_candidate_pairs(config: dict[str, Any]) -> list[tuple[Dyadic, Dyad
             raise CalibrationError(f"verifier: {name} candidates must be positive")
         if len(set(values)) != len(values):
             raise CalibrationError(f"verifier: duplicate {name} candidate")
-        if any(not values[index + 1] < values[index] for index in range(len(values) - 1)):
-            raise CalibrationError(f"verifier: {name} candidates not strictly decreasing")
-    pairs = []
-    for width in widths:
-        for radius in radii:
-            pairs.append((width, radius))
-    return pairs
+        if any(
+            not values[index + 1] < values[index]
+            for index in range(len(values) - 1)
+        ):
+            raise CalibrationError(
+                f"verifier: {name} candidates not strictly decreasing"
+            )
+    return [(width, radius) for width in widths for radius in radii]
 
 
-def _verify_source_manifest(out_dir: Path, config: dict[str, Any]) -> dict[str, Any]:
+def _verify_source_manifest(
+    out_dir: Path, config: dict[str, Any]
+) -> dict[str, Any]:
     manifest = parse_canonical_json_bytes(
-        (out_dir / "SOURCE_MANIFEST.json").read_bytes(), allow_display=False,
+        (out_dir / "SOURCE_MANIFEST.json").read_bytes(), allow_display=False
     )
-    _require_exact_keys(manifest, {
-        "audited_source_commit", "binding_to_final_lambda_start", "design_commit",
-        "kernel_path", "kernel_sha256", "mode", "schema",
-    }, "source manifest")
+    _require_exact_keys(
+        manifest,
+        {
+            "audited_source_commit",
+            "binding_to_final_lambda_start",
+            "design_commit",
+            "kernel_path",
+            "kernel_sha256",
+            "mode",
+            "schema",
+        },
+        "source manifest",
+    )
     assert_result_namespace(manifest)
     if manifest["schema"] != "btube-calibration-source-manifest-v1":
         raise CalibrationError("source manifest schema mismatch")
     if manifest["audited_source_commit"] != config["audited_source_commit"]:
-        raise CalibrationError("source manifest audited-source provenance mismatch")
+        raise CalibrationError(
+            "source manifest audited-source provenance mismatch"
+        )
     if manifest["design_commit"] != config["design_commit"]:
         raise CalibrationError("source manifest design provenance mismatch")
-    if manifest["binding_to_final_lambda_start"] is not config["binding_to_final_lambda_start"]:
+    if (
+        manifest["binding_to_final_lambda_start"]
+        is not config["binding_to_final_lambda_start"]
+    ):
         raise CalibrationError("source manifest binding flag mismatch")
     if manifest["mode"] != config["mode"]:
         raise CalibrationError("source manifest mode mismatch")
@@ -64,7 +82,9 @@ def _verify_source_manifest(out_dir: Path, config: dict[str, Any]) -> dict[str, 
 
 def _verify_records(out_dir: Path):
     config, config_raw = load_config(out_dir / "config.calibration.json")
-    parsed = parse_canonical_jsonl((out_dir / "calibration_records.jsonl").read_bytes())
+    parsed = parse_canonical_jsonl(
+        (out_dir / "calibration_records.jsonl").read_bytes()
+    )
     previous = chain_genesis(CHAIN_DOMAIN)
     for record, raw in parsed:
         if record.get("previous_record_sha256") != previous:
@@ -72,38 +92,68 @@ def _verify_records(out_dir: Path):
         assert_result_namespace(record)
         previous = sha256_hex(raw)
     summary = parse_canonical_json_bytes(
-        (out_dir / "CALIBRATION_SUMMARY.json").read_bytes(), allow_display=False,
+        (out_dir / "CALIBRATION_SUMMARY.json").read_bytes(),
+        allow_display=False,
     )
-    _require_exact_keys(summary, {
-        "binding_to_final_lambda_start", "candidate_count", "chain_tip", "coverage_claim",
-        "machine_conclusion", "mode", "recommendation", "record_count", "schema", "state",
-    }, "summary")
+    _require_exact_keys(
+        summary,
+        {
+            "binding_to_final_lambda_start",
+            "candidate_count",
+            "chain_tip",
+            "coverage_claim",
+            "machine_conclusion",
+            "mode",
+            "recommendation",
+            "record_count",
+            "schema",
+            "state",
+        },
+        "summary",
+    )
     assert_result_namespace(summary)
     if summary["schema"] != "btube-calibration-summary-v1":
         raise CalibrationError("summary schema mismatch")
     if summary["machine_conclusion"] != {"real_analytic": False}:
-        raise CalibrationError("machine_conclusion must be exactly present-and-false")
+        raise CalibrationError(
+            "machine_conclusion must be exactly present-and-false"
+        )
     if summary["state"] not in TERMINAL_STATES:
         raise CalibrationError("invalid terminal state")
-    if summary["chain_tip"] != previous or summary["record_count"] != len(parsed):
+    if (
+        summary["chain_tip"] != previous
+        or summary["record_count"] != len(parsed)
+    ):
         raise CalibrationError("summary chain/count mismatch")
     if summary["mode"] != config["mode"]:
         raise CalibrationError("summary mode mismatch")
-    if summary["binding_to_final_lambda_start"] is not config["binding_to_final_lambda_start"]:
+    if (
+        summary["binding_to_final_lambda_start"]
+        is not config["binding_to_final_lambda_start"]
+    ):
         raise CalibrationError("summary binding flag mismatch")
 
-    ends = [record for record, _ in parsed if record.get("record_type") == "candidate_end"]
+    ends = [
+        record
+        for record, _ in parsed
+        if record.get("record_type") == "candidate_end"
+    ]
     pairs = _verifier_candidate_pairs(config)
     if len(ends) != summary["candidate_count"] or len(ends) != len(pairs):
         raise CalibrationError("candidate completeness mismatch")
-    if [record.get("candidate_index") for record in ends] != list(range(len(pairs))):
+    if [record.get("candidate_index") for record in ends] != list(
+        range(len(pairs))
+    ):
         raise CalibrationError("candidate order/index mismatch")
     if config["mode"] == CALIBRATION_MODE:
         a0b_pass_flags = [True] * len(pairs)
     else:
         a0b = verify_a0b_start_anchors(out_dir, config)
         a0b_pass_flags = [entry["passed"] for entry in a0b["entries"]]
-        if len(a0b_pass_flags) != len(pairs) or any(not isinstance(flag, bool) for flag in a0b_pass_flags):
+        if (
+            len(a0b_pass_flags) != len(pairs)
+            or any(not isinstance(flag, bool) for flag in a0b_pass_flags)
+        ):
             raise CalibrationError("A0B candidate gate vector mismatch")
     passing = [
         record["candidate_index"]
@@ -125,17 +175,25 @@ def _verify_records(out_dir: Path):
         expected_state = "CALIBRATION_INCOMPLETE"
         expected_coverage = False
         if config["binding_to_final_lambda_start"] is not False:
-            raise CalibrationError("diagnostic mode cannot bind final lambda_start")
+            raise CalibrationError(
+                "diagnostic mode cannot bind final lambda_start"
+            )
     else:
         expected = first_passing
-        expected_state = "CALIBRATION_COMPLETE" if expected is not None else "CALIBRATION_INCOMPLETE"
+        expected_state = (
+            "CALIBRATION_COMPLETE"
+            if expected is not None
+            else "CALIBRATION_INCOMPLETE"
+        )
         expected_coverage = expected is not None
     if (
         summary["recommendation"] != expected
         or summary["state"] != expected_state
         or summary["coverage_claim"] is not expected_coverage
     ):
-        raise CalibrationError("deterministic recommendation/state policy mismatch")
+        raise CalibrationError(
+            "deterministic recommendation/state policy mismatch"
+        )
     return config, summary, config_raw
 
 
@@ -146,13 +204,20 @@ def verify_pre(out_dir: Path, source_head: str) -> int:
     require_blocal_dependency(config)
     _verify_source_manifest(out_dir, config)
     routed = verify_routed_outputs(out_dir, config)
+    exact = verify_exact_lambda_trace(out_dir)
+    if exact["a0b_exact_boundary_record_count"] <= 0:
+        raise CalibrationError(
+            "exact lambda verifier: missing real A0B exact boundary path"
+        )
     load_production_kernel()
     report = {
         "a0b_start_anchor_verifier": "PASS",
         "config_sha256": sha256_hex(config_raw),
         "kernel_sha256": KERNEL_SHA256,
         "record_chain_tip": summary["chain_tip"],
-        "routed_boundary_evaluation_count": routed["boundary_route_evaluation_count"],
+        "routed_boundary_evaluation_count": routed[
+            "boundary_route_evaluation_count"
+        ],
         "routed_evaluator_verifier": "PASS",
         "schema": "btube-calibration-checker-report-v1",
         "source_head": source_head,
