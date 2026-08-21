@@ -85,9 +85,9 @@ class ExactLambdaNegativeControls(unittest.TestCase):
         self.base = reconstruct_transport(BRIDGE, BRIDGE)
 
     def assert_transport_rejected(self, mutate):
-        detail = copy.deepcopy(self.base)
-        mutate(detail)
         with self.assertRaises((CalibrationError, SchemaError)):
+            detail = copy.deepcopy(self.base)
+            mutate(detail)
             verify_transport_detail(detail)
 
     def test_negative_01_noncanonical_rational_encoding_rejected(self):
