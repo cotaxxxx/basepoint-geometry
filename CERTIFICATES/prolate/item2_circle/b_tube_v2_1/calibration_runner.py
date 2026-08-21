@@ -5,12 +5,7 @@ from calibration_config import *
 from calibration_numeric import *
 from calibration_security import *
 from a0b_start_anchor import *
-from exact_lambda_contract import EXACT_LAMBDA_TRANSPORT_SHA256
 from exact_lambda_static import assert_exact_lambda_static_gate
-from exact_lambda_transport import (
-    ExactLambdaRoutedEvaluator,
-    install_exact_lambda_call_sites,
-)
 from routed_evaluator import routed_bundle_pins
 from routed_record_verifier import require_route_consistency_certificate
 
@@ -22,7 +17,7 @@ def _effective_candidate_pass(chain_passed: bool, start_gate_passed: bool) -> bo
 
 
 def _write_routed_outputs(
-    out_dir: Path, config: dict[str, Any], evaluator: ExactLambdaRoutedEvaluator
+    out_dir: Path, config: dict[str, Any], evaluator: Any
 ) -> None:
     trace_raw = canonical_jsonl(evaluator.trace)
     (out_dir / ROUTED_TRACE_NAME).write_bytes(trace_raw)
@@ -49,7 +44,7 @@ def run_calibration(out_dir: Path, *, diagnostic: bool = False) -> int:
     assert_workflow_security()
     assert_exact_lambda_static_gate()
     config, config_raw = load_config()
-    routed: ExactLambdaRoutedEvaluator | None = None
+    routed: Any | None = None
     if diagnostic:
         start = require_diagnostic_mode(config)
     else:
@@ -64,6 +59,10 @@ def run_calibration(out_dir: Path, *, diagnostic: bool = False) -> int:
     ctx.dps = config["dps"]
     kernel = raw_kernel
     if not diagnostic:
+        from exact_lambda_transport import (
+            ExactLambdaRoutedEvaluator,
+            install_exact_lambda_call_sites,
+        )
         install_exact_lambda_call_sites()
         routed = ExactLambdaRoutedEvaluator(raw_kernel, arb, config)
         kernel = routed
