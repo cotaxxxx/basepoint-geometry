@@ -98,9 +98,9 @@ class ExactLambdaNegativeControls(unittest.TestCase):
 
     def test_negative_02_modified_exact_lambda_rejected(self):
         def mutate(detail):
-            detail["lambda_exact_interval"]["lo"] = Rational.from_fraction(
-                Fraction(5, 2)
-            ).to_json()
+            replacement = Rational.from_fraction(Fraction(5, 2)).to_json()
+            detail["lambda_exact_interval"]["lo"] = replacement
+            detail["lambda_exact_interval"]["hi"] = replacement
         self.assert_transport_rejected(mutate)
 
     def test_negative_03_modified_lambda_plus_rejected(self):
@@ -143,9 +143,8 @@ class ExactLambdaNegativeControls(unittest.TestCase):
     def test_negative_08_lambda_not_contained_rejected(self):
         def mutate(detail):
             iv = DyadicInterval.from_json(detail["s_outward_dyadic_interval"])
-            one_ulp = Dyadic(1, EXACT_LAMBDA_ROUNDING_BITS)
-            detail["s_outward_dyadic_interval"] = DyadicInterval(
-                iv.lo + one_ulp, iv.hi - one_ulp
+            detail["s_outward_dyadic_interval"] = DyadicInterval.point(
+                iv.lo
             ).to_json()
         self.assert_transport_rejected(mutate)
 
