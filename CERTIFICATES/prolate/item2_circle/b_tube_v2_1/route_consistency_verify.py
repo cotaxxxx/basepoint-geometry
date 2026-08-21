@@ -10,7 +10,6 @@ from calibration_context import *
 from calibration_config import load_config
 from calibration_security import assert_clean_source_tree, load_production_kernel
 from exact_lambda_static import assert_exact_lambda_static_gate
-from exact_lambda_transport import ExactLambdaRoutedEvaluator
 from exact_lambda_verifier import reconstruct_transport
 from routed_record_verifier import verify_route_consistency_certificate_structure
 
@@ -34,6 +33,8 @@ def _point_arb(value: Fraction, arb_type):
 def verify_route_consistency_fresh(
     certificate_path: Path, *, source_head: str
 ) -> dict:
+    assert_exact_lambda_static_gate()
+    from exact_lambda_transport import ExactLambdaRoutedEvaluator
     config, _ = load_config()
     raw = certificate_path.read_bytes()
     certificate = parse_canonical_json_bytes(raw, allow_display=False)
