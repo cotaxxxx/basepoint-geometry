@@ -21,26 +21,42 @@ fi
 
 if ! gh auth status >/dev/null 2>&1; then
   say "Authorize this research PC with GitHub (one time)"
-  printf 'A GitHub authorization page/code may appear. Approve it once; later runs will not ask again.\n'
+  printf 'Approve the GitHub device authorization once.\n'
   gh auth login --hostname github.com --git-protocol https --web
   gh auth setup-git
 fi
 
 gh auth status >/dev/null 2>&1 || fail "GitHub CLI authentication did not complete"
 
-say "Create private control repository"
+# Workflow files require the OAuth 'workflow' scope. Add it only when missing.
+if ! gh api -i user 2>/dev/null | tr -d '\r' | grep -qi '^x-oauth-scopes:.*workflow'; then
+  say "Authorize GitHub workflow scope (one time)"
+  gh auth refresh --hostname github.com --scopes workflow
+  gh auth setup-git
+fi
+
+say "Prepare private control repository"
 if gh repo view "$REPO" >/dev/null 2>&1; then
   VIS="$(gh repo view "$REPO" --json visibility --jq .visibility)"
   [[ "$VIS" == "PRIVATE" ]] || fail "$REPO exists but is not private"
 else
+  gh repo create "$REPO" --private
+fi
+
+# Resume cleanly after a previous rejected push.
+if [[ ! -d "$CONTROL/.git" ]]; then
   rm -rf "$CONTROL"
   mkdir -p "$CONTROL/.github/workflows" "$CONTROL/jobs" "$CONTROL/results"
   cd "$CONTROL"
   git init -b main
   git config user.name "daybreak-runner-bootstrap"
   git config user.email "runner@localhost"
+else
+  cd "$CONTROL"
+fi
 
-  cat > .github/workflows/remote.yml <<'YAML'
+mkdir -p .github/workflows jobs results
+cat > .github/workflows/remote.yml <<'YAML'
 name: DAYBREAK PC remote job
 
 on:
@@ -107,7 +123,7 @@ jobs:
         run: exit "${{ steps.execute.outputs.rc || '1' }}"
 YAML
 
-  cat > jobs/run.sh <<'SH'
+cat > jobs/run.sh <<'SH'
 #!/usr/bin/env bash
 set -euo pipefail
 echo "RUNNER_ONLINE_TEST"
@@ -116,18 +132,20 @@ whoami
 pwd
 command -v python >/dev/null && python --version || true
 SH
-  chmod +x jobs/run.sh
-  printf '# DAYBREAK works control\nPrivate control repository for the dedicated self-hosted research PC.\n' > README.md
-  : > results/.gitkeep
-  git add .
-  git commit -m "Initialize private DAYBREAK PC control"
-  gh repo create "$REPO" --private --source=. --remote=origin --push
-fi
+chmod +x jobs/run.sh
+printf '# DAYBREAK works control\nPrivate control repository for the dedicated self-hosted research PC.\n' > README.md
+: > results/.gitkeep
 
-if [[ ! -d "$CONTROL/.git" ]]; then
-  rm -rf "$CONTROL"
-  gh repo clone "$REPO" "$CONTROL"
+git config user.name "daybreak-runner-bootstrap"
+git config user.email "runner@localhost"
+if ! git remote get-url origin >/dev/null 2>&1; then
+  git remote add origin "https://github.com/${REPO}.git"
 fi
+git add .
+if ! git diff --cached --quiet; then
+  git commit -m "Initialize private DAYBREAK PC control"
+fi
+git push -u origin main
 
 say "Install GitHub Actions runner locally"
 mkdir -p "$RUNNER"
