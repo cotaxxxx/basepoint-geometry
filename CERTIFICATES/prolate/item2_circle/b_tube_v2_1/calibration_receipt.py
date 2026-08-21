@@ -2,6 +2,11 @@
 from calibration_context import *
 from calibration_config import *
 from calibration_security import *
+from exact_lambda_contract import (
+    EXACT_LAMBDA_TRANSPORT_PATH,
+    EXACT_LAMBDA_TRANSPORT_SHA256,
+)
+from exact_lambda_verifier import verify_exact_lambda_trace_bytes
 from routed_record_verifier import (
     verify_route_consistency_certificate_structure,
     verify_routed_manifest_object,
@@ -9,13 +14,27 @@ from routed_record_verifier import (
 )
 
 
-def verify_final(archive_path: Path, receipt_path: Path, source_head: str) -> int:
-    receipt = parse_canonical_json_bytes(receipt_path.read_bytes(), allow_display=False)
-    _require_exact_keys(receipt, {
-        "archive_name", "archive_sha256", "configuration_sha256",
-        "kernel_file_sha256", "payload_manifest_sha256", "schema", "source_head",
-        "state", "workflow_source_sha256",
-    }, "receipt")
+def verify_final(
+    archive_path: Path, receipt_path: Path, source_head: str
+) -> int:
+    receipt = parse_canonical_json_bytes(
+        receipt_path.read_bytes(), allow_display=False
+    )
+    _require_exact_keys(
+        receipt,
+        {
+            "archive_name",
+            "archive_sha256",
+            "configuration_sha256",
+            "kernel_file_sha256",
+            "payload_manifest_sha256",
+            "schema",
+            "source_head",
+            "state",
+            "workflow_source_sha256",
+        },
+        "receipt",
+    )
     assert_result_namespace(receipt)
     if receipt["schema"] != "btube-calibration-delivery-receipt-v1":
         raise CalibrationError("receipt schema mismatch")
@@ -23,14 +42,20 @@ def verify_final(archive_path: Path, receipt_path: Path, source_head: str) -> in
         raise CalibrationError("receipt source-head mismatch")
     if receipt["kernel_file_sha256"] != KERNEL_SHA256:
         raise CalibrationError("receipt kernel mismatch")
-    if receipt["state"] not in {"CALIBRATION_COMPLETE", "CALIBRATION_INCOMPLETE"}:
+    if receipt["state"] not in {
+        "CALIBRATION_COMPLETE",
+        "CALIBRATION_INCOMPLETE",
+    }:
         raise CalibrationError("receipt terminal state invalid")
     if (
         receipt["archive_name"] != archive_path.name
         or sha256_hex(archive_path.read_bytes()) != receipt["archive_sha256"]
     ):
         raise CalibrationError("archive byte mismatch")
-    if sha256_hex(WORKFLOW_PATH.read_bytes()) != receipt["workflow_source_sha256"]:
+    if (
+        sha256_hex(WORKFLOW_PATH.read_bytes())
+        != receipt["workflow_source_sha256"]
+    ):
         raise CalibrationError("workflow source mismatch")
 
     with zipfile.ZipFile(archive_path, "r") as archive:
@@ -38,37 +63,77 @@ def verify_final(archive_path: Path, receipt_path: Path, source_head: str) -> in
         if names != sorted(names) or len(names) != len(set(names)):
             raise CalibrationError("archive paths not unique/sorted")
         manifest_raw = archive.read("PAYLOAD_SHA256SUMS.json")
-        if sha256_hex(manifest_raw) != receipt["payload_manifest_sha256"]:
+        if (
+            sha256_hex(manifest_raw)
+            != receipt["payload_manifest_sha256"]
+        ):
             raise CalibrationError("payload manifest digest mismatch")
-        manifest = parse_canonical_json_bytes(manifest_raw, allow_display=False)
-        _require_exact_keys(manifest, {"files", "schema"}, "payload manifest")
+        manifest = parse_canonical_json_bytes(
+            manifest_raw, allow_display=False
+        )
+        _require_exact_keys(
+            manifest, {"files", "schema"}, "payload manifest"
+        )
         if manifest["schema"] != "btube-calibration-payload-manifest-v1":
             raise CalibrationError("payload manifest schema mismatch")
-        expected_names = sorted(set(manifest["files"]) | {"PAYLOAD_SHA256SUMS.json"})
+        expected_names = sorted(
+            set(manifest["files"]) | {"PAYLOAD_SHA256SUMS.json"}
+        )
         if names != expected_names:
             raise CalibrationError("archive payload file set mismatch")
         for relative, digest in manifest["files"].items():
             if sha256_hex(archive.read(relative)) != digest:
-                raise CalibrationError(f"archive payload digest mismatch: {relative}")
+                raise CalibrationError(
+                    f"archive payload digest mismatch: {relative}"
+                )
+
+        transport_archive_path = (
+            "source/CERTIFICATES/prolate/item2_circle/"
+            f"b_tube_v2_1/{EXACT_LAMBDA_TRANSPORT_PATH}"
+        )
+        if (
+            sha256_hex(archive.read(transport_archive_path))
+            != EXACT_LAMBDA_TRANSPORT_SHA256
+        ):
+            raise CalibrationError(
+                "archive exact-lambda transport source pin mismatch"
+            )
 
         config_raw = archive.read("config.calibration.json")
-        if sha256_hex(config_raw) != receipt["configuration_sha256"]:
+        if (
+            sha256_hex(config_raw)
+            != receipt["configuration_sha256"]
+        ):
             raise CalibrationError("configuration digest mismatch")
-        config = parse_canonical_json_bytes(config_raw, allow_display=False)
+        config = parse_canonical_json_bytes(
+            config_raw, allow_display=False
+        )
         require_blocal_dependency(config)
 
         bridge_raw = archive.read("ROUTE_CONSISTENCY_CERTIFICATE.json")
         bridge_pin = config.get("route_consistency_certificate_sha256")
         if bridge_pin is None or sha256_hex(bridge_raw) != bridge_pin:
-            raise CalibrationError("archive route consistency certificate pin mismatch")
-        bridge = parse_canonical_json_bytes(bridge_raw, allow_display=False)
+            raise CalibrationError(
+                "archive route consistency certificate pin mismatch"
+            )
+        bridge = parse_canonical_json_bytes(
+            bridge_raw, allow_display=False
+        )
         verify_route_consistency_certificate_structure(
             bridge, expected_source_head=config["audited_source_commit"]
         )
         if bridge["producer_settings"]["dps"] != config["checker_dps"]:
-            raise CalibrationError("archive route consistency checker precision mismatch")
+            raise CalibrationError(
+                "archive route consistency checker precision mismatch"
+            )
 
-        trace = verify_routed_trace_bytes(archive.read(ROUTED_TRACE_NAME), config)
+        trace_raw = archive.read(ROUTED_TRACE_NAME)
+        trace = verify_routed_trace_bytes(trace_raw, config)
+        exact = verify_exact_lambda_trace_bytes(trace_raw)
+        if exact["a0b_exact_boundary_record_count"] <= 0:
+            raise CalibrationError(
+                "archive exact lambda verifier: missing A0B path"
+            )
         routed_manifest = parse_canonical_json_bytes(
             archive.read(ROUTED_MANIFEST_NAME), allow_display=False
         )
@@ -84,11 +149,14 @@ def verify_final(archive_path: Path, receipt_path: Path, source_head: str) -> in
             != trace["boundary_route_evaluation_count"]
             or checker.get("source_head") != source_head
         ):
-            raise CalibrationError("archive checker/routed trace mismatch")
+            raise CalibrationError(
+                "archive checker/routed trace mismatch"
+            )
 
         load_production_kernel()
         summary = parse_canonical_json_bytes(
-            archive.read("CALIBRATION_SUMMARY.json"), allow_display=False
+            archive.read("CALIBRATION_SUMMARY.json"),
+            allow_display=False,
         )
         if summary.get("state") != receipt["state"]:
             raise CalibrationError("receipt/summary state mismatch")
@@ -96,10 +164,14 @@ def verify_final(archive_path: Path, receipt_path: Path, source_head: str) -> in
     return 0
 
 
-def assert_no_workflow_in_result_merge(changed_paths: Iterable[str]) -> None:
+def assert_no_workflow_in_result_merge(
+    changed_paths: Iterable[str],
+) -> None:
     workflow = ".github/workflows/prolate-item2-btube-v2-1-calibration.yml"
     if workflow in set(changed_paths):
-        raise CalibrationError("temporary calibration workflow survives result merge")
+        raise CalibrationError(
+            "temporary calibration workflow survives result merge"
+        )
 
 
 def verify_config_only() -> int:
@@ -108,7 +180,9 @@ def verify_config_only() -> int:
     assert_workflow_security()
     load_production_kernel()
     if config["mode"] == BINDING_MODE:
-        from routed_record_verifier import require_route_consistency_certificate
+        from routed_record_verifier import (
+            require_route_consistency_certificate,
+        )
         require_route_consistency_certificate(config)
     return 0
 
