@@ -1,0 +1,11 @@
+#!/usr/bin/env python3
+"""Pinned exact-lambda transport contract for B-TUBE v2.1."""
+
+EXACT_LAMBDA_TRANSPORT_PATH = "exact_lambda_transport.py"
+EXACT_LAMBDA_TRANSPORT_SHA256 = "bb87010a7581af5a700868ab72712ecec8cd8cf512f7cad6a9ea14cf7ef1a753"
+EXACT_LAMBDA_ADDENDUM_PATH = "ROUTED_EVALUATOR_EXACT_LAMBDA_ADDENDUM_V2.md"
+EXACT_LAMBDA_ADDENDUM_SHA256 = "deb672741e972a5d485d6477c8ff87d16d2dfb92d29dbd50511cb2ef8fc7d358"
+EXACT_LAMBDA_ROUNDING_BITS = 192
+EXACT_LAMBDA_TRANSPORT_RULE_ID = "BLOCAL_V22_FIXED_LATTICE_OUTWARD_192_V1"
+
+__all__ = [name for name in globals() if not name.startswith("__")]
