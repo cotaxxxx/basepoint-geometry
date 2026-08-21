@@ -6,6 +6,7 @@ CONTROL="$HOME/daybreak-works-control"
 RUNNER="$HOME/actions-runner-daybreak"
 LABEL="daybreak-works"
 NAME="daybreak-works"
+SERVICE="daybreak-actions-runner.service"
 
 say(){ printf '\n== %s ==\n' "$*"; }
 fail(){ printf '\nFAIL: %s\n' "$*" >&2; exit 1; }
@@ -139,12 +140,47 @@ if [[ ! -f .runner ]]; then
   unset TOKEN
 fi
 
-say "Start runner"
-if pgrep -f "$RUNNER/bin/Runner.Listener" >/dev/null 2>&1; then
-  echo "runner already running"
-else
-  nohup "$RUNNER/run.sh" > "$RUNNER/runner.log" 2>&1 < /dev/null &
+say "Configure automatic runner startup"
+mkdir -p "$HOME/.config/systemd/user"
+cat > "$HOME/.config/systemd/user/$SERVICE" <<EOF
+[Unit]
+Description=GitHub Actions Runner - DAYBREAK Works
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=$RUNNER
+ExecStart=$RUNNER/run.sh
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target
+EOF
+
+if systemctl --user daemon-reload >/dev/null 2>&1; then
+  # Stop any old manually-started copy to avoid duplicate listeners.
+  if ! systemctl --user is-active --quiet "$SERVICE"; then
+    OLD_PIDS="$(pgrep -f "$RUNNER/bin/Runner.Listener" || true)"
+    if [[ -n "$OLD_PIDS" ]]; then
+      kill $OLD_PIDS || true
+      sleep 2
+    fi
+  fi
+  systemctl --user enable --now "$SERVICE"
   sleep 3
+  systemctl --user --no-pager --full status "$SERVICE" || true
+  PERSISTENCE="systemd-user (automatic after desktop login)"
+else
+  say "systemd user service unavailable; falling back to nohup"
+  if pgrep -f "$RUNNER/bin/Runner.Listener" >/dev/null 2>&1; then
+    echo "runner already running"
+  else
+    nohup "$RUNNER/run.sh" > "$RUNNER/runner.log" 2>&1 < /dev/null &
+    sleep 3
+  fi
+  PERSISTENCE="nohup fallback (manual restart required after reboot)"
 fi
 
 say "Verify runner registration"
@@ -153,5 +189,5 @@ gh api "repos/${REPO}/actions/runners" --jq '.runners[] | {name,status,busy,labe
 echo
 printf 'READY: %s\n' "$REPO"
 printf 'RUNNER_DIR: %s\n' "$RUNNER"
-printf 'LOG: %s\n' "$RUNNER/runner.log"
-printf 'NOTE: runner currently starts with nohup; it will need to be restarted after a reboot until persistence is configured.\n'
+printf 'PERSISTENCE: %s\n' "$PERSISTENCE"
+printf 'NOTE: ChatGPT does not need to be opened on this PC; use the phone for conversation.\n'
