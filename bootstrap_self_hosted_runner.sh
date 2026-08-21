@@ -12,8 +12,21 @@ fail(){ printf '\nFAIL: %s\n' "$*" >&2; exit 1; }
 
 command -v git >/dev/null || fail "git is required"
 command -v curl >/dev/null || fail "curl is required"
-command -v gh >/dev/null || fail "GitHub CLI (gh) is not installed"
-gh auth status >/dev/null 2>&1 || fail "GitHub CLI is not authenticated. Run: gh auth login"
+
+if ! command -v gh >/dev/null 2>&1; then
+  say "Install GitHub CLI (one time)"
+  sudo apt-get update
+  sudo apt-get install -y gh
+fi
+
+if ! gh auth status >/dev/null 2>&1; then
+  say "Authorize this research PC with GitHub (one time)"
+  printf 'A GitHub authorization page/code may appear. Approve it once; later runs will not ask again.\n'
+  gh auth login --hostname github.com --git-protocol https --web
+  gh auth setup-git
+fi
+
+gh auth status >/dev/null 2>&1 || fail "GitHub CLI authentication did not complete"
 
 say "Create private control repository"
 if gh repo view "$REPO" >/dev/null 2>&1; then
@@ -140,7 +153,6 @@ if [[ ! -f .runner ]]; then
 fi
 
 say "Install boot-time runner service"
-# One sudo authentication here; after this the runner starts at boot before desktop login.
 if [[ -x ./svc.sh ]]; then
   if ! systemctl list-unit-files --type=service 2>/dev/null | grep -q 'actions.runner.*daybreak'; then
     sudo ./svc.sh install "$(id -un)"
@@ -153,7 +165,6 @@ else
 fi
 
 say "Disable suspend and hibernate for always-on operation"
-# Screen lock/display blanking may still happen, but the machine itself will stay awake.
 sudo systemctl mask sleep.target suspend.target hibernate.target hybrid-sleep.target >/dev/null
 
 say "Verify runner registration"
