@@ -152,6 +152,10 @@ else
   fail "runner svc.sh is missing"
 fi
 
+say "Disable suspend and hibernate for always-on operation"
+# Screen lock/display blanking may still happen, but the machine itself will stay awake.
+sudo systemctl mask sleep.target suspend.target hibernate.target hybrid-sleep.target >/dev/null
+
 say "Verify runner registration"
 gh api "repos/${REPO}/actions/runners" --jq '.runners[] | {name,status,busy,labels:[.labels[].name]}'
 
@@ -159,4 +163,5 @@ echo
 printf 'READY: %s\n' "$REPO"
 printf 'RUNNER_DIR: %s\n' "$RUNNER"
 printf 'PERSISTENCE: %s\n' "$PERSISTENCE"
-printf 'NOTE: ChatGPT does not need to be opened on this PC. Power on the PC; the runner starts before desktop login.\n'
+printf 'POWER: suspend/hibernate disabled; screen lock is harmless\n'
+printf 'NOTE: ChatGPT does not need to be opened on this PC. Leave it powered on and use the phone for conversation.\n'
