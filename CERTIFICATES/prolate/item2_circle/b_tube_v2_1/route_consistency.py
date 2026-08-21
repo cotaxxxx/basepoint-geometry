@@ -9,7 +9,9 @@ from pathlib import Path
 from calibration_context import *
 from calibration_config import load_config
 from calibration_security import assert_clean_source_tree, load_production_kernel
-from routed_evaluator import RoutedEvaluator, routed_bundle_pins
+from exact_lambda_static import assert_exact_lambda_static_gate
+from exact_lambda_transport import ExactLambdaRoutedEvaluator
+from routed_evaluator import routed_bundle_pins
 from routed_record_verifier import bridge_grid_sha256
 
 
@@ -18,7 +20,11 @@ def _points() -> list[tuple[Fraction, Fraction]]:
         Fraction(17, 8), Fraction(5, 2), Fraction(3, 1),
         Fraction(7, 2), Fraction(4, 1), Fraction(9, 2),
     )
-    return [(Fraction(k, 64), lam) for k in range(48, 64) for lam in lambdas]
+    return [
+        (Fraction(k, 64), lam)
+        for k in range(48, 64)
+        for lam in lambdas
+    ]
 
 
 def _point_arb(value: Fraction, arb_type):
@@ -32,30 +38,41 @@ def _interval_json(value: DyadicInterval) -> dict:
 def build_route_consistency_certificate(
     config: dict, interior_kernel, arb_type, *, source_head: str
 ) -> dict:
-    evaluator = RoutedEvaluator(interior_kernel, arb_type, config)
+    evaluator = ExactLambdaRoutedEvaluator(interior_kernel, arb_type, config)
     evaluator.set_phase("ROUTE_CONSISTENCY")
     rows = []
     for index, (r, lam) in enumerate(_points()):
         r_ball = _point_arb(r, arb_type)
-        lam_ball = _point_arb(lam, arb_type)
         row = {
             "index": index,
             "lambda": Rational.from_fraction(lam).to_json(),
             "r": Rational.from_fraction(r).to_json(),
         }
         for quantity in ("F", "F_r"):
-            _, interior, _ = evaluator.evaluate_forced_arb(
-                quantity, r_ball, lam_ball, ROUTED_INTERIOR_ROUTE_ID,
+            _, interior, _ = evaluator.evaluate_forced_exact_arb(
+                quantity,
+                r_ball,
+                lam,
+                lam,
+                ROUTED_INTERIOR_ROUTE_ID,
                 tol=ROUTE_CONSISTENCY_TOL,
                 depth=ROUTE_CONSISTENCY_DEPTH,
                 limit=ROUTE_CONSISTENCY_LIMIT,
             )
-            _, boundary, _ = evaluator.evaluate_forced_arb(
-                quantity, r_ball, lam_ball, ROUTED_BOUNDARY_ROUTE_ID,
+            _, boundary, boundary_evidence = evaluator.evaluate_forced_exact_arb(
+                quantity,
+                r_ball,
+                lam,
+                lam,
+                ROUTED_BOUNDARY_ROUTE_ID,
                 tol=ROUTE_CONSISTENCY_TOL,
                 depth=ROUTE_CONSISTENCY_DEPTH,
                 limit=ROUTE_CONSISTENCY_LIMIT,
             )
+            if "exact_lambda_transport" not in boundary_evidence["detail"]:
+                raise CalibrationError(
+                    "route consistency: exact lambda transport evidence missing"
+                )
             intersection = interior.intersection(boundary)
             if intersection is None:
                 raise CalibrationError(
@@ -67,7 +84,7 @@ def build_route_consistency_certificate(
                 "intersection": _interval_json(intersection),
             }
         rows.append(row)
-    certificate = {
+    return {
         "boundary_route_evaluation_count": evaluator.boundary_evaluation_count,
         "contract_id": ROUTED_CONTRACT_ID,
         "grid_id": ROUTE_CONSISTENCY_GRID_ID,
@@ -85,7 +102,6 @@ def build_route_consistency_certificate(
         "schema": ROUTE_CONSISTENCY_SCHEMA,
         "status": "PASS",
     }
-    return certificate
 
 
 def _main() -> int:
@@ -96,9 +112,10 @@ def _main() -> int:
     if args.out.exists():
         raise CalibrationError("route consistency output already exists")
     assert_clean_source_tree()
+    assert_exact_lambda_static_gate()
     config, _ = load_config()
     kernel, _ = load_production_kernel()
-    from flint import arb, ctx  # type: ignore[import-not-found]
+    from flint import arb, ctx
     ctx.dps = config["checker_dps"]
     certificate = build_route_consistency_certificate(
         config, kernel, arb, source_head=args.source_head
