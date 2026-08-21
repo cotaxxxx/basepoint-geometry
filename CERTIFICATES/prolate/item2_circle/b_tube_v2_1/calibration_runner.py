@@ -5,7 +5,13 @@ from calibration_config import *
 from calibration_numeric import *
 from calibration_security import *
 from a0b_start_anchor import *
-from routed_evaluator import RoutedEvaluator, routed_bundle_pins
+from exact_lambda_contract import EXACT_LAMBDA_TRANSPORT_SHA256
+from exact_lambda_static import assert_exact_lambda_static_gate
+from exact_lambda_transport import (
+    ExactLambdaRoutedEvaluator,
+    install_exact_lambda_call_sites,
+)
+from routed_evaluator import routed_bundle_pins
 from routed_record_verifier import require_route_consistency_certificate
 
 
@@ -15,7 +21,9 @@ def _effective_candidate_pass(chain_passed: bool, start_gate_passed: bool) -> bo
     return chain_passed and start_gate_passed
 
 
-def _write_routed_outputs(out_dir: Path, config: dict[str, Any], evaluator: RoutedEvaluator) -> None:
+def _write_routed_outputs(
+    out_dir: Path, config: dict[str, Any], evaluator: ExactLambdaRoutedEvaluator
+) -> None:
     trace_raw = canonical_jsonl(evaluator.trace)
     (out_dir / ROUTED_TRACE_NAME).write_bytes(trace_raw)
     manifest = {
@@ -39,22 +47,25 @@ def run_calibration(out_dir: Path, *, diagnostic: bool = False) -> int:
     assert_no_stale_inputs(out_dir)
     assert_clean_source_tree()
     assert_workflow_security()
+    assert_exact_lambda_static_gate()
     config, config_raw = load_config()
-    routed: RoutedEvaluator | None = None
+    routed: ExactLambdaRoutedEvaluator | None = None
     if diagnostic:
         start = require_diagnostic_mode(config)
     else:
         require_blocal_dependency(config)
         require_route_consistency_certificate(config)
         start = Rational.from_json(
-            config["blocal_dependency"]["lambda_start"], "blocal_dependency.lambda_start"
+            config["blocal_dependency"]["lambda_start"],
+            "blocal_dependency.lambda_start",
         )
     raw_kernel, kernel_path = load_production_kernel()
     from flint import arb, ctx
     ctx.dps = config["dps"]
     kernel = raw_kernel
     if not diagnostic:
-        routed = RoutedEvaluator(raw_kernel, arb, config)
+        install_exact_lambda_call_sites()
+        routed = ExactLambdaRoutedEvaluator(raw_kernel, arb, config)
         kernel = routed
     out_dir.mkdir(parents=True)
     (out_dir / "config.calibration.json").write_bytes(config_raw)
@@ -63,7 +74,9 @@ def run_calibration(out_dir: Path, *, diagnostic: bool = False) -> int:
         assert routed is not None
         routed.set_phase("A0B")
         a0b = build_a0b_start_anchor_certificate(config, kernel, arb)
-        (out_dir / "A0B_START_ANCHORS.json").write_bytes(canonical_json_bytes(a0b))
+        (out_dir / "A0B_START_ANCHORS.json").write_bytes(
+            canonical_json_bytes(a0b)
+        )
         a0b_entries = a0b["entries"]
     records = []
     previous = chain_genesis(CHAIN_DOMAIN)
@@ -73,12 +86,23 @@ def run_calibration(out_dir: Path, *, diagnostic: bool = False) -> int:
         if routed is not None:
             routed.set_phase(f"CANDIDATE:{candidate_index}")
         passed, previous, candidate = _candidate_run(
-            config=config, kernel=kernel, arb_type=arb, start=start,
-            width=width, radius=radius, candidate_index=candidate_index,
-            records=records, previous=previous,
+            config=config,
+            kernel=kernel,
+            arb_type=arb,
+            start=start,
+            width=width,
+            radius=radius,
+            candidate_index=candidate_index,
+            records=records,
+            previous=previous,
         )
-        start_gate_passed = True if diagnostic else a0b_entries[candidate_index]["passed"]
-        if _effective_candidate_pass(passed, start_gate_passed) and first_passing is None:
+        start_gate_passed = (
+            True if diagnostic else a0b_entries[candidate_index]["passed"]
+        )
+        if (
+            _effective_candidate_pass(passed, start_gate_passed)
+            and first_passing is None
+        ):
             first_passing = candidate
 
     if diagnostic:
@@ -87,7 +111,11 @@ def run_calibration(out_dir: Path, *, diagnostic: bool = False) -> int:
         coverage_claim = False
     else:
         recommendation = first_passing
-        state = "CALIBRATION_COMPLETE" if recommendation is not None else "CALIBRATION_INCOMPLETE"
+        state = (
+            "CALIBRATION_COMPLETE"
+            if recommendation is not None
+            else "CALIBRATION_INCOMPLETE"
+        )
         coverage_claim = recommendation is not None
     summary = {
         "binding_to_final_lambda_start": config["binding_to_final_lambda_start"],
@@ -103,7 +131,9 @@ def run_calibration(out_dir: Path, *, diagnostic: bool = False) -> int:
     }
     assert_result_namespace(summary)
     (out_dir / "calibration_records.jsonl").write_bytes(canonical_jsonl(records))
-    (out_dir / "CALIBRATION_SUMMARY.json").write_bytes(canonical_json_bytes(summary))
+    (out_dir / "CALIBRATION_SUMMARY.json").write_bytes(
+        canonical_json_bytes(summary)
+    )
     if routed is not None:
         _write_routed_outputs(out_dir, config, routed)
     source_manifest = {
@@ -115,7 +145,9 @@ def run_calibration(out_dir: Path, *, diagnostic: bool = False) -> int:
         "mode": config["mode"],
         "schema": "btube-calibration-source-manifest-v1",
     }
-    (out_dir / "SOURCE_MANIFEST.json").write_bytes(canonical_json_bytes(source_manifest))
+    (out_dir / "SOURCE_MANIFEST.json").write_bytes(
+        canonical_json_bytes(source_manifest)
+    )
     return 0
 
 
