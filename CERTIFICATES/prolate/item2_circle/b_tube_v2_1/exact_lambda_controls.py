@@ -15,10 +15,6 @@ from calibration_config import load_config
 from calibration_security import load_production_kernel
 from a0b_start_anchor import build_a0b_start_anchor_certificate
 from exact_lambda_static import assert_exact_lambda_static_gate
-from exact_lambda_transport import (
-    ExactLambdaRoutedEvaluator,
-    install_exact_lambda_call_sites,
-)
 from exact_lambda_verifier import reconstruct_transport, verify_transport_detail
 
 
@@ -37,6 +33,10 @@ def _point_arb(value: Fraction, arb_type):
 
 def _runtime():
     assert_exact_lambda_static_gate()
+    from exact_lambda_transport import (
+        ExactLambdaRoutedEvaluator,
+        install_exact_lambda_call_sites,
+    )
     config, _ = load_config()
     kernel, _ = load_production_kernel()
     from flint import arb, ctx
