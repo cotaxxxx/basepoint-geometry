@@ -96,6 +96,20 @@ def run_positive_controls() -> dict:
         raise CalibrationError(
             "positive control lambda_start: rounding loss must be zero"
         )
+    for row in rows[1:]:
+        transport = row["transport"]
+        total = (
+            Rational.from_json(
+                transport["lower_rounding_enlargement"]
+            ).as_fraction()
+            + Rational.from_json(
+                transport["upper_rounding_enlargement"]
+            ).as_fraction()
+        )
+        if not Fraction(0) < total < Fraction(1, 1 << 191):
+            raise CalibrationError(
+                f"positive control {row['label']}: nonzero outward rounding required"
+            )
     return {
         "boundary_evaluation_count": evaluator.boundary_evaluation_count,
         "rows": rows,
@@ -109,6 +123,8 @@ def run_a0b_smoke() -> dict:
     certificate = build_a0b_start_anchor_certificate(
         config, evaluator, arb
     )
+    if certificate.get("all_passed") is not True:
+        raise CalibrationError("A0B smoke: start-anchor certificate did not pass")
     trace = [
         record for record in evaluator.trace if record.get("phase") == "A0B"
     ]
