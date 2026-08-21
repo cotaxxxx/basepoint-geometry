@@ -10,7 +10,6 @@ from calibration_context import *
 from calibration_config import load_config
 from calibration_security import assert_clean_source_tree, load_production_kernel
 from exact_lambda_static import assert_exact_lambda_static_gate
-from exact_lambda_transport import ExactLambdaRoutedEvaluator
 from routed_evaluator import routed_bundle_pins
 from routed_record_verifier import bridge_grid_sha256
 
@@ -38,6 +37,8 @@ def _interval_json(value: DyadicInterval) -> dict:
 def build_route_consistency_certificate(
     config: dict, interior_kernel, arb_type, *, source_head: str
 ) -> dict:
+    assert_exact_lambda_static_gate()
+    from exact_lambda_transport import ExactLambdaRoutedEvaluator
     evaluator = ExactLambdaRoutedEvaluator(interior_kernel, arb_type, config)
     evaluator.set_phase("ROUTE_CONSISTENCY")
     rows = []
