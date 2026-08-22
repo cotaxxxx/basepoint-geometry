@@ -9,7 +9,7 @@ from time import perf_counter
 
 import calibration_candidate as candidate
 from affine_geometry import krawczyk_image
-from calibration_config import load_config
+from calibration_config import load_config, require_blocal_dependency
 from calibration_context import (
     CHAIN_DOMAIN,
     D_ZERO,
@@ -32,6 +32,7 @@ from flint import arb, ctx
 
 DIAGNOSTIC_BUDGET = 24_000
 DIAGNOSTIC_HU_WIDTH = Fraction(1, 2)
+SOFT_DEADLINE_SECONDS = 300 * 60
 EXPECTED_CANDIDATES = 9
 EXPECTED_CELLS = 228
 EXPECTED_JOINS = 219
@@ -40,6 +41,10 @@ EXPECTED_SITES = 456
 OUT_DIR = Path("diagnostic-output")
 OUT_JSONL = OUT_DIR / "diagnostic-census-pass1-NOT_BINDING.jsonl"
 OUT_SUMMARY = OUT_DIR / "diagnostic-census-pass1-summary-NOT_BINDING.json"
+
+
+class SoftDeadline(RuntimeError):
+    pass
 
 
 def frac(value: Fraction | None) -> str | None:
@@ -74,6 +79,11 @@ def main() -> int:
         raw_kernel, _ = load_production_kernel()
         ctx.dps = config["dps"]
         install_exact_lambda_call_sites()
+        # The pinned research HEAD's calibration_candidate binding dispatcher
+        # references this canonical config gate without importing it. Inject
+        # the exact function into that module for this controls-only census;
+        # do not alter any target bytes.
+        candidate.require_blocal_dependency = require_blocal_dependency
         evaluator = ExactLambdaRoutedEvaluator(raw_kernel, arb, config)
 
         route = evaluator.modules["blocal_v22_boundary"]
@@ -113,6 +123,15 @@ def main() -> int:
         predictor_cache: dict[tuple, Dyadic] = {}
         predictor_cache_hits = 0
         predictor_cache_misses = 0
+        run_t0 = perf_counter()
+
+        def append_row(row: dict) -> None:
+            rows.append(row)
+            with OUT_JSONL.open("a", encoding="utf-8") as stream:
+                stream.write(
+                    json.dumps(row, sort_keys=True, separators=(",", ":")) + "\n"
+                )
+                stream.flush()
 
         def cached_predictor(kernel, arb_type, lam, seed, *, iterations,
                              tol, depth, limit):
@@ -170,6 +189,11 @@ def main() -> int:
 
         def wrapped_krawczyk(*, kernel, arb_type, domain, lam_lo, lam_hi,
                              tol, depth, limit):
+            elapsed_before_site = perf_counter() - run_t0
+            if elapsed_before_site >= SOFT_DEADLINE_SECONDS:
+                raise SoftDeadline(
+                    f"soft deadline reached before site {len(rows)} of {EXPECTED_SITES}"
+                )
             phase = evaluator.phase
             if not phase.startswith("CANDIDATE:"):
                 raise RuntimeError(f"unexpected phase: {phase}")
@@ -182,11 +206,59 @@ def main() -> int:
 
             before = evaluator.boundary_evaluation_count
             t0 = perf_counter()
-            result = original_krawczyk(
-                kernel=kernel, arb_type=arb_type, domain=domain,
-                lam_lo=lam_lo, lam_hi=lam_hi, tol=tol,
-                depth=depth, limit=limit,
-            )
+            try:
+                result = original_krawczyk(
+                    kernel=kernel, arb_type=arb_type, domain=domain,
+                    lam_lo=lam_lo, lam_hi=lam_hi, tol=tol,
+                    depth=depth, limit=limit,
+                )
+            except Exception as exc:
+                initial_elapsed = perf_counter() - t0
+                initial_evaluations = evaluator.boundary_evaluation_count - before
+                row = {
+                    "schema": "btube-census-pass1-site-v1",
+                    "evidence_class": "DIAGNOSTIC_NOT_BINDING",
+                    "candidate_index": candidate_index,
+                    "site_ordinal": ordinal,
+                    "site_kind": kind,
+                    "site_index": kind_index,
+                    "lambda_lo": str(lam_lo),
+                    "lambda_hi": str(lam_hi),
+                    "domain_lo": str(domain.lo.as_fraction()),
+                    "domain_hi": str(domain.hi.as_fraction()),
+                    "site_error_type": type(exc).__name__,
+                    "site_error": str(exc),
+                    "initial_passed": None,
+                    "initial_reason": None,
+                    "initial_margin": None,
+                    "initial_residual_lo": None,
+                    "initial_residual_hi": None,
+                    "initial_slope_lo": None,
+                    "initial_slope_hi": None,
+                    "initial_evaluations": initial_evaluations,
+                    "initial_elapsed_seconds": f"{initial_elapsed:.6f}",
+                    "hu_half_status": "SKIPPED_SITE_ERROR",
+                    "hu_half_evaluations": 0,
+                    "hu_half_elapsed_seconds": "0.000000",
+                    "hu_half_margin": None,
+                    "hu_half_passed": None,
+                }
+                append_row(row)
+                print(
+                    f"SITE_ERROR candidate={candidate_index} kind={kind} "
+                    f"index={kind_index} error={type(exc).__name__}:{exc}"
+                )
+                midpoint = domain.midpoint()
+                return {
+                    "image": DyadicInterval.point(midpoint),
+                    "left_margin": D_ZERO,
+                    "passed": True,
+                    "preconditioner": D_ZERO,
+                    "reason": None,
+                    "residual": DyadicInterval.point(D_ZERO),
+                    "right_margin": D_ZERO,
+                    "slope": DyadicInterval.point(D_ZERO),
+                }
             initial_elapsed = perf_counter() - t0
             initial_evaluations = evaluator.boundary_evaluation_count - before
             initial_margin = min(
@@ -195,13 +267,23 @@ def main() -> int:
             )
 
             alt_t0 = perf_counter()
-            alt_slope, alt_evaluations, alt_status = alternative_domain_slope(
-                domain, lam_lo, lam_hi
-            )
+            alt_error_type = None
+            alt_error = None
+            try:
+                alt_slope, alt_evaluations, alt_status = alternative_domain_slope(
+                    domain, lam_lo, lam_hi
+                )
+            except Exception as exc:
+                alt_slope, alt_evaluations, alt_status = None, 0, "SITE_ERROR"
+                alt_error_type = type(exc).__name__
+                alt_error = str(exc)
             alt_elapsed = perf_counter() - alt_t0
             alt_margin = initial_margin
             alt_passed = result["passed"]
-            if alt_slope is not None and result["preconditioner"] != D_ZERO:
+            if alt_status == "SITE_ERROR":
+                alt_margin = None
+                alt_passed = None
+            elif alt_slope is not None and result["preconditioner"] != D_ZERO:
                 alt_image = krawczyk_image(
                     m=domain.midpoint(), residual=result["residual"],
                     slope=alt_slope,
@@ -224,6 +306,8 @@ def main() -> int:
                 "lambda_hi": str(lam_hi),
                 "domain_lo": str(domain.lo.as_fraction()),
                 "domain_hi": str(domain.hi.as_fraction()),
+                "site_error_type": alt_error_type,
+                "site_error": alt_error,
                 "initial_passed": result["passed"],
                 "initial_reason": result["reason"],
                 "initial_margin": str(initial_margin),
@@ -236,15 +320,10 @@ def main() -> int:
                 "hu_half_status": alt_status,
                 "hu_half_evaluations": alt_evaluations,
                 "hu_half_elapsed_seconds": f"{alt_elapsed:.6f}",
-                "hu_half_margin": str(alt_margin),
+                "hu_half_margin": frac(alt_margin),
                 "hu_half_passed": alt_passed,
             }
-            rows.append(row)
-            with OUT_JSONL.open("a", encoding="utf-8") as stream:
-                stream.write(
-                    json.dumps(row, sort_keys=True, separators=(",", ":")) + "\n"
-                )
-                stream.flush()
+            append_row(row)
             print(
                 f"SITE candidate={candidate_index} kind={kind} index={kind_index} "
                 f"initial_margin={initial_margin} initial_passed={result['passed']} "
@@ -265,7 +344,6 @@ def main() -> int:
 
         records = []
         previous = chain_genesis(CHAIN_DOMAIN)
-        run_t0 = perf_counter()
         for candidate_index, (width, radius) in enumerate(pairs):
             evaluator.set_phase(f"CANDIDATE:{candidate_index}")
             _, previous, _ = candidate._candidate_run(
@@ -298,9 +376,10 @@ def main() -> int:
             "candidate_count": len(pairs),
             "site_count": len(rows),
             "site_counts": counts,
-            "initial_positive_count": sum(row["initial_passed"] for row in rows),
-            "hu_half_positive_count": sum(row["hu_half_passed"] for row in rows),
-            "remaining_negative_count": sum(not row["hu_half_passed"] for row in rows),
+            "initial_positive_count": sum(row["initial_passed"] is True for row in rows),
+            "hu_half_positive_count": sum(row["hu_half_passed"] is True for row in rows),
+            "remaining_negative_count": sum(row["hu_half_passed"] is False for row in rows),
+            "site_error_count": sum(row["site_error_type"] is not None for row in rows),
             "hu_half_cap_count": sum(row["hu_half_status"] == "CAP" for row in rows),
             "predictor_cache_hits": predictor_cache_hits,
             "predictor_cache_misses": predictor_cache_misses,
@@ -313,8 +392,42 @@ def main() -> int:
         )
         for key, value in summary.items():
             print(f"SUMMARY_{key.upper()}={value}")
+        if summary["site_error_count"]:
+            print("DIAGNOSTIC_ERROR=SiteErrors:one or more sites were isolated")
+            print("DIAGNOSTIC_VERDICT=ERROR")
+            return 4
         print("DIAGNOSTIC_VERDICT=PASS")
         return 0
+    except SoftDeadline as exc:
+        elapsed = perf_counter() - run_t0
+        counts = {
+            kind: sum(row["site_kind"] == kind for row in rows)
+            for kind in ("cell", "join", "terminal")
+        }
+        summary = {
+            "schema": "btube-census-pass1-partial-v1",
+            "evidence_class": "DIAGNOSTIC_NOT_BINDING",
+            "not_binding": True,
+            "diagnostic_verdict": "PARTIAL",
+            "partial_reason": str(exc),
+            "soft_deadline_seconds": SOFT_DEADLINE_SECONDS,
+            "site_count": len(rows),
+            "site_counts": counts,
+            "site_error_count": sum(
+                row["site_error_type"] is not None for row in rows
+            ),
+            "predictor_cache_hits": predictor_cache_hits,
+            "predictor_cache_misses": predictor_cache_misses,
+            "charged_boundary_evaluations": evaluator.boundary_evaluation_count,
+            "elapsed_seconds": f"{elapsed:.6f}",
+        }
+        OUT_SUMMARY.write_text(
+            json.dumps(summary, sort_keys=True, separators=(",", ":")) + "\n",
+            encoding="utf-8",
+        )
+        print(f"DIAGNOSTIC_PARTIAL={exc}")
+        print("DIAGNOSTIC_VERDICT=PARTIAL")
+        return 7
     except Exception as exc:
         OUT_DIR.mkdir(parents=True, exist_ok=True)
         OUT_SUMMARY.write_text(

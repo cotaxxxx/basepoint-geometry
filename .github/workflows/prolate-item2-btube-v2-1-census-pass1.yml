@@ -20,6 +20,7 @@ jobs:
       REQUIRED_TARGET_TREE: 0f9831b3268da3b6d48b8eca34672d06134b6b6b
       DIAGNOSTIC_BUDGET: "24000"
       DIAGNOSTIC_HU_WIDTH: "1/2"
+      SOFT_DEADLINE_SECONDS: "18000"
       EXPECTED_SITES: "456"
       PYTHONDONTWRITEBYTECODE: "1"
 
@@ -43,27 +44,31 @@ jobs:
           test -f "$manifest"
           test -f "$workflow"
           test -f "$diagnostic"
-          test "$(wc -l < "$manifest")" -eq 7
+          test "$(wc -l < "$manifest")" -eq 8
           target_head="$(sed -n 's/^TARGET_HEAD=//p' "$manifest")"
           workflow_sha256="$(sed -n 's/^WORKFLOW_SHA256=//p' "$manifest")"
           diagnostic_sha256="$(sed -n 's/^DIAGNOSTIC_SHA256=//p' "$manifest")"
           budget="$(sed -n 's/^DIAGNOSTIC_BUDGET=//p' "$manifest")"
           hu_width="$(sed -n 's/^DIAGNOSTIC_HU_WIDTH=//p' "$manifest")"
+          soft_deadline="$(sed -n 's/^SOFT_DEADLINE_SECONDS=//p' "$manifest")"
           sites="$(sed -n 's/^EXPECTED_SITES=//p' "$manifest")"
           launch_id="$(sed -n 's/^LAUNCH_ID=//p' "$manifest")"
           for key in TARGET_HEAD WORKFLOW_SHA256 DIAGNOSTIC_SHA256 \
-                     DIAGNOSTIC_BUDGET DIAGNOSTIC_HU_WIDTH EXPECTED_SITES LAUNCH_ID; do
+                     DIAGNOSTIC_BUDGET DIAGNOSTIC_HU_WIDTH \
+                     SOFT_DEADLINE_SECONDS EXPECTED_SITES LAUNCH_ID; do
             test "$(grep -c "^${key}=" "$manifest")" -eq 1
           done
           [[ "$target_head" =~ ^[0-9a-f]{40}$ ]]
           [[ "$workflow_sha256" =~ ^[0-9a-f]{64}$ ]]
           [[ "$diagnostic_sha256" =~ ^[0-9a-f]{64}$ ]]
           [[ "$budget" =~ ^[0-9]+$ ]]
+          [[ "$soft_deadline" =~ ^[0-9]+$ ]]
           [[ "$sites" =~ ^[0-9]+$ ]]
           [[ "$launch_id" =~ ^census-pass1-c6a45866-[0-9]{3}$ ]]
           test "$target_head" = "$REQUIRED_TARGET_HEAD"
           test "$budget" = "$DIAGNOSTIC_BUDGET"
           test "$hu_width" = "$DIAGNOSTIC_HU_WIDTH"
+          test "$soft_deadline" = "$SOFT_DEADLINE_SECONDS"
           test "$sites" = "$EXPECTED_SITES"
           test "$(sha256sum "$workflow" | awk '{print $1}')" = "$workflow_sha256"
           test "$(sha256sum "$diagnostic" | awk '{print $1}')" = "$diagnostic_sha256"
@@ -76,6 +81,7 @@ jobs:
           echo "DIAGNOSTIC_SHA256=$diagnostic_sha256"
           echo "DIAGNOSTIC_BUDGET=$budget"
           echo "DIAGNOSTIC_HU_WIDTH=$hu_width"
+          echo "SOFT_DEADLINE_SECONDS=$soft_deadline"
           echo "EXPECTED_SITES=$sites"
           echo "EVIDENCE_CLASS=DIAGNOSTIC_NOT_BINDING"
 
