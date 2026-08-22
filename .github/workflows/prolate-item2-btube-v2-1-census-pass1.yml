@@ -1,0 +1,171 @@
+name: Prolate item 2 B-TUBE v2.1 census pass 1
+
+on:
+  push:
+    branches:
+      - controls/btube-v2-1-verification
+    paths:
+      - .github/verification-launch/btube-v2-1-census-pass1.txt
+
+permissions:
+  contents: read
+
+jobs:
+  census:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 350
+    env:
+      REL: CERTIFICATES/prolate/item2_circle/b_tube_v2_1
+      REQUIRED_TARGET_HEAD: c6a45866bf673c01e22c1519e4b87e75bea01c39
+      REQUIRED_TARGET_TREE: 0f9831b3268da3b6d48b8eca34672d06134b6b6b
+      DIAGNOSTIC_BUDGET: "24000"
+      DIAGNOSTIC_HU_WIDTH: "1/2"
+      EXPECTED_SITES: "456"
+      PYTHONDONTWRITEBYTECODE: "1"
+
+    steps:
+      - name: Checkout controls
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ github.sha }}
+          path: control
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Parse pinned census manifest
+        id: manifest
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          manifest="control/.github/verification-launch/btube-v2-1-census-pass1.txt"
+          workflow="control/.github/workflows/prolate-item2-btube-v2-1-census-pass1.yml"
+          diagnostic="control/.github/diagnostics/btube-v2-1-census-pass1.py"
+          test -f "$manifest"
+          test -f "$workflow"
+          test -f "$diagnostic"
+          test "$(wc -l < "$manifest")" -eq 7
+          target_head="$(sed -n 's/^TARGET_HEAD=//p' "$manifest")"
+          workflow_sha256="$(sed -n 's/^WORKFLOW_SHA256=//p' "$manifest")"
+          diagnostic_sha256="$(sed -n 's/^DIAGNOSTIC_SHA256=//p' "$manifest")"
+          budget="$(sed -n 's/^DIAGNOSTIC_BUDGET=//p' "$manifest")"
+          hu_width="$(sed -n 's/^DIAGNOSTIC_HU_WIDTH=//p' "$manifest")"
+          sites="$(sed -n 's/^EXPECTED_SITES=//p' "$manifest")"
+          launch_id="$(sed -n 's/^LAUNCH_ID=//p' "$manifest")"
+          for key in TARGET_HEAD WORKFLOW_SHA256 DIAGNOSTIC_SHA256 \
+                     DIAGNOSTIC_BUDGET DIAGNOSTIC_HU_WIDTH EXPECTED_SITES LAUNCH_ID; do
+            test "$(grep -c "^${key}=" "$manifest")" -eq 1
+          done
+          [[ "$target_head" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$workflow_sha256" =~ ^[0-9a-f]{64}$ ]]
+          [[ "$diagnostic_sha256" =~ ^[0-9a-f]{64}$ ]]
+          [[ "$budget" =~ ^[0-9]+$ ]]
+          [[ "$sites" =~ ^[0-9]+$ ]]
+          [[ "$launch_id" =~ ^census-pass1-c6a45866-[0-9]{3}$ ]]
+          test "$target_head" = "$REQUIRED_TARGET_HEAD"
+          test "$budget" = "$DIAGNOSTIC_BUDGET"
+          test "$hu_width" = "$DIAGNOSTIC_HU_WIDTH"
+          test "$sites" = "$EXPECTED_SITES"
+          test "$(sha256sum "$workflow" | awk '{print $1}')" = "$workflow_sha256"
+          test "$(sha256sum "$diagnostic" | awk '{print $1}')" = "$diagnostic_sha256"
+          test "$(git -C control rev-parse HEAD)" = "$GITHUB_SHA"
+          test -z "$(git -C control status --porcelain=v1 --untracked-files=all)"
+          echo "target_head=$target_head" >> "$GITHUB_OUTPUT"
+          echo "CONTROL_HEAD=$GITHUB_SHA"
+          echo "TARGET_HEAD=$target_head"
+          echo "WORKFLOW_SHA256=$workflow_sha256"
+          echo "DIAGNOSTIC_SHA256=$diagnostic_sha256"
+          echo "DIAGNOSTIC_BUDGET=$budget"
+          echo "DIAGNOSTIC_HU_WIDTH=$hu_width"
+          echo "EXPECTED_SITES=$sites"
+          echo "EVIDENCE_CLASS=DIAGNOSTIC_NOT_BINDING"
+
+      - name: Checkout exact target
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ steps.manifest.outputs.target_head }}
+          path: target
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Fresh target invariant
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          test "$(git -C target rev-parse HEAD)" = "$REQUIRED_TARGET_HEAD"
+          test "$(git -C target rev-parse 'HEAD^{tree}')" = "$REQUIRED_TARGET_TREE"
+          test -z "$(git -C target status --porcelain=v1 --untracked-files=all)"
+          echo "HEAD_BEFORE=$(git -C target rev-parse HEAD)"
+          echo "TREE_BEFORE=$(git -C target rev-parse 'HEAD^{tree}')"
+
+      - name: Set up exact Python
+        uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38
+        with:
+          python-version: "3.11.16"
+          cache: pip
+          cache-dependency-path: target/CERTIFICATES/prolate/item2_circle/b_tube_v2_1/requirements-calibration.txt
+          check-latest: false
+
+      - name: Install pinned dependency
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          python -m pip install --require-hashes --only-binary=:all: \
+            -r "target/${REL}/requirements-calibration.txt"
+
+      - name: Four-pin runtime gate
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          python - <<'PY'
+          import sys
+          import flint
+          print("PYTHON_VERSION=" + ".".join(map(str, sys.version_info[:3])))
+          print("PYTHON_FLINT_VERSION=" + flint.__version__)
+          print("FLINT_VERSION=" + flint.__FLINT_VERSION__)
+          if sys.version_info[:3] != (3, 11, 16): raise SystemExit(5)
+          if flint.__version__ != "0.9.0": raise SystemExit(5)
+          if flint.__FLINT_VERSION__ != "3.6.0": raise SystemExit(5)
+          PY
+          test "$(git -C target rev-parse HEAD)" = "$REQUIRED_TARGET_HEAD"
+          test "$(git -C target rev-parse 'HEAD^{tree}')" = "$REQUIRED_TARGET_TREE"
+
+      - name: Run non-binding census pass 1
+        shell: bash
+        env:
+          PYTHONPATH: target/CERTIFICATES/prolate/item2_circle/b_tube_v2_1
+          PYTHONPYCACHEPREFIX: ${{ runner.temp }}/btube-pycache-census-pass1
+        run: |
+          set -Eeuo pipefail
+          echo "START_UTC=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          python control/.github/diagnostics/btube-v2-1-census-pass1.py
+          echo "END_UTC=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+      - name: Upload non-binding census output
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: diagnostic-btube-census-pass1-NOT_BINDING
+          path: diagnostic-output/
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Final target invariants
+        if: always()
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          actual_head="$(git -C target rev-parse HEAD)"
+          actual_tree="$(git -C target rev-parse 'HEAD^{tree}')"
+          status="$(git -C target status --porcelain=v1 --untracked-files=all)"
+          echo "HEAD_AFTER=$actual_head"
+          echo "TREE_AFTER=$actual_tree"
+          if [[ "$actual_head" = "$REQUIRED_TARGET_HEAD" \
+                && "$actual_tree" = "$REQUIRED_TARGET_TREE" \
+                && -z "$status" ]]; then
+            echo "HEAD_INVARIANT=PASS"
+            echo "TREE_INVARIANT=PASS"
+          else
+            echo "HEAD_INVARIANT=FAIL"
+            printf 'TREE_INVARIANT=FAIL status=%q\n' "$status"
+            exit 6
+          fi
