@@ -1,0 +1,166 @@
+name: Prolate item 2 B-TUBE v2.1 threshold diagnostic
+
+on:
+  push:
+    branches:
+      - controls/btube-v2-1-verification
+    paths:
+      - .github/verification-launch/btube-v2-1-threshold-diagnostic.txt
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      REL: CERTIFICATES/prolate/item2_circle/b_tube_v2_1
+      REQUIRED_PYTHON: "3.11.16"
+      REQUIRED_PYFLINT: "0.9.0"
+      REQUIRED_FLINT: "3.6.0"
+      PYTHONDONTWRITEBYTECODE: "1"
+
+    steps:
+      - name: Checkout controls
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ github.sha }}
+          path: control
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Parse pinned diagnostic manifest
+        id: manifest
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          manifest="control/.github/verification-launch/btube-v2-1-threshold-diagnostic.txt"
+          workflow="control/.github/workflows/prolate-item2-btube-v2-1-threshold-diagnostic.yml"
+          diagnostic="control/.github/diagnostics/btube-v2-1-krawczyk-threshold.py"
+          test -f "$manifest"
+          test -f "$workflow"
+          test -f "$diagnostic"
+          test "$(wc -l < "$manifest")" -eq 4
+
+          target_head="$(sed -n 's/^TARGET_HEAD=//p' "$manifest")"
+          workflow_sha256="$(sed -n 's/^WORKFLOW_SHA256=//p' "$manifest")"
+          diagnostic_sha256="$(sed -n 's/^DIAGNOSTIC_SHA256=//p' "$manifest")"
+          launch_id="$(sed -n 's/^LAUNCH_ID=//p' "$manifest")"
+
+          test "$(grep -c '^TARGET_HEAD=' "$manifest")" -eq 1
+          test "$(grep -c '^WORKFLOW_SHA256=' "$manifest")" -eq 1
+          test "$(grep -c '^DIAGNOSTIC_SHA256=' "$manifest")" -eq 1
+          test "$(grep -c '^LAUNCH_ID=' "$manifest")" -eq 1
+          [[ "$target_head" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$workflow_sha256" =~ ^[0-9a-f]{64}$ ]]
+          [[ "$diagnostic_sha256" =~ ^[0-9a-f]{64}$ ]]
+          [[ "$launch_id" =~ ^[A-Za-z0-9._-]+$ ]]
+
+          test "$(sha256sum "$workflow" | awk '{print $1}')" = "$workflow_sha256"
+          test "$(sha256sum "$diagnostic" | awk '{print $1}')" = "$diagnostic_sha256"
+          test "$(git -C control rev-parse HEAD)" = "${GITHUB_SHA}"
+          test -z "$(git -C control status --porcelain=v1 --untracked-files=all)"
+
+          {
+            echo "target_head=$target_head"
+            echo "workflow_sha256=$workflow_sha256"
+            echo "diagnostic_sha256=$diagnostic_sha256"
+            echo "launch_id=$launch_id"
+          } >> "$GITHUB_OUTPUT"
+
+          echo "CONTROL_HEAD=${GITHUB_SHA}"
+          echo "TARGET_HEAD=$target_head"
+          echo "WORKFLOW_SHA256=$workflow_sha256"
+          echo "DIAGNOSTIC_SHA256=$diagnostic_sha256"
+          echo "LAUNCH_ID=$launch_id"
+
+      - name: Checkout exact target
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ steps.manifest.outputs.target_head }}
+          path: target
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Fresh target invariant
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          expected="${{ steps.manifest.outputs.target_head }}"
+          test "$(git -C target rev-parse HEAD)" = "$expected"
+          test -z "$(git -C target status --porcelain=v1 --untracked-files=all)"
+          test ! -e target/btube-calibration-run
+          test ! -e target/btube-calibration-delivery
+          echo "HEAD_BEFORE=$(git -C target rev-parse HEAD)"
+          echo "TREE_BEFORE=$(git -C target rev-parse 'HEAD^{tree}')"
+
+      - name: Set up exact Python
+        uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38
+        with:
+          python-version: "3.11.16"
+          cache: pip
+          cache-dependency-path: target/CERTIFICATES/prolate/item2_circle/b_tube_v2_1/requirements-calibration.txt
+          check-latest: false
+
+      - name: Install pinned dependency
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          python -m pip install \
+            --require-hashes \
+            --only-binary=:all: \
+            -r "target/${REL}/requirements-calibration.txt"
+
+      - name: Four-pin runtime gate
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          python - <<'PY'
+          import sys
+          import flint
+          actual_python = sys.version_info[:3]
+          actual_pyflint = flint.__version__
+          actual_flint = flint.__FLINT_VERSION__
+          print("PYTHON_VERSION=" + ".".join(map(str, actual_python)))
+          print("PYTHON_FLINT_VERSION=" + str(actual_pyflint))
+          print("FLINT_VERSION=" + str(actual_flint))
+          if actual_python != (3, 11, 16):
+              raise SystemExit(f"Python pin mismatch: {actual_python!r}")
+          if actual_pyflint != "0.9.0":
+              raise SystemExit(f"python-flint pin mismatch: {actual_pyflint!r}")
+          if actual_flint != "3.6.0":
+              raise SystemExit(f"FLINT pin mismatch: {actual_flint!r}")
+          PY
+          test "$(git -C target rev-parse HEAD)" = "${{ steps.manifest.outputs.target_head }}"
+
+      - name: Run threshold diagnostic
+        shell: bash
+        env:
+          PYTHONPATH: target/CERTIFICATES/prolate/item2_circle/b_tube_v2_1
+          PYTHONPYCACHEPREFIX: ${{ runner.temp }}/btube-pycache-threshold-diagnostic
+        run: |
+          set -Eeuo pipefail
+          echo "BTUBE_KRAWCZYK_THRESHOLD_DIAGNOSTIC_LAUNCH_V1"
+          echo "START_UTC=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          python control/.github/diagnostics/btube-v2-1-krawczyk-threshold.py
+          echo "END_UTC=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+      - name: Final target invariants
+        if: always()
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          expected="${{ steps.manifest.outputs.target_head }}"
+          actual="$(git -C target rev-parse HEAD)"
+          status="$(git -C target status --porcelain=v1 --untracked-files=all)"
+          echo "HEAD_AFTER=$actual"
+          echo "TREE_AFTER=$(git -C target rev-parse 'HEAD^{tree}')"
+          if [[ "$actual" = "$expected" && -z "$status" ]]; then
+            echo "HEAD_INVARIANT=PASS"
+            echo "TREE_INVARIANT=PASS"
+          else
+            echo "HEAD_INVARIANT=FAIL"
+            printf 'TREE_INVARIANT=FAIL status=%q\n' "$status"
+            exit 4
+          fi
