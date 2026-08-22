@@ -28,6 +28,10 @@ from routed_evaluator import (
 EXACT_LAMBDA_TRANSPORT_DETAIL_KEY = "exact_lambda_transport"
 EXACT_LAMBDA_REFINEMENT_EVAL_CAP = 24000
 EXACT_LAMBDA_F_NONZERO_PREDICATE_ID = "R7_F_NONZERO_V1"
+EXACT_LAMBDA_PREDICTOR_F_QUALITY_PREDICATE_ID = (
+    "R7_PREDICTOR_F_NONZERO_OR_WIDTH_2M10_V1"
+)
+EXACT_LAMBDA_PREDICTOR_F_WIDTH_DELTA = Fraction(1, 1024)
 EXACT_LAMBDA_HU_POS_PREDICATE_ID = "R7_HU_POS_V1"
 
 
@@ -149,6 +153,7 @@ class ExactLambdaRoutedEvaluator(RoutedEvaluator):
         lambda_hi: Fraction,
         *,
         f_nonzero: bool = False,
+        f_predictor_quality: bool = False,
     ):
         route = self.modules["blocal_v22_boundary"]
         model = self.modules["blocal_v22_model"]
@@ -158,12 +163,31 @@ class ExactLambdaRoutedEvaluator(RoutedEvaluator):
         s_iv, transport = _transport_evidence(model, lambda_lo, lambda_hi)
         s0, s1 = s_iv.lo.as_fraction(), s_iv.hi.as_fraction()
         cap = min(EXACT_LAMBDA_REFINEMENT_EVAL_CAP, self._boundary_call_cap())
+        if f_nonzero and f_predictor_quality:
+            raise CalibrationError(
+                "exact lambda transport: conflicting F refinement modes"
+            )
+        predictor_accept_reason: str | None = None
 
         def f_nonzero_accept(enclosure):
             lo, hi = model.interval_fractions(
                 enclosure, "exact lambda transport F NONZERO refinement"
             )
             return hi < 0 or 0 < lo
+
+        def f_predictor_quality_accept(enclosure):
+            nonlocal predictor_accept_reason
+            lo, hi = model.interval_fractions(
+                enclosure, "exact lambda transport predictor F quality refinement"
+            )
+            if hi < 0 or 0 < lo:
+                predictor_accept_reason = "NONZERO"
+                return True
+            if hi - lo <= EXACT_LAMBDA_PREDICTOR_F_WIDTH_DELTA:
+                predictor_accept_reason = "WIDTH"
+                return True
+            predictor_accept_reason = None
+            return False
 
         def compute():
             if quantity == "F":
@@ -180,7 +204,13 @@ class ExactLambdaRoutedEvaluator(RoutedEvaluator):
                     s0,
                     s1,
                     required_sign=None,
-                    accept=f_nonzero_accept if f_nonzero else None,
+                    accept=(
+                        f_nonzero_accept
+                        if f_nonzero
+                        else f_predictor_quality_accept
+                        if f_predictor_quality
+                        else None
+                    ),
                     evaluation_cap=cap,
                 )
             return route.enclose_hu(
@@ -217,6 +247,25 @@ class ExactLambdaRoutedEvaluator(RoutedEvaluator):
         )
         if quantity == "F_r":
             interval = -interval
+        predictor_quality_reason = None
+        if quantity == "F" and f_predictor_quality:
+            lo = interval.lo.as_fraction()
+            hi = interval.hi.as_fraction()
+            if hi < 0 or 0 < lo:
+                predictor_quality_reason = "NONZERO"
+            elif hi - lo <= EXACT_LAMBDA_PREDICTOR_F_WIDTH_DELTA:
+                predictor_quality_reason = "WIDTH"
+            else:
+                raise CalibrationError(
+                    "exact lambda transport: predictor F quality refinement unresolved"
+                )
+            if (
+                predictor_accept_reason is not None
+                and predictor_accept_reason != predictor_quality_reason
+            ):
+                raise CalibrationError(
+                    "exact lambda transport: predictor F quality reason mismatch"
+                )
         value = _dyadic_interval_arb(interval, self.arb_type)
         return value, interval, {
             "boundary_proof_id": proof.get("proof_id"),
@@ -227,8 +276,22 @@ class ExactLambdaRoutedEvaluator(RoutedEvaluator):
             "refinement_predicate_id": (
                 EXACT_LAMBDA_F_NONZERO_PREDICATE_ID
                 if quantity == "F" and f_nonzero
+                else EXACT_LAMBDA_PREDICTOR_F_QUALITY_PREDICATE_ID
+                if quantity == "F" and f_predictor_quality
                 else EXACT_LAMBDA_HU_POS_PREDICATE_ID
                 if quantity == "F_r"
+                else None
+            ),
+            "refinement_width_delta": (
+                Rational.from_fraction(
+                    EXACT_LAMBDA_PREDICTOR_F_WIDTH_DELTA
+                ).to_json()
+                if quantity == "F" and f_predictor_quality
+                else None
+            ),
+            "refinement_accept_reason": (
+                predictor_quality_reason
+                if quantity == "F" and f_predictor_quality
                 else None
             ),
             "source_quantity": "F" if quantity == "F" else "H_U",
@@ -273,12 +336,17 @@ class ExactLambdaRoutedEvaluator(RoutedEvaluator):
         force_route: str | None = None,
         record: bool = True,
         f_nonzero: bool = False,
+        f_predictor_quality: bool = False,
     ):
         if quantity not in {"F", "F_r"}:
             raise CalibrationError("exact lambda transport: unsupported quantity")
-        if f_nonzero and quantity != "F":
+        if f_nonzero and f_predictor_quality:
             raise CalibrationError(
-                "exact lambda transport: NONZERO refinement is F-only"
+                "exact lambda transport: conflicting F refinement modes"
+            )
+        if (f_nonzero or f_predictor_quality) and quantity != "F":
+            raise CalibrationError(
+                "exact lambda transport: F refinement mode is F-only"
             )
         _exact_lambda_domain(lambda_lo, lambda_hi)
         lam_ball = _fraction_interval_arb(lambda_lo, lambda_hi, self.arb_type)
@@ -299,7 +367,12 @@ class ExactLambdaRoutedEvaluator(RoutedEvaluator):
             )
         elif selected == ROUTED_BOUNDARY_ROUTE_ID:
             value, interval, detail, used = self._boundary_exact(
-                quantity, r_iv, lambda_lo, lambda_hi, f_nonzero=f_nonzero
+                quantity,
+                r_iv,
+                lambda_lo,
+                lambda_hi,
+                f_nonzero=f_nonzero,
+                f_predictor_quality=f_predictor_quality,
             )
         elif selected == ROUTED_STRADDLE_ROUTE_ID and force_route is None:
             left, right = exact_straddle_children(r_iv)
@@ -307,7 +380,12 @@ class ExactLambdaRoutedEvaluator(RoutedEvaluator):
                 quantity, left, lambda_lo, lambda_hi, tol, depth, limit
             )
             _, ri, rd, ru = self._boundary_exact(
-                quantity, right, lambda_lo, lambda_hi, f_nonzero=f_nonzero
+                quantity,
+                right,
+                lambda_lo,
+                lambda_hi,
+                f_nonzero=f_nonzero,
+                f_predictor_quality=f_predictor_quality,
             )
             interval = DyadicInterval.hull([li.lo, li.hi, ri.lo, ri.hi])
             value = _dyadic_interval_arb(interval, self.arb_type)
@@ -333,6 +411,18 @@ class ExactLambdaRoutedEvaluator(RoutedEvaluator):
             raise CalibrationError(
                 "exact lambda transport: F NONZERO refinement unresolved"
             )
+        predictor_quality_reason = None
+        if f_predictor_quality:
+            lo = interval.lo.as_fraction()
+            hi = interval.hi.as_fraction()
+            if hi < 0 or 0 < lo:
+                predictor_quality_reason = "NONZERO"
+            elif hi - lo <= EXACT_LAMBDA_PREDICTOR_F_WIDTH_DELTA:
+                predictor_quality_reason = "WIDTH"
+            else:
+                raise CalibrationError(
+                    "exact lambda transport: predictor F quality refinement unresolved"
+                )
         evidence = {
             "boundary_route_evaluation_count_delta": used,
             "boundary_route_evaluation_count_total": self.boundary_evaluation_count,
@@ -344,6 +434,19 @@ class ExactLambdaRoutedEvaluator(RoutedEvaluator):
             "phase": self.phase,
             "pins": routed_bundle_pins(),
             "post_failure_fallback": False,
+            "predictor_f_quality": (
+                {
+                    "accept_reason": predictor_quality_reason,
+                    "predicate_id": (
+                        EXACT_LAMBDA_PREDICTOR_F_QUALITY_PREDICATE_ID
+                    ),
+                    "width_delta": Rational.from_fraction(
+                        EXACT_LAMBDA_PREDICTOR_F_WIDTH_DELTA
+                    ).to_json(),
+                }
+                if f_predictor_quality
+                else None
+            ),
             "quantity": quantity,
             "r_interval": r_iv.to_json(),
             "route_id": selected,
@@ -369,6 +472,7 @@ class ExactLambdaRoutedEvaluator(RoutedEvaluator):
         limit: int = 200000,
         *,
         require_nonzero: bool = False,
+        predictor_quality: bool = False,
     ):
         value, _, _ = self._evaluate_exact(
             "F",
@@ -379,6 +483,7 @@ class ExactLambdaRoutedEvaluator(RoutedEvaluator):
             depth,
             limit,
             f_nonzero=require_nonzero,
+            f_predictor_quality=predictor_quality,
         )
         return value
 
@@ -442,8 +547,12 @@ def _raw_lambda_ball(lambda_lo: Fraction, lambda_hi: Fraction, arb_type):
 
 def _kernel_F(
     kernel, arb_type, r_arg, lambda_lo: Fraction, lambda_hi: Fraction,
-    *, tol, depth, limit, nonzero: bool = False
+    *, tol, depth, limit, nonzero: bool = False, predictor_quality: bool = False
 ):
+    if nonzero and predictor_quality:
+        raise CalibrationError(
+            "exact lambda transport: conflicting F refinement modes"
+        )
     if isinstance(kernel, ExactLambdaRoutedEvaluator):
         return kernel.F_exact_arb(
             r_arg,
@@ -453,6 +562,7 @@ def _kernel_F(
             depth=depth,
             limit=limit,
             require_nonzero=nonzero,
+            predictor_quality=predictor_quality,
         )
     value = kernel.F_arb(
         r_arg,
@@ -461,11 +571,22 @@ def _kernel_F(
         depth=depth,
         limit=limit,
     )
-    if nonzero:
+    if nonzero or predictor_quality:
         interval = arb_ball_to_exact_interval(value)
-        if not (interval.hi < D_ZERO or D_ZERO < interval.lo):
+        is_nonzero = interval.hi < D_ZERO or D_ZERO < interval.lo
+        if nonzero and not is_nonzero:
             raise CalibrationError(
                 "exact lambda transport: F NONZERO refinement unresolved"
+            )
+        if predictor_quality and not (
+            is_nonzero
+            or (
+                interval.hi.as_fraction() - interval.lo.as_fraction()
+                <= EXACT_LAMBDA_PREDICTOR_F_WIDTH_DELTA
+            )
+        ):
+            raise CalibrationError(
+                "exact lambda transport: predictor F quality refinement unresolved"
             )
     return value
 
@@ -505,7 +626,7 @@ def exact_newton_predictor(
         residual = arb_ball_to_exact_interval(
             _kernel_F(
                 kernel, arb_type, point, lam, lam,
-                tol=tol, depth=depth, limit=limit, nonzero=True
+                tol=tol, depth=depth, limit=limit, predictor_quality=True
             )
         )
         slope = arb_ball_to_exact_interval(
