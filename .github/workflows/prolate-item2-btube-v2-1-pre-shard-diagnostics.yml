@@ -1,0 +1,181 @@
+name: Prolate item 2 B-TUBE v2.1 pre-shard diagnostics
+
+on:
+  push:
+    branches: [controls/btube-v2-1-verification]
+    paths: [.github/verification-launch/btube-v2-1-pre-shard-diagnostics.txt]
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 330
+    env:
+      REL: CERTIFICATES/prolate/item2_circle/b_tube_v2_1
+      REQUIRED_TARGET_HEAD: c6a45866bf673c01e22c1519e4b87e75bea01c39
+      REQUIRED_TARGET_TREE: 0f9831b3268da3b6d48b8eca34672d06134b6b6b
+      EXPECTED_CANDIDATES: "9"
+      SOFT_DEADLINE_SECONDS: "16800"
+      PYTHONDONTWRITEBYTECODE: "1"
+
+    steps:
+      - name: Checkout controls
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ github.sha }}
+          path: control
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Parse pinned manifest
+        id: manifest
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          manifest=control/.github/verification-launch/btube-v2-1-pre-shard-diagnostics.txt
+          workflow=control/.github/workflows/prolate-item2-btube-v2-1-pre-shard-diagnostics.yml
+          diag_a=control/.github/diagnostics/btube-v2-1-nonfinite-single.py
+          diag_b=control/.github/diagnostics/btube-v2-1-terminal-geometry.py
+          test -f "$manifest" && test -f "$workflow" && test -f "$diag_a" && test -f "$diag_b"
+          test "$(wc -l < "$manifest")" -eq 8
+          target_head="$(sed -n 's/^TARGET_HEAD=//p' "$manifest")"
+          workflow_sha="$(sed -n 's/^WORKFLOW_SHA256=//p' "$manifest")"
+          diag_a_sha="$(sed -n 's/^DIAGNOSTIC_A_SHA256=//p' "$manifest")"
+          diag_b_sha="$(sed -n 's/^DIAGNOSTIC_B_SHA256=//p' "$manifest")"
+          candidates="$(sed -n 's/^EXPECTED_CANDIDATES=//p' "$manifest")"
+          timeout="$(sed -n 's/^TIMEOUT_MINUTES=//p' "$manifest")"
+          soft_deadline="$(sed -n 's/^SOFT_DEADLINE_SECONDS=//p' "$manifest")"
+          launch_id="$(sed -n 's/^LAUNCH_ID=//p' "$manifest")"
+          for key in TARGET_HEAD WORKFLOW_SHA256 DIAGNOSTIC_A_SHA256 \
+                     DIAGNOSTIC_B_SHA256 EXPECTED_CANDIDATES TIMEOUT_MINUTES \
+                     SOFT_DEADLINE_SECONDS LAUNCH_ID; do
+            test "$(grep -c "^${key}=" "$manifest")" -eq 1
+          done
+          [[ "$target_head" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$workflow_sha" =~ ^[0-9a-f]{64}$ ]]
+          [[ "$diag_a_sha" =~ ^[0-9a-f]{64}$ ]]
+          [[ "$diag_b_sha" =~ ^[0-9a-f]{64}$ ]]
+          [[ "$launch_id" =~ ^pre-shard-c6a45866-[0-9]{3}$ ]]
+          test "$target_head" = "$REQUIRED_TARGET_HEAD"
+          test "$candidates" = "$EXPECTED_CANDIDATES"
+          test "$timeout" = 330
+          test "$soft_deadline" = "$SOFT_DEADLINE_SECONDS"
+          test "$(sha256sum "$workflow" | awk '{print $1}')" = "$workflow_sha"
+          test "$(sha256sum "$diag_a" | awk '{print $1}')" = "$diag_a_sha"
+          test "$(sha256sum "$diag_b" | awk '{print $1}')" = "$diag_b_sha"
+          test "$(git -C control rev-parse HEAD)" = "$GITHUB_SHA"
+          test -z "$(git -C control status --porcelain=v1 --untracked-files=all)"
+          echo "target_head=$target_head" >> "$GITHUB_OUTPUT"
+          echo "EVIDENCE_CLASS=DIAGNOSTIC_NOT_BINDING"
+
+      - name: Checkout exact target
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ steps.manifest.outputs.target_head }}
+          path: target
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Fresh target invariant
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          test "$(git -C target rev-parse HEAD)" = "$REQUIRED_TARGET_HEAD"
+          test "$(git -C target rev-parse 'HEAD^{tree}')" = "$REQUIRED_TARGET_TREE"
+          test -z "$(git -C target status --porcelain=v1 --untracked-files=all)"
+
+      - name: Set up exact Python
+        uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38
+        with:
+          python-version: "3.11.16"
+          cache: pip
+          cache-dependency-path: target/CERTIFICATES/prolate/item2_circle/b_tube_v2_1/requirements-calibration.txt
+          check-latest: false
+
+      - name: Install pinned dependency
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          python -m pip install --require-hashes --only-binary=:all: \
+            -r "target/${REL}/requirements-calibration.txt"
+
+      - name: Four-pin runtime gate
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          python - <<'PY'
+          import sys, flint
+          print("PYTHON_VERSION=" + ".".join(map(str, sys.version_info[:3])))
+          print("PYTHON_FLINT_VERSION=" + flint.__version__)
+          print("FLINT_VERSION=" + flint.__FLINT_VERSION__)
+          if sys.version_info[:3] != (3, 11, 16): raise SystemExit(5)
+          if flint.__version__ != "0.9.0": raise SystemExit(5)
+          if flint.__FLINT_VERSION__ != "3.6.0": raise SystemExit(5)
+          PY
+          test "$(git -C target rev-parse HEAD)" = "$REQUIRED_TARGET_HEAD"
+          test "$(git -C target rev-parse 'HEAD^{tree}')" = "$REQUIRED_TARGET_TREE"
+
+      - name: A - Diagnose one NONFINITE site
+        id: diag_a
+        continue-on-error: true
+        shell: bash
+        env:
+          PYTHONPATH: target/CERTIFICATES/prolate/item2_circle/b_tube_v2_1
+          PYTHONPYCACHEPREFIX: ${{ runner.temp }}/btube-pycache-pre-shard-a
+        run: python control/.github/diagnostics/btube-v2-1-nonfinite-single.py
+
+      - name: B - Census terminal geometry independently
+        id: diag_b
+        if: always()
+        continue-on-error: true
+        shell: bash
+        env:
+          PYTHONPATH: target/CERTIFICATES/prolate/item2_circle/b_tube_v2_1
+          PYTHONPYCACHEPREFIX: ${{ runner.temp }}/btube-pycache-pre-shard-b
+        run: python control/.github/diagnostics/btube-v2-1-terminal-geometry.py
+
+      - name: Upload non-binding outputs
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: diagnostic-btube-pre-shard-NOT_BINDING
+          path: diagnostic-output/
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Final target invariants
+        if: always()
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          actual_head="$(git -C target rev-parse HEAD)"
+          actual_tree="$(git -C target rev-parse 'HEAD^{tree}')"
+          status="$(git -C target status --porcelain=v1 --untracked-files=all)"
+          if [[ "$actual_head" = "$REQUIRED_TARGET_HEAD" \
+                && "$actual_tree" = "$REQUIRED_TARGET_TREE" && -z "$status" ]]; then
+            echo "HEAD_INVARIANT=PASS"
+            echo "TREE_INVARIANT=PASS"
+          else
+            printf 'INVARIANT=FAIL status=%q\n' "$status"
+            exit 6
+          fi
+
+      - name: Final diagnostic verdict
+        if: always()
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          a = json.loads(Path("diagnostic-output/nonfinite-single-NOT_BINDING.json").read_text())
+          b = json.loads(Path("diagnostic-output/terminal-geometry-NOT_BINDING.json").read_text())
+          print("DIAGNOSTIC_A_VERDICT=" + a["diagnostic_verdict"])
+          print("DIAGNOSTIC_A_CLASSIFICATION=" + a.get("classification", "NONE"))
+          print("DIAGNOSTIC_B_VERDICT=" + b["diagnostic_verdict"])
+          print("TERMINAL_CALL_COUNT=" + str(b.get("terminal_call_count")))
+          if a["diagnostic_verdict"] != "PASS": raise SystemExit(4)
+          if b["diagnostic_verdict"] != "PASS": raise SystemExit(7)
+          PY
