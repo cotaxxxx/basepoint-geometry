@@ -2,6 +2,14 @@
 
 長球（prolate spheroid）の大域分類に用いる機械可読証明書を保存する。
 
+## Paper 1 — local bifurcation
+
+`local_bifurcation/` archives the rigorous local-coefficient certificate and
+the exact symbolic audits used to prove the unique simple critical aspect
+ratio `a_c in (4.72438, 4.72439)`, with `Q'(a_c) < 0` and `H4(a_c) < 0`.
+This local theorem is logically independent of the global-classification
+certificates below.
+
 ## Item 0 — equatorial positivity
 
 For every
