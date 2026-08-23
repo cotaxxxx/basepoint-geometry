@@ -1,6 +1,6 @@
 # Research Status
 
-更新日：2026-07-26
+更新日：2026-08-24
 
 ## 研究体系
 
@@ -47,12 +47,12 @@
 
 | 順序 | 対象 | 状態 | Submission ID |
 |---:|---|---|---|
-| 1 | 長球 | Experimental Mathematics で desk rejection。局所定理を保持し、大域分類を加えて改稿中 | `264926013` |
+| 1 | 長球 | Paper 1 の日本語改稿版を 2026-08-23 登録。局所分岐定理は独立認証済み。英訳・archival DOI・投稿版整備が残る | `264926013`（旧投稿） |
 | 2 | 三軸楕円体 | 局所 unfolding 認証済み・投稿準備 | — |
 | 3 | 円柱・円錐台統一族 | 投稿済み・本文差し替え依頼中 | `262380744` |
-| 4 | 丸めた D3 対称双円錐 | Experimental Mathematics 投稿済み | `265797675` |
-| 5 | 正六面体と球 | Experimental Mathematics 投稿済み | `267038558` |
-| 6 | 正四面体 | Experimental Mathematics 投稿済み | `264768194` |
+| 4 | 丸めた D3 対称双円錐 | Experimental Mathematics 投稿記録を収録 | `265797675` |
+| 5 | 正六面体と球 | Experimental Mathematics 投稿記録を収録 | `267038558` |
+| 6 | 正四面体 | Experimental Mathematics 投稿記録を収録 | `264768194` |
 | 7 | 双正四面体 | 検証完了・投稿準備 | — |
 
 ## 各論 I　体系列
@@ -60,7 +60,7 @@
 ### 1　楕円体系列
 
 - 1-1　球体：完全解析分類・本文・TeX・PDF・source ZIP 収録済み
-- 1-2　長球：局所分岐認証済み・赤道正値性の項目0と境界 Maxwell 転移の項目5を完全認証・大域分類を継続
+- 1-2　長球：Paper 1 局所分岐を独立認証・日本語改稿版を 2026-08-23 登録。大域分類は Paper 2 として継続
 - 1-3　三軸楕円体：中心 Hessian 対角化・局所 unfolding 認証済み・投稿準備
 
 ### 2　柱体系列
@@ -72,21 +72,42 @@
 
 - 3-1　円錐：未配置
 - 3-2　円錐台：単体分類は未配置。円柱との統一研究は各論 II に配置
-- 3-3　正四面体：局所最大性と区間認証を完了・投稿済み
+- 3-3　正四面体：局所最大性と区間認証を完了・投稿記録を収録
 - 3-4　正四角錐：検証中
 - 3-5　双正四面体：中心鞍型・軸上停留点の認証を完了・投稿準備
 
 ### 4　混成体系列
 
-- 4-1　丸めた D3 対称双円錐：局所分裂定理・Arb 認証完了・投稿済み
+- 4-1　丸めた D3 対称双円錐：局所分裂定理・Arb 認証完了・投稿記録を収録
 
 ## 各論 II　複合研究
 
-- II-1　円柱–円錐台統一族：cusp unfolding 論文を投稿済み・本文差し替え依頼中
-- II-2　球体–正六面体比較：中心構造と中心–頂点境界値恒等式を収録・投稿済み
+- II-1　円柱–円錐台統一族：cusp unfolding 論文の投稿記録と差し替え経緯を収録
+- II-2　球体–正六面体比較：中心構造と中心–頂点境界値恒等式を収録
 - II-3　立方体から球への補間：研究継続。中心 Hessian 符号反転点 `s* ≈ 0.064022956` を確認
 
-## 現在の重点：長球の大域分類
+## 現在の重点：長球の完全分類
+
+### Paper 1　局所基点分岐 — CERTIFIED / ARCHIVED
+
+`CERTIFICATES/prolate/local_bifurcation/` に Paper 1 の局所係数認証を独立アーカイブした。
+
+Arb/Acb の fail-closed 区間認証により、
+
+- `Q(4.7) > 0`;
+- `Q(4.75) < 0`;
+- `Q'(a) < 0` on `[4.7,4.75]`;
+- `H4(a) < 0` on `[4.7,4.75]`;
+- `Q(4.72438) > 0`;
+- `Q(4.72439) < 0`
+
+を認証した。したがって一意な単純零点
+
+`a_c in (4.72438,4.72439)`
+
+が存在し、`Q'(a_c)<0`, `H4(a_c)<0`。停留円の中心への局所収縮と中心 Hessian の nullity 増加を与える Paper 1 の存在定理は、後述の B-TUBE に論理的に依存しない。
+
+日本語改稿版 PDF / DOCX は `01_KAKURON_I/1_楕円体系列/1-2_長球/manuscript/` に登録済み。
 
 ### 項目0　赤道正値性 — CERTIFIED
 
@@ -99,7 +120,7 @@
 | 中心帯 `0 < r <= 9/20` | **CERTIFIED (0c)** | `F_r>0`, hence `F>0`; 1363葉・混合ラベル |
 | 中央帯 `9/20 <= r <= 3/4` | **CERTIFIED (0d)** | 全224葉が直接 `F>0`; driver 118 + mixed 80 + Riemann 26 |
 | 境界帯 `3/4 <= r <= 1` | **CERTIFIED (0b)** | `F_r<0`; 435葉、2828原子セル未被覆0、terminal 0 |
-| 辺 `r=1` | **CERTIFIED (0a + Stage 1)** | 境界侵入根と `lambda<lambda_partial` 側の正値性; 22 + 4葉 |
+| 辺 `r=1` | **CERTIFIED (0a + Stage 1)** | boundary sign と boundary-entry parameter; 22 + 4葉 |
 
 四部は `r=9/20` と `r=3/4` で接合する。したがって、
 
@@ -111,6 +132,40 @@
 0b の独立監査では、ZIP・証明書 SHA-256 が報告値と一致し、435葉の全てで `negative_certified=true`、キュー0、terminal 0、exact rational `28 x 101 = 2828` セルの未被覆0を確認した。
 
 証明書：`CERTIFICATES/prolate/`。
+
+### 項目2　大域停留円枝 / B-TUBE — IN PROGRESS / NOT CERTIFIED AS A WHOLE
+
+`CERTIFICATES/prolate/item2_circle/` に大域停留円枝の一意性を扱う実装・設計資産を配置している。
+
+現在の B-TUBE v2.1 の `main` 収録部分は **schema/checker self-test only** であり、production prolate evaluation ではない。契約上は、各 λ-cell で parametric Krawczyk による存在、`sup F_r<0` による一意性、exact JOIN、枝の連続性を認証する構成である。
+
+B-TUBE は `CERTIFIED_CORE_INTERVAL` と `CERTIFIED_B_TUBE_FULL` を分離し、後者には境界接続 dependency の pin が必要である。さらに item 3 の canonical `C-G-TUBE` single-slice artifact との MATCH dependency を持つ。
+
+Draft PR #17 は calibration-only implementation の static audit であり、現在の profile は明示的に `DIAGNOSTIC_ONLY`。`B-LOCAL/B-ENTRY` が critical path で、B-LOCAL dependency tuple は未 pin。main merge、calibration-approved tag、calibration workflow run、production B-TUBE run は未承認である。
+
+したがって **項目2全体の大域停留円枝の一意性は未認証**。
+
+### 項目3　中心接続 / C-G-TUBE と λ sweep v9 — PREREQUISITES / PROTOTYPE
+
+`CERTIFICATES/prolate/item3_center_connection/` には C-G-TUBE / C-MATCH の clean-room prerequisites を配置している。
+
+- `vendor/`：accepted item-2 clean-room kernel に基づく endpoint-regular `F_rr` extension;
+- `audit/`：`F_rr` formulas の symbolic / high-precision audit;
+- `calibration/`：fail-closed centered-form calibration harness。
+
+この calibration は初期 radial cell width の根拠を与えるだけで、**C-G-TUBE 自体を認証しない**。production tube は Actions-produced schema-v2 calibration JSON を dependency chain に含める必要がある。
+
+Issue #23 の v9 derivative-kernel prototype cycle は独立 branch `agent/item3-sweep-v9-kernel-prototype` で audit boundary まで完了し、head は
+
+`3cbc91a7133b5386271b1ef10ed91aa403ada710`。
+
+prototype は fixed-domain integrands
+
+`F`, `F_r`, `F_lambda`, `F_rr`, `F_rlambda`
+
+を実装し、`gamma_rrr`, `gamma_lambda`, `gamma_rlambda`, `gamma_rrlambda` と、`h(c)=acos(c)^2` の安定な三階微分処理（removable value `h'''(1)=-8/15`）を含む。canonical midpoint centers と exact split scores を用いる二変数 mean-value core も実装済み。
+
+ただし local environment では `python-flint` が無く rigorous `arb/acb` integration call は未実行であり、この source は **prototype / NOT_AUDITED**。finite differences と symbolic diagnostics は `DIAGNOSTIC_ONLY` で、production kernel・approved config・production tag・workflow run・certification declaration には昇格していない。
 
 ### 項目5　境界 Maxwell 転移 — CERTIFIED
 
@@ -141,24 +196,46 @@
 
 証明書・配信監査・SHA-256 manifest：`CERTIFICATES/prolate/item5_maxwell/`。
 
-### 次の認証順序
+### 項目6　軸方向 profile — PARTIALLY CERTIFIED / WHOLE ITEM NOT CERTIFIED
 
-1. **項目2**：大域停留円枝の一意性（管認証＋外部排除）
-2. **項目3**：`r_in -> 0` と局所正規形の接続
-3. **項目6–7**：軸・境界緯度プロファイル
-4. **項目8**：二変数零点排除
+Draft PR #6 は
 
-完了済みの項目5を実行待ち列から外し、項目2を次の主対象とする。
+`Psi_lambda(w)=A_lambda'(w)>0`
 
-## File Library 取込状況
+for every `lambda>=1`, `0<w<1` の完全認証を目標とする。項目6全体はまだ **NOT CERTIFIED**。
+
+現在の認証済み node：
+
+- `C-HESSIAN`：`Q_parallel(lambda)>0` for `1<=lambda<=100`;
+- `C-1`：`Psi_lambda(w)>0` for `1<=lambda<=10`, `0<w<=1/20`;
+- `P-BOUNDARY`：`Phi(lambda)>0` for `1<=lambda<=100`, rational floor `43/5000`;
+- `P-MODULUS`：`1<=lambda<=100`, `1-2^-24<w<1` の final pole layer を認証。1,614,752 evaluations、807,396 certified leaves、terminal 0。
+
+未完の主 node は `F-CENTER`, `F-MIDDLE`, `F-POLE`, `P-DYADIC`, `T-INTERFACE`, `T-MONO`, `T-INTERIOR-0`, `T-CENTER`, `T-POLE`。全 interface で exact coverage と terminal 0 を閉じるまで、項目6全体の結論は出さない。
+
+### 次の認証優先順序
+
+1. **項目2**：`B-LOCAL/B-ENTRY` dependency を確定し、B-TUBE calibration → production の認証境界を閉じる
+2. **項目3**：v9 prototype の独立再導出・pinned python-flint rigorous execution・checker 統合を行い、C-G-TUBE / C-MATCH へ接続する
+3. **項目6**：finite grid / dyadic pole layer / tail proof の残り node を閉じ、exact dependency DAG を完成する
+4. **項目7–8**：境界緯度 profile と二変数零点排除へ進む
+
+既に完了した Paper 1 局所分岐、項目0、項目5は新規実行待ち列から外し、証明書・manifest の固定参照対象とする。
+
+## File Library / GitHub 取込状況
 
 - 論文体系、原ファイル名、状態、配置先：`00_MASTER/LIBRARY_PAPER_ARCHIVE.md` に収録済み
 - 双対位相欠損研究 v1.4 の体系配置・証明状態・原成果物 SHA-256：GitHub 収録済み。PDF・TeX・Markdown 本体は元成果物を無改変で後続取込
 - 球体の TeX・PDF・source ZIP：GitHub 収録済み
+- 長球 Paper 1 日本語改稿版 PDF / DOCX：2026-08-23 登録済み
+- 長球 Paper 1 `local_bifurcation/`：rigorous interval certificate、symbolic audits、SHA-256 reference bytes を収録
 - 長球 item 0d の証明書、監査記録、SHA-256 manifest：GitHub 収録
 - 長球 item 0c の完成状態と配置インターフェース：GitHub 収録。原ZIPは元成果物から無改変で追加入庫する
 - 長球 item 0b の機械可読証明書、独立監査、元ZIPおよび全構成ファイルの SHA-256：GitHub 収録
+- 長球 item 2：`item2_circle/`、clean-room / self-test / B-TUBE v2.1 contract 資産を収録。production certification は未完
+- 長球 item 3：`item3_center_connection/` に C-G-TUBE / C-MATCH prerequisites を収録。v9 derivative kernel は独立 branch の prototype / NOT_AUDITED
 - 長球 item 5 の認証証明書、配信監査、元ZIP照合、SHA-256 manifest：GitHub 収録
+- item 6 の完全認証は Draft PR #6 上で継続中。部分 node の成功と項目全体の認証を分離する
 - その他の PDF・ZIP バイナリ：本体取込待ち
 - テキスト原稿・認証コード・JSON：完全ファイルを取得できたものから `manuscript/` または `supplement/` に移管する
 
@@ -173,3 +250,4 @@
 7. 認証コード・JSON・実行記録・SHA-256 manifest は `supplement/` または `CERTIFICATES/` に保存する。
 8. 局所認証と完全大域分類を明確に区別する。
 9. 文献既知、直接導出、新規性候補を明確に区別する。
+10. `CERTIFIED`、`PARTIALLY CERTIFIED`、`PROTOTYPE`、`DIAGNOSTIC_ONLY`、`NOT_AUDITED` を混同しない。PR / branch 上の成果は main の完成認証と分離して記録する。
