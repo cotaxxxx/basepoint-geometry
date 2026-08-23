@@ -18,7 +18,7 @@
 - `H_4(a_c)<0`
 - 停留円の局所的な収縮と中心 Hessian の nullity 増加
 - Arb/python-flint による fail-closed 区間認証
-- 証明成果物：[`CERTIFICATES/prolate/local_bifurcation/`](../../../../CERTIFICATES/prolate/local_bifurcation/)
+- 証明成果物：[`CERTIFICATES/prolate/local_bifurcation/`](../../../CERTIFICATES/prolate/local_bifurcation/)
 
 ## 論文2 — 完全性
 
