@@ -213,3 +213,30 @@ confirm remaining oblate pre-rename items
 The highest-level destination remains Basepoint Dynamics, but near-term work
 must be judged by whether it advances P1--P4 and preserves reliable evidence
 for the later general theory.
+
+
+## 12. Execution status
+
+Checked: 2026-08-25
+
+The pre-rename oblate repository was inspected at commit
+`2cb9e11e7eb07c1662457bac14881da7c159f968`.
+
+| Item | Status | Record |
+|---|---|---|
+| Evidence/expectation demotion wording | DONE | Expectations are explicitly not controls until an implementation-calling, implementation-independent test exists. |
+| Candidate numerical replacements and derivation classes | DONE | Direct high-precision values are present; obsolete values `0.64430` and `0.6965` are absent. |
+| One-source/two-source provenance distinction | DONE | `lambda_entry_ob` is recorded as one-source; `lambda_axis_ob` records independent agreement near `0.40796`. |
+| `RESEARCH_RULES.md` | DONE | Present in the oblate repository. |
+| Diagnostic derivation-class requirement | DONE | Present in `diagnostics/README.md`. |
+| README introductory sentence | DONE | Replaced with the agreed non-certification wording. |
+| GitHub repository description field | NOT DONE | The repository metadata still contains the previous long README-style description. |
+| Vendored `checker/` | NOT DONE | No production checker exists yet. Rule 11 forbids an ambiguous placeholder. |
+| `UPSTREAM.json` | NOT DONE | Must be created together with an actual vendored checker; no placeholder is committed. |
+| Rename to `bg-oblate-spheroid` | NOT DONE | Must wait until the pre-rename correction unit is closed. |
+| Prolate archival DOI | NOT DONE | This is the next major operation after the oblate pre-rename unit. |
+| New `bg-prolate-spheroid` repository | NOT DONE | Must follow the DOI and oblate rename steps. |
+
+The oblate pre-rename correction unit is therefore **not yet closed**. Its
+remaining actionable metadata item is the GitHub repository description.
+Checker vendoring remains intentionally deferred until a real checker exists.
