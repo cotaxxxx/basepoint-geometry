@@ -219,8 +219,8 @@ for the later general theory.
 
 Checked: 2026-08-25
 
-The pre-rename oblate repository was inspected at commit
-`2cb9e11e7eb07c1662457bac14881da7c159f968`.
+The pre-rename oblate repository was inspected at
+`cotaxxxx/Oblate-Spheroid-Research@2cb9e11e7eb07c1662457bac14881da7c159f968`.
 
 | Item | Status | Record |
 |---|---|---|
@@ -240,3 +240,25 @@ The pre-rename oblate repository was inspected at commit
 The oblate pre-rename correction unit is therefore **not yet closed**. Its
 remaining actionable metadata item is the GitHub repository description.
 Checker vendoring remains intentionally deferred until a real checker exists.
+
+
+### Independent audit record
+
+On 2026-08-25, the project owner independently compared the execution-status
+table with the repository contents and reported all twelve entries accurate.
+
+The audited repository state was:
+
+- `cotaxxxx/Oblate-Spheroid-Research@2cb9e11e7eb07c1662457bac14881da7c159f968`;
+- project ledger before this audit note:
+  `cotaxxxx/basepoint-geometry@8ec89573f996e73efd2e98e09132b0112db5a497`.
+
+The audit specifically confirmed that obsolete values `0.64430`, `0.6965`,
+and `0.6443` were absent; derivation classes and methods were present;
+the expectation-test rename was complete; `CONTROL_EXPECT.json` separated
+evidence class, derivation class, and artifact role and recorded the promotion
+condition; and `RESEARCH_RULES.md` was present in the oblate repository.
+
+This audit does not promote any numerical value or artifact to `CERTIFIED`.
+The pre-rename correction unit remains open solely because the GitHub
+repository description field still requires replacement.
