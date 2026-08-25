@@ -230,16 +230,17 @@ The pre-rename oblate repository was inspected at
 | `RESEARCH_RULES.md` | DONE | Present in the oblate repository. |
 | Diagnostic derivation-class requirement | DONE | Present in `diagnostics/README.md`. |
 | README introductory sentence | DONE | Replaced with the agreed non-certification wording. |
-| GitHub repository description field | NOT DONE | The repository metadata still contains the previous long README-style description. |
+| GitHub repository description field | DONE | Verified through the GitHub repository metadata on 2026-08-25; it exactly matches the agreed non-certification description. |
 | Vendored `checker/` | NOT DONE | No production checker exists yet. Rule 11 forbids an ambiguous placeholder. |
 | `UPSTREAM.json` | NOT DONE | Must be created together with an actual vendored checker; no placeholder is committed. |
 | Rename to `bg-oblate-spheroid` | NOT DONE | Must wait until the pre-rename correction unit is closed. |
 | Prolate archival DOI | NOT DONE | This is the next major operation after the oblate pre-rename unit. |
 | New `bg-prolate-spheroid` repository | NOT DONE | Must follow the DOI and oblate rename steps. |
 
-The oblate pre-rename correction unit is therefore **not yet closed**. Its
-remaining actionable metadata item is the GitHub repository description.
-Checker vendoring remains intentionally deferred until a real checker exists.
+The oblate pre-rename documentation-and-metadata correction unit is **closed**.
+The GitHub repository description was verified after manual update on
+2026-08-25. Checker vendoring remains a separate implementation-stage
+obligation and is intentionally deferred until a real checker exists.
 
 
 ### Independent audit record
@@ -260,8 +261,8 @@ evidence class, derivation class, and artifact role and recorded the promotion
 condition; and `RESEARCH_RULES.md` was present in the oblate repository.
 
 This audit does not promote any numerical value or artifact to `CERTIFIED`.
-The pre-rename correction unit remains open solely because the GitHub
-repository description field still requires replacement.
+The GitHub repository description field was subsequently replaced and
+verified. The pre-rename documentation-and-metadata correction unit is closed.
 
 
 ## 13. Oblate prototype checkpoint
