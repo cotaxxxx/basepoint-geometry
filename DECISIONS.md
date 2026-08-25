@@ -262,3 +262,39 @@ condition; and `RESEARCH_RULES.md` was present in the oblate repository.
 This audit does not promote any numerical value or artifact to `CERTIFIED`.
 The pre-rename correction unit remains open solely because the GitHub
 repository description field still requires replacement.
+
+
+## 13. Oblate prototype checkpoint
+
+Recorded: 2026-08-25
+
+A reviewable endpoint-regular axial evaluator now exists on the unmerged draft
+branch:
+
+- repository and branch:
+  `cotaxxxx/Oblate-Spheroid-Research@implementation/endpoint-regular-axis-v1`;
+- draft review: pull request #1;
+- prototype checkpoint:
+  `cotaxxxx/Oblate-Spheroid-Research@92e3ad5d2ab8a8b7b9a7cfee7ef5f84890af3e89`;
+- evidence status: `PROTOTYPE / NOT_AUDITED`.
+
+The implementation directly evaluates the pole endpoint after
+`mu = 1 - s^2`, connects the fixed sphere expectations to tests that call the
+implementation, reproduces the recorded boundary root and signs, and agrees
+with the earlier axial-branch diagnostic table at its stated rounding scale.
+
+The project owner reported an independent code read, algebra check, separate
+numerical implementation, and execution. Because the reviewer also
+participated in the earlier derivation, this is recorded as strong cross-check
+evidence but not as the independent producer/auditor separation required for
+interval certification.
+
+Deferred obligations are:
+
+- split-interval convergence comparison at increased precision;
+- a derivation-independent variable transformation or quadrature path;
+- fail-closed interval implementation;
+- certification-only workflow discipline.
+
+Decision: do not begin interval certification now. Leave pull request #1 as an
+unmerged draft prototype and return to the P1 submission priority.
