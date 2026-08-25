@@ -17,6 +17,8 @@ from exact_lambda_transport import (
     _install_runtime_lambda_native_f_guard,
 )
 from exact_lambda_verifier import (
+    VERIFIER_TRANSPORT_SHA256,
+    _verify_source_pins,
     reconstruct_transport,
     verify_transport_detail,
 )
@@ -78,6 +80,13 @@ class ExactLambdaPositiveControls(unittest.TestCase):
         self.assertEqual(
             result["transport_sha256"], EXACT_LAMBDA_TRANSPORT_SHA256
         )
+
+    def test_verifier_transport_pin_matches_producer_and_source(self):
+        self.assertEqual(
+            VERIFIER_TRANSPORT_SHA256,
+            EXACT_LAMBDA_TRANSPORT_SHA256,
+        )
+        _verify_source_pins()
 
 
 class ExactLambdaNegativeControls(unittest.TestCase):
