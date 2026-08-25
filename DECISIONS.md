@@ -37,6 +37,23 @@ The intended four-repository structure is:
 The experimental repositories are evidence and reproduction layers for the
 particular papers. They are not substitutes for the general theory.
 
+The Theory of Basepoint Geometry publication workspace is stored inside
+`basepoint-geometry/theory/`; it is not maintained as a fifth repository.
+The theory workspace has exactly three divisions:
+
+- `general-theory/` -- 総論; the General Theory paper after P1--P4;
+- `particular-studies/` -- 各論; P1--P4 and later work on single bodies;
+- `research-notes/` -- 研究ノート; multiple-body questions,
+  `NOT_BINDING`, and not presently scheduled as a paper.
+
+There is no `particular-studies-ii/` division. Particular Studies is not
+limited to quadratic bodies: stretching, compression, deformation,
+bifurcation, unfolding, and polyhedral examples remain there whenever the
+problem concerns a single body. Multiple-body work begins with the unresolved
+definition of the energy `E` for external base points. Separate publication
+of the research notes will be considered only after definitions stabilize and
+theorem-level statements exist.
+
 ### Rename rule
 
 `basepoint-geometry` must not be renamed again. It was renamed from
