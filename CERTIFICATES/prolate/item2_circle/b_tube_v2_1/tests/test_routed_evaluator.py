@@ -89,13 +89,26 @@ class RoutedEvaluatorContractTests(unittest.TestCase):
             with self.assertRaises(calibration.CalibrationError):
                 calibration.load_config(path)
 
-    def test_unpinned_bridge_blocks_binding_gate(self):
+    def test_pinned_bridge_opens_binding_gate_and_tamper_is_rejected(self):
         config = calibration.load_config()[0]
-        self.assertIsNone(config["route_consistency_certificate_sha256"])
+        self.assertEqual(
+            config["route_consistency_certificate_sha256"],
+            "b04c92fb264b6ce7bb7d36ed75475fe4fb00bc75a72994281e9a17648b18ac07",
+        )
+        certificate = calibration.require_route_consistency_certificate(config)
+        self.assertEqual(certificate["status"], "PASS")
+        self.assertEqual(
+            certificate["implementation_source_head"],
+            config["audited_source_commit"],
+        )
+
+        tampered = dict(config)
+        tampered["route_consistency_certificate_sha256"] = "0" * 64
         with self.assertRaisesRegex(
-            calibration.CalibrationError, "route consistency certificate is not pinned"
+            calibration.CalibrationError,
+            "route consistency certificate byte SHA mismatch",
         ):
-            calibration.require_route_consistency_certificate(config)
+            calibration.require_route_consistency_certificate(tampered)
 
     def _trace_record(
         self, *, route_id, r_interval, quantity="F", phase="CANDIDATE:0",

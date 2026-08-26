@@ -3,7 +3,7 @@ from calibration_context import *
 
 CONFIG_SCHEMA = "btube-calibration-config-v4-routed"
 DESIGN_VERSION = "btube-calibration-design-v4-routed"
-AUDITED_SOURCE_COMMIT = "99fc7ea08c526a72556b0b50b5b07689f7680e87"
+AUDITED_SOURCE_COMMIT = "ff860886bc949bbd2117aa2fda82fed8a433a6ec"
 DESIGN_COMMIT = ROUTED_DESIGN_COMMIT
 
 
