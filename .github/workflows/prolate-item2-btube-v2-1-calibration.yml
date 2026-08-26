@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 360
     env:
-      CALIBRATION_CONFIG_SHA256: 47d8b88e57298b0434c5ee2912879a088fd508b6da376f2bdce0da70b0532852
+      CALIBRATION_CONFIG_SHA256: f4ce912ac9ac8e1c78823f61454be80a778f5548a950e622955422ec25425e2d
       PYTHONDONTWRITEBYTECODE: "1"
     steps:
       - name: Verify approved tag names the exact run head
@@ -54,7 +54,7 @@ jobs:
         run: |
           set -euo pipefail
           test "$(sha256sum config.calibration.json | awk '{print $1}')" = "${CALIBRATION_CONFIG_SHA256}"
-          test "$(wc -c < config.calibration.json)" -eq 2196
+          test "$(wc -c < config.calibration.json)" -eq 3594
           python - <<'PY'
           import json
           from pathlib import Path
