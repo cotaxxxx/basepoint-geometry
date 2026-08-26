@@ -8,10 +8,17 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 import calibration
+import calibration_candidate
 from numeric_schema import parse_canonical_json_bytes, sha256_hex
 
 
 class CalibrationGuardTests(unittest.TestCase):
+    def test_binding_candidate_uses_canonical_blocal_dependency_gate(self):
+        self.assertIs(
+            calibration_candidate.require_blocal_dependency,
+            calibration.require_blocal_dependency,
+        )
+
     def _diagnostic_profile(self):
         config = calibration.load_config()[0]
         config["mode"] = calibration.CALIBRATION_MODE

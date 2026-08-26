@@ -1,6 +1,7 @@
 """Deterministic evaluation of one calibration candidate."""
 from calibration_context import *
 from calibration_numeric import *
+from calibration_config import require_blocal_dependency
 
 
 def _evaluate_krawczyk(*, kernel, arb_type, domain, lam_lo, lam_hi, tol, depth, limit):
