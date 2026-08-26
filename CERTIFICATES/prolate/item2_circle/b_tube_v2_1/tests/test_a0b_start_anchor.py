@@ -8,11 +8,18 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 import calibration
+import calibration_security
 import a0b_start_anchor_verify as a0bv
 from numeric_schema import D_ZERO, Dyadic, DyadicInterval, Rational
 
 
 class A0BStartAnchorTests(unittest.TestCase):
+    def test_independent_verifier_imports_result_namespace_guard(self):
+        self.assertIs(
+            a0bv.assert_result_namespace,
+            calibration_security.assert_result_namespace,
+        )
+
     def test_a0_delta_consistency_invariant(self):
         _, cert = calibration._load_a0_start_interval()
         delta = Rational.from_json(cert["delta_start_exact"]).as_fraction()

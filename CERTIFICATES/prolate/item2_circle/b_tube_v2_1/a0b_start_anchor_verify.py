@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from calibration_context import *
 from calibration_config import require_blocal_dependency
+from calibration_security import assert_result_namespace
 
 
 A0B_SCHEMA = "btube-a0b-start-anchors-v1"
