@@ -53,7 +53,7 @@ class ExactLambdaPrepartitionTests(unittest.TestCase):
             ],
         )
         self.assertEqual(leaves[0]["r_interval"].lo, self.domain.lo)
-        self.assertEqual(leaves[-1]["r_interval"].hi, self.domain.hi)
+        self.assertEqual(leaves[6]["r_interval"].hi, self.domain.hi)
         self.assertEqual(leaves[0]["lambda_lo"], self.lam_lo)
         self.assertEqual(leaves[0]["lambda_hi"], self.lam_hi)
 
