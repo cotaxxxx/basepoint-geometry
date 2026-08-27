@@ -15,6 +15,7 @@ from exact_lambda_prepartition_contract import (
 from exact_lambda_transport import (
     ExactLambdaRoutedEvaluator,
     _dyadic_arb,
+    _dyadic_interval_arb,
     _kernel_F,
     _kernel_Fr,
     exact_evaluate_krawczyk,
