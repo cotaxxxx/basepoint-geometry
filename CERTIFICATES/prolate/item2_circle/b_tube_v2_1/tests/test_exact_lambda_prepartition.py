@@ -88,6 +88,54 @@ class ExactLambdaPrepartitionTests(unittest.TestCase):
             self.assertEqual(far.hi, near.lo)
         self.assertEqual(r_bins[0].hi, self.domain.hi)
 
+    def test_slope_prepartition_preserves_exact_leaf_intervals(self):
+        expected = producer.fatal_slope_prepartition_leaves(
+            self.domain, self.lam_lo, self.lam_hi
+        )
+
+        class FakeExactKernel:
+            def __init__(self):
+                self.phase = "CANDIDATE:0"
+                self.calls = []
+
+            def set_phase(self, phase):
+                self.phase = phase
+
+            def _evaluate_exact(
+                self, quantity, r_iv, lambda_lo, lambda_hi,
+                tol, depth, limit,
+            ):
+                self.calls.append(
+                    (quantity, r_iv, lambda_lo, lambda_hi)
+                )
+                interval = DyadicInterval(
+                    Dyadic(-2, 0), Dyadic(-1, 0)
+                )
+                return None, interval, {}
+
+        fake = FakeExactKernel()
+
+        slope = producer._prepartitioned_slope(
+            fake,
+            None,
+            self.domain,
+            self.lam_lo,
+            self.lam_hi,
+            tol="1e-20",
+            depth=12,
+            limit=200000,
+        )
+
+        self.assertEqual(len(fake.calls), 30)
+        self.assertTrue(slope.hi < Dyadic(0, 0))
+
+        for call, leaf in zip(fake.calls, expected):
+            quantity, r_iv, lam_lo, lam_hi = call
+            self.assertEqual(quantity, "F_r")
+            self.assertEqual(r_iv, leaf["r_interval"])
+            self.assertEqual(lam_lo, leaf["lambda_lo"])
+            self.assertEqual(lam_hi, leaf["lambda_hi"])
+
     def test_outside_frozen_target_rejected(self):
         shifted = DyadicInterval(
             self.domain.lo,

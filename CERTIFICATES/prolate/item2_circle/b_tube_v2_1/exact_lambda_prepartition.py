@@ -15,7 +15,6 @@ from exact_lambda_prepartition_contract import (
 from exact_lambda_transport import (
     ExactLambdaRoutedEvaluator,
     _dyadic_arb,
-    _dyadic_interval_arb,
     _kernel_F,
     _kernel_Fr,
     exact_evaluate_krawczyk,
@@ -200,21 +199,16 @@ def _prepartitioned_slope(
                 + "|"
                 + leaf["leaf_id"]
             )
-            value = _kernel_Fr(
-                kernel,
-                arb_type,
-                _dyadic_interval_arb(
-                    leaf["r_interval"], arb_type
-                ),
+            _, interval, _ = kernel._evaluate_exact(
+                "F_r",
+                leaf["r_interval"],
                 leaf["lambda_lo"],
                 leaf["lambda_hi"],
-                tol=tol,
-                depth=depth,
-                limit=limit,
+                tol,
+                depth,
+                limit,
             )
-            intervals.append(
-                arb_ball_to_exact_interval(value)
-            )
+            intervals.append(interval)
     finally:
         kernel.set_phase(base_phase)
 

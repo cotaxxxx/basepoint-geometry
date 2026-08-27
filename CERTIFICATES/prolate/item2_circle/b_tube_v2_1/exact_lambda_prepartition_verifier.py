@@ -11,7 +11,7 @@ import exact_lambda_prepartition_contract as producer_contract
 
 VERIFIER_PREPARTITION_PATH = "exact_lambda_prepartition.py"
 VERIFIER_PREPARTITION_SHA256 = (
-    "80eec68c07f90bb2abc63877e6b241f549c9726c04b374f96cdf751be689dc8a"
+    "23df9d9bd15683e6693008b0312f0b50ed537b031ae3e4db8a89178512bf7b9d"
 )
 VERIFIER_PREPARTITION_RULE_ID = "R111_FATAL_SLOPE_PREPARTITION_30_LEAF_V1"
 
