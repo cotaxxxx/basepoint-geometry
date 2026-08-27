@@ -8,6 +8,9 @@ from typing import Any
 
 from calibration_context import *
 import exact_lambda_contract as producer_contract
+from exact_lambda_prepartition_verifier import (
+    verify_prepartition_trace_records,
+)
 
 VERIFIER_TRANSPORT_PATH = "exact_lambda_transport.py"
 VERIFIER_TRANSPORT_SHA256 = "adee7587a7519e8c0274470a63ddda6c82f4b8ebd4117c18fcab1ce77fb0ce80"
@@ -164,6 +167,7 @@ def verify_exact_lambda_trace_bytes(data: bytes) -> dict[str, Any]:
     boundary_records = 0
     a0b_records = 0
     max_total_enlargement = Fraction(0)
+    records = [record for record, _ in parsed]
     for index, (record, _) in enumerate(parsed):
         detail = _boundary_detail(record)
         if detail is None:
@@ -206,6 +210,7 @@ def verify_exact_lambda_trace_bytes(data: bytes) -> dict[str, Any]:
             )
     if parsed and boundary_records == 0:
         raise CalibrationError("exact lambda verifier: no exact boundary evidence")
+    verify_prepartition_trace_records(records)
     return {
         "a0b_exact_boundary_record_count": a0b_records,
         "boundary_exact_record_count": boundary_records,

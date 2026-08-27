@@ -63,7 +63,11 @@ def run_calibration(out_dir: Path, *, diagnostic: bool = False) -> int:
             ExactLambdaRoutedEvaluator,
             install_exact_lambda_call_sites,
         )
+        from exact_lambda_prepartition import (
+            install_exact_lambda_prepartition_call_site,
+        )
         install_exact_lambda_call_sites()
+        install_exact_lambda_prepartition_call_site()
         routed = ExactLambdaRoutedEvaluator(raw_kernel, arb, config)
         kernel = routed
     out_dir.mkdir(parents=True)

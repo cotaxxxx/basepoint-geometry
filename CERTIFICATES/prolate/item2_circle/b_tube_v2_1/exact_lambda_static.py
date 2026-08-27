@@ -13,9 +13,14 @@ from exact_lambda_contract import (
     EXACT_LAMBDA_TRANSPORT_PATH,
     EXACT_LAMBDA_TRANSPORT_SHA256,
 )
+from exact_lambda_prepartition_contract import (
+    EXACT_LAMBDA_PREPARTITION_PATH,
+    EXACT_LAMBDA_PREPARTITION_SHA256,
+)
 
 RESULT_BEARING_EXACT_LAMBDA_SOURCES = (
     EXACT_LAMBDA_TRANSPORT_PATH,
+    EXACT_LAMBDA_PREPARTITION_PATH,
     "calibration_runner.py",
     "route_consistency.py",
     "route_consistency_verify.py",
@@ -29,6 +34,13 @@ def assert_exact_lambda_static_gate() -> dict[str, Any]:
     )
     if sha256_hex(transport.read_bytes()) != EXACT_LAMBDA_TRANSPORT_SHA256:
         raise CalibrationError("exact lambda static gate: transport pin mismatch")
+    prepartition = _assert_repo_regular_file(
+        BTUBE_ROOT / EXACT_LAMBDA_PREPARTITION_PATH, REPO_ROOT
+    )
+    if sha256_hex(prepartition.read_bytes()) != EXACT_LAMBDA_PREPARTITION_SHA256:
+        raise CalibrationError(
+            "exact lambda static gate: prepartition source pin mismatch"
+        )
     addendum = _assert_repo_regular_file(
         BTUBE_ROOT / EXACT_LAMBDA_ADDENDUM_PATH, REPO_ROOT
     )
@@ -50,6 +62,7 @@ def assert_exact_lambda_static_gate() -> dict[str, Any]:
     return {
         "addendum_sha256": EXACT_LAMBDA_ADDENDUM_SHA256,
         "frozen_file_count": len(frozen),
+        "prepartition_sha256": EXACT_LAMBDA_PREPARTITION_SHA256,
         "scanned_sources": scanned,
         "transport_sha256": EXACT_LAMBDA_TRANSPORT_SHA256,
     }
