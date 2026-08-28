@@ -1,0 +1,55 @@
+# SymPy mirror run record
+# generated: 2026-08-28
+# command: python3 diagnostics/wolfram_handoff_cap_crosscheck_sympy_mirror.py
+# evidence class: SYMBOLIC_CROSSCHECK / NOT_BINDING
+# python: 3.11.15 sympy: 1.14.0
+
+PASS check1_N_equals_minus_one_minus_mu2_times_C
+PASS check2_complement_identity_w2q_minus_lam2A2
+PASS check3_gamma_t_equals_lam_N_over_w_q_three_halves
+PASS check3_alpha_t_cleared_polynomial_identity
+PASS check3_alpha_tt_is_t_derivative_of_alpha_t
+PASS check3_branch_C_positive_alpha_t
+PASS check3_branch_C_positive_alpha_tt
+PASS check3_branch_C_negative_alpha_t
+PASS check3_branch_C_negative_alpha_tt
+PASS check4_cross_coefficient_equals_minus_4_mu
+PASS check4_alpha_t_squared_coefficient_equals_2A
+PASS check4_alpha_alpha_tt_coefficient_equals_2A
+PASS check5_compact_second_derivative_polynomial_identity
+PASS check5_branch_C_positive
+PASS check5_branch_C_negative
+PASS check6_sample_mu_1/2_t_1/2_lam_3/5_C>0
+PASS check6_sample_mu_-1/2_t_1/2_lam_3/5_C<0
+PASS check6_sample_mu_4/5_t_-3/4_lam_2/5_C>0
+PASS check6_sample_mu_-9/10_t_9/10_lam_1/2_C<0
+PASS check6_sample_mu_-3/10_t_1/3_lam_7/10_C>0
+PASS check6_sample_mu_1/10_t_-9/10_lam_1/4_C>0
+PASS check6_sample_mu_-7/10_t_-1/2_lam_33/50_C<0
+PASS check6_sample_mu_3/5_t_7/10_lam_5/8_C>0
+PASS check6_both_sign_branches_sampled
+direct_second_derivative_residuals=
+  mu=1/2 t=1/2 lam=3/5 branch=C>0 alpha_t_residual=0 alpha_tt_residual=0 second_derivative_residual=0
+  mu=-1/2 t=1/2 lam=3/5 branch=C<0 alpha_t_residual=0 alpha_tt_residual=0 second_derivative_residual=0
+  mu=4/5 t=-3/4 lam=2/5 branch=C>0 alpha_t_residual=0 alpha_tt_residual=0 second_derivative_residual=0
+  mu=-9/10 t=9/10 lam=1/2 branch=C<0 alpha_t_residual=0 alpha_tt_residual=0 second_derivative_residual=0
+  mu=-3/10 t=1/3 lam=7/10 branch=C>0 alpha_t_residual=0 alpha_tt_residual=0 second_derivative_residual=0
+  mu=1/10 t=-9/10 lam=1/4 branch=C>0 alpha_t_residual=0 alpha_tt_residual=0 second_derivative_residual=0
+  mu=-7/10 t=-1/2 lam=33/50 branch=C<0 alpha_t_residual=0 alpha_tt_residual=0 second_derivative_residual=0
+  mu=3/5 t=7/10 lam=5/8 branch=C>0 alpha_t_residual=0 alpha_tt_residual=0 second_derivative_residual=0
+  max_second_derivative_residual= 0
+PASS check7_phi_series_is_polynomial_in_u
+PASS check7_phi_series_vanishes_at_zero
+PASS check7_phi_coefficients_match_closed_form
+PASS check7_phi_truncation_residual_is_order_u_nine
+phi_series= 256*u**8/6435 + 1024*u**7/21021 + 128*u**6/2079 + 128*u**5/1575 + 4*u**4/35 + 8*u**3/45 + u**2/3 + u
+phi_series_coefficients= [0, 1, 1/3, 8/45, 4/35, 128/1575, 128/2079, 1024/21021, 256/6435]
+phi_truncation_residual= 3.3310443035122715143182712771562409666205043698779e-29
+PASS check8_argmax_is_critical_point
+PASS check8_value_at_argmax
+PASS check8_global_bound_factorization
+PASS check8_cofactor_is_positive_definite
+PASS check8_maxvalue_agrees
+PASS check8_alpha_tt_majorant_form
+majorant_maximum= 3*sqrt(3)/16 = 0.32475952641916449253639618903235106880177598508945
+failure_count= 0
