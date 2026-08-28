@@ -1,0 +1,96 @@
+{
+  "schema": "btube-blocal-v23-native-flambda-baseline-v1",
+  "status": "DESIGN_DRAFT_ONLY",
+  "binding_use_authorized": false,
+  "promotion_status": "NOT_PROMOTED",
+  "branch": "btube-v2-3-native-flambda",
+  "base_commit": "52b98b6bd93382a47ed4cf5cbc7067edb0cebe45",
+  "base_tree": "bbfa5d964d92c88d108a34d4751234e5ded736e6",
+  "version_policy": "VERSIONED_IMMUTABILITY",
+  "legacy_blocal": {
+    "version": "2.2",
+    "mutation_forbidden": true,
+    "source_tree_git_sha": "13963fbc8ef91fa2a4a68ea561043422bb2429ad",
+    "files": {
+      "blocal_arb_adapter.py": {
+        "git_blob_sha": "4d6a32eea71f54bcfd225b1116a78247e291f00f",
+        "sha256": "99e640fba88cfe353ea360190a03df7a9de8840637922f9f56fa6b7168d94e66"
+      },
+      "blocal_phase4_model.py": {
+        "git_blob_sha": "1dac88a1e7b2350dfbdea2d7eaf976956994af4c",
+        "sha256": "92bc9010cbaf7e3c61a79aa6bb05e2f717a99486e1faac416e0f3dd3ee5f327a"
+      },
+      "blocal_v22_boundary.py": {
+        "git_blob_sha": "077872d61f63b61606fe3cf63fea513c1129623e",
+        "sha256": "aea768c02644fdb08c8c32455207efe7424c7dc34efe378ad545c3ab9418abf9"
+      },
+      "blocal_v22_model.py": {
+        "git_blob_sha": "fe934e067978b430e64ac0a2731c43229639ec78",
+        "sha256": "8e9bcb0d9519cd6feb2375486985dddde43735dcb327cded28e96a33c61acb16"
+      },
+      "blocal_v22_policy.py": {
+        "git_blob_sha": "7d3ef70f62bb53820ab90e34392f7800830c4ede",
+        "sha256": "d8bac8535f5146f22906e8cdc604640edd909709998a41d7f377c9802ca7cc65"
+      },
+      "blocal_v22_symbolic_audit.py": {
+        "git_blob_sha": "482893a32aaf408b76ec476c56731245fca36a7f",
+        "sha256": "b75ce97c8ff1342c6472a744cf2b64bf3413a3112190a5ff6fed73f60b40d0a1"
+      },
+      "config.blocal-v2.2-run.json": {
+        "git_blob_sha": "0d288f188d01a1e2c45c09cd1afadaba821f68fb",
+        "sha256": "dab371fa62ed10a00029cd31b0002e503952277ef072fb8f5d7fd5222965d469"
+      }
+    }
+  },
+  "new_blocal": {
+    "version": "2.3",
+    "native_quantity": "F_lambda",
+    "route_id": "BLOCAL_FLAMBDA_ROUTE_V1",
+    "shared_kernel_policy": "SHARED_SINGLE_SUPPLY_PINNED_MATHEMATICAL_DEPENDENCY",
+    "source_bundle_sha256": null,
+    "config_sha256": null,
+    "checker_sha256": null,
+    "symbolic_audit_sha256": null,
+    "transport_lemma_id": "F_LAMBDA_IS_LAMBDA_DERIVATIVE_OF_ROUTE_F_V1",
+    "transport_lemma_audit": "PENDING"
+  },
+  "diagnostic_audit_lineage": {
+    "evidence_class": "DIAGNOSTIC_NOT_BINDING",
+    "rhi_source_script_sha256": "b0ccc570940581ee9b5a73f036d9664c7ba0754d94661157470d3fdcd01cb258",
+    "rhi_receipt_sha256": "72e82fb1868662e6b0a02e7a923d11b73c2fd367a961a5115a7a9d76d0d9e678",
+    "diagnostic_impl_module_sha256": "d3f73cacc26e40df8a1aa05aaddd5810239178d8138eb4cb48c27c1016a2abf4",
+    "ordinary_function_sha256": "c11d4e3322593f22fd96f64bc6d5a14080c8b2a1ba62b2255e66c454b73df9fd",
+    "duffy_function_sha256": "2b6cda67b845ad299331061c4a93cc72ea12e9c90a6fee224e825f32cf35c549",
+    "independent_symbolic_audit": "PASS",
+    "arb_j2_scalar_dispatch_audit": "PASS",
+    "both_endpoints_diagnostic_supported": true,
+    "control_sanity": "NOT_ESTABLISHED"
+  },
+  "lambda_geometry": {
+    "lambda_start": "3307749/1600000",
+    "lambda_end": "118/25",
+    "full_span": "4244251/1600000",
+    "nominal_widths": ["1/4", "1/8", "1/16"],
+    "flambda_base_tile_width": "1/16",
+    "terminal_residual_rule": "FINAL_EXACT_RESIDUAL_IF_POSITIVE_AND_LT_1_OVER_16"
+  },
+  "budgets": {
+    "producer_anchor_call_cap": 24000,
+    "producer_flambda_cell_call_cap": 24000,
+    "checker_anchor_call_cap": 24000,
+    "checker_flambda_cell_call_cap": 24000,
+    "post_hoc_cap_increase": "FORBIDDEN",
+    "anchor_cap_headroom": "THIN_OBSERVED"
+  },
+  "implementation_gate": {
+    "design_audit": "PASS",
+    "native_v23_source": "PENDING",
+    "native_v23_config": "PENDING",
+    "shared_kernel_pin": "PENDING",
+    "transport_lemma_human_audit": "PENDING",
+    "producer_glue": "PENDING",
+    "checker_glue": "PENDING",
+    "negative_controls_nc01_nc31": "PENDING",
+    "binding_use_authorized": false
+  }
+}
