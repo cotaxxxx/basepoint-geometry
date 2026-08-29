@@ -38,11 +38,28 @@ The kernel uses the fixed angular domain
 
 ## Audit argument
 
-On the relevant real parameter region, `lambda>0` and `r<1`. Hence `w^2>0`. Also
+On the relevant real parameter region, `lambda>0` and `0<r<1`. Hence `w^2>0`. Moreover,
 
-`q = (r-u)^2 + (ell-u^2)`
+\[
+\begin{aligned}
+q
+&=\ell-2ru+r^2 \\
+&=(r-u)^2+(\ell-u^2) \\
+&=(r-u)^2+\sin^2\theta\,\sin^2\phi+\lambda^2\cos^2\theta.
+\end{aligned}
+\]
 
-and `ell-u^2` is nonnegative; on the compact fixed angular domain and on any compact parameter rectangle strictly inside `r<1, lambda>0`, the denominator supply used by the production kernel stays in its regular real branch. The apparent `h(c)` singularity at `c=1` is removed by the kernel's hypergeometric representation. Therefore the fixed-domain integrand defining `F`, together with its first real partial derivatives in `(r,lambda)`, is continuous on a compact angular domain and locally uniformly bounded on an open parameter neighborhood. Differentiation under the integral sign is therefore valid locally, giving joint `C^1` regularity.
+Thus every term in the last expression is nonnegative. If `q=0`, all three terms must vanish. Hence
+
+- `r=u`,
+- `sin(theta) sin(phi)=0`,
+- `cos(theta)=0`.
+
+The last condition gives `theta=pi/2`; then `sin(theta)=1`, so `sin(phi)=0` and therefore `u=cos(phi)=+1` or `-1`. Together with `r=u`, this forces `r=+1` or `r=-1`, contradicting `0<r<1`. Therefore `q>0` everywhere on the relevant fixed angular domain.
+
+For any compact parameter rectangle contained strictly in `0<r<1, lambda>0`, continuity and compactness therefore give positive lower bounds for both `q` and `w^2`. The denominator supply of the production kernel consequently remains in its regular real branch on a sufficiently small open neighborhood of each MONOTONE_TUBE rectangle and each start/end join hull. The apparent `h(c)` singularity at `c=1` is removed by the kernel's hypergeometric representation.
+
+Hence the fixed-domain integrand defining `F`, together with its first real partial derivatives in `(r,lambda)`, is continuous on the compact angular domain and locally uniformly bounded on the corresponding open parameter neighborhood. Differentiation under the integral sign is therefore valid locally, giving joint `C^1` regularity.
 
 This lemma is qualitative only. It supplies no sign, root count, numerical enclosure, or quantitative derivative bound.
 
