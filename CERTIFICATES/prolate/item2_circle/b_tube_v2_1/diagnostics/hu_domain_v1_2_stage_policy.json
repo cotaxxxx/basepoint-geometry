@@ -1,0 +1,133 @@
+{
+  "schema": "production-hu-domain-positive-control-policy-v1",
+  "contract_id": "PRODUCTION_HU_DOMAIN_CONTRACT_V1_2",
+  "evidence_class": "POSITIVE_CONTROL_NOT_BINDING",
+  "binding_use_authorized": false,
+  "purpose": "cell0 positive control for pinned finite first-passing stage policy before V1.2 release",
+  "quantity": "H_U",
+  "required_sign": "POS",
+  "dps": 60,
+  "per_box_cap": 24000,
+  "source_baseline_commit": "996bc349fdafe6d0c840c06e2c79a6a51e52b9b0",
+  "allowed_changes_after_source_baseline": [
+    "CERTIFICATES/prolate/item2_circle/b_tube_v2_1/diagnostics/hu_domain_v1_2_cell0_positive_control.py",
+    "CERTIFICATES/prolate/item2_circle/b_tube_v2_1/diagnostics/hu_domain_v1_2_stage_policy.json"
+  ],
+  "toolchain": {
+    "python": "3.13.14",
+    "python_flint": "0.9.0",
+    "flint": "3.6.0"
+  },
+  "parent": {
+    "r_lo": "37140511944960794174557707/38685626227668133590597632",
+    "r_hi": "32763/32768",
+    "lambda_lo": "3307749/1600000",
+    "lambda_hi": "3707749/1600000"
+  },
+  "stage_semantics": {
+    "first_passing": true,
+    "resolved_leaf_immutable": true,
+    "refine_only_unresolved": true,
+    "r_refinement": "EXACT_BISECTION",
+    "lambda_l32": "EXACT_EQUAL_SUBDIVISION_32",
+    "lambda_l128": "EXACT_REFINE_EACH_L32_LEAF_BY_4",
+    "on_final_unresolved": "UNRESOLVED",
+    "no_undeclared_stage": true
+  },
+  "stages": [
+    {
+      "stage_id": "S0_BASE",
+      "op": "BASE",
+      "child_factor": 1,
+      "max_new_boxes_rule": "1"
+    },
+    {
+      "stage_id": "S1_R1",
+      "op": "R_BISECT",
+      "child_factor": 2,
+      "max_new_boxes_rule": "2 * unresolved_parent_count"
+    },
+    {
+      "stage_id": "S2_R2",
+      "op": "R_BISECT",
+      "child_factor": 2,
+      "max_new_boxes_rule": "2 * unresolved_parent_count"
+    },
+    {
+      "stage_id": "S3_R3",
+      "op": "R_BISECT",
+      "child_factor": 2,
+      "max_new_boxes_rule": "2 * unresolved_parent_count"
+    },
+    {
+      "stage_id": "S4_R4",
+      "op": "R_BISECT",
+      "child_factor": 2,
+      "max_new_boxes_rule": "2 * unresolved_parent_count"
+    },
+    {
+      "stage_id": "S5_R5",
+      "op": "R_BISECT",
+      "child_factor": 2,
+      "max_new_boxes_rule": "2 * unresolved_parent_count"
+    },
+    {
+      "stage_id": "S6_R6",
+      "op": "R_BISECT",
+      "child_factor": 2,
+      "max_new_boxes_rule": "2 * unresolved_parent_count"
+    },
+    {
+      "stage_id": "S7_L32",
+      "op": "LAMBDA_SUBDIVIDE",
+      "division": 32,
+      "child_factor": 32,
+      "max_new_boxes_rule": "32 * unresolved_parent_count"
+    },
+    {
+      "stage_id": "S8_R_POST_L32_1",
+      "op": "R_BISECT",
+      "child_factor": 2,
+      "max_new_boxes_rule": "2 * unresolved_parent_count"
+    },
+    {
+      "stage_id": "S9_R_POST_L32_2",
+      "op": "R_BISECT",
+      "child_factor": 2,
+      "max_new_boxes_rule": "2 * unresolved_parent_count"
+    },
+    {
+      "stage_id": "S10_L128",
+      "op": "LAMBDA_REFINE_BY_4",
+      "child_factor": 4,
+      "max_new_boxes_rule": "4 * unresolved_parent_count"
+    }
+  ],
+  "static_worst_case": {
+    "new_box_counts_by_stage": [
+      1,
+      2,
+      4,
+      8,
+      16,
+      32,
+      64,
+      2048,
+      4096,
+      8192,
+      32768
+    ],
+    "total_new_boxes": 47231,
+    "max_evaluations": 1133544000
+  },
+  "positive_control_acceptance": {
+    "all_terminal_lo_positive": true,
+    "r_endpoints_exact": true,
+    "lambda_endpoints_exact": true,
+    "no_gaps": true,
+    "no_interior_overlaps": true,
+    "union_equals_parent": true,
+    "cover_margin_positive": true,
+    "verdict": "POSITIVE_CONTROL_PASS"
+  }
+}
