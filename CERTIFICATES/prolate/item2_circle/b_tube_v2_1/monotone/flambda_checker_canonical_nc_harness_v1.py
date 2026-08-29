@@ -2,10 +2,14 @@
 """Canonical NC01..NC20 harness for F_LAMBDA_TRANSPORT_CHECKER_V1.
 
 The harness runs the frozen independent checker at its historical execution HEAD
-inside a clean detached worktree.  The canonical ID list is read from
+inside a clean detached worktree. The canonical ID list is read from
 F_LAMBDA_CHECKER_CANONICAL_NC_CATALOG_V1.json and must equal the literal list
-below exactly.  NC04b is intentionally excluded and is a later A0B q_left/q_right
+below exactly. NC04b is intentionally excluded and is a later A0B q_left/q_right
 pinning control.
+
+Historical producer/checker receipt paths are optional. If omitted, this harness
+locates them by exact SHA-256 under deterministic local roots. This removes the
+manual path-discovery step without weakening receipt identity.
 """
 from __future__ import annotations
 
@@ -29,6 +33,8 @@ CATALOG_REL = BT_REL / "monotone/F_LAMBDA_CHECKER_CANONICAL_NC_CATALOG_V1.json"
 CHECKER_REL = BT_REL / "flambda_transport_checker_v1.py"
 CHECKER_HEAD = "996bc349fdafe6d0c840c06e2c79a6a51e52b9b0"
 COMPONENT1_SHA256 = "f60c22cbc1d4a45e5593a64e64194f7e3dbc97df69e1547aca092d2d93b7911f"
+PRODUCER_RECEIPT_SHA256 = "34f1a08a334e4c62fc3071427f7d91e863341cfb4c784405d0be26ed4d927d8e"
+CHECKER_RECEIPT_SHA256 = "3e1e1894604e9b99f7413cbb6d3bbdb7c7b0ecb6babe1966ae955986bebe59a9"
 DELTA = Fraction(6900531025808907, 1 << 86)
 EPS = Fraction(1, 1 << 100)
 CANONICAL_IDS = [f"NC{i:02d}" for i in range(1, 21)]
@@ -40,6 +46,14 @@ def stop(msg: str) -> None:
 
 def sha256_bytes(raw: bytes) -> str:
     return hashlib.sha256(raw).hexdigest()
+
+
+def sha256_path(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as fh:
+        for chunk in iter(lambda: fh.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
 
 
 def git(repo: Path, *args: str) -> str:
@@ -55,6 +69,67 @@ def load_json(path: Path) -> dict[str, Any]:
 
 def deep_copy(obj: dict[str, Any]) -> dict[str, Any]:
     return json.loads(json.dumps(obj))
+
+
+def deterministic_search_roots(repo: Path) -> list[Path]:
+    roots: list[Path] = []
+    for candidate in (repo, repo.parent, Path("/tmp")):
+        try:
+            resolved = candidate.resolve()
+        except OSError:
+            continue
+        if resolved.exists() and resolved not in roots:
+            roots.append(resolved)
+    return roots
+
+
+def discover_receipt(repo: Path, expected_sha: str, label: str) -> Path:
+    matches: list[Path] = []
+    scanned = 0
+    for root in deterministic_search_roots(repo):
+        try:
+            candidates = sorted(root.rglob("*.json"))
+        except OSError:
+            continue
+        for path in candidates:
+            if not path.is_file():
+                continue
+            scanned += 1
+            try:
+                if sha256_path(path) == expected_sha:
+                    matches.append(path.resolve())
+            except (OSError, PermissionError):
+                continue
+    unique = sorted(set(matches))
+    if not unique:
+        print(f"{label}_AUTO_RESOLVE=MISSING")
+        print(f"{label}_EXPECTED_SHA256={expected_sha}")
+        print(f"{label}_JSON_FILES_SCANNED={scanned}")
+        stop(f"{label} receipt with exact SHA-256 is not present in repo/repo-parent//tmp")
+    if len(unique) > 1:
+        print(f"{label}_AUTO_RESOLVE=MULTIPLE_IDENTICAL_COPIES")
+        for path in unique:
+            print(f"{label}_COPY={path}")
+    chosen = unique[0]
+    print(f"{label}_AUTO_RESOLVE=FOUND")
+    print(f"{label}_PATH={chosen}")
+    print(f"{label}_SHA256={expected_sha}")
+    return chosen
+
+
+def resolve_receipt(repo: Path, supplied: Path | None, expected_sha: str, label: str) -> Path:
+    if supplied is None:
+        return discover_receipt(repo, expected_sha, label)
+    path = supplied.expanduser().resolve()
+    if not path.is_file():
+        stop(f"{label} supplied path is not a file: {path}")
+    got = sha256_path(path)
+    if got != expected_sha:
+        stop(f"{label} SHA mismatch: expected {expected_sha}, got {got}")
+    print(f"{label}_AUTO_RESOLVE=EXPLICIT_PATH")
+    print(f"{label}_PATH={path}")
+    print(f"{label}_SHA256={got}")
+    return path
 
 
 def load_checker(worktree: Path):
@@ -134,14 +209,12 @@ def mutation_table(Dyadic: Any, Rational: Any) -> dict[str, Callable[[dict[str, 
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--repo", type=Path, required=True)
-    ap.add_argument("--producer-receipt", type=Path, required=True)
-    ap.add_argument("--checker-receipt", type=Path, required=True)
+    ap.add_argument("--producer-receipt", type=Path, default=None)
+    ap.add_argument("--checker-receipt", type=Path, default=None)
     ap.add_argument("--output", type=Path, required=True)
     ns = ap.parse_args()
 
     repo = ns.repo.resolve()
-    producer_path = ns.producer_receipt.expanduser().resolve()
-    checker_receipt_path = ns.checker_receipt.expanduser().resolve()
     output = ns.output.expanduser().resolve()
 
     if git(repo, "status", "--porcelain"):
@@ -164,6 +237,9 @@ def main() -> int:
         stop("catalog control order mismatch")
     if catalog.get("excluded_followup_controls") != ["NC04b"]:
         stop("NC04b exclusion mismatch")
+
+    producer_path = resolve_receipt(repo, ns.producer_receipt, PRODUCER_RECEIPT_SHA256, "PRODUCER_RECEIPT")
+    checker_receipt_path = resolve_receipt(repo, ns.checker_receipt, CHECKER_RECEIPT_SHA256, "CHECKER_RECEIPT")
 
     producer_raw = producer_path.read_bytes()
     producer = json.loads(producer_raw)
@@ -222,10 +298,7 @@ def main() -> int:
                         expected_head=CHECKER_HEAD,
                         receipt=receipt,
                     )
-                result.update({
-                    "nc_id": nc_id,
-                    "mutation": row["mutation"],
-                })
+                result.update({"nc_id": nc_id, "mutation": row["mutation"]})
                 results.append(result)
         finally:
             subprocess.check_call(
@@ -252,6 +325,8 @@ def main() -> int:
         "component1_geometry_receipt_sha256": COMPONENT1_SHA256,
         "producer_receipt_sha256": sha256_bytes(producer_raw),
         "checker_receipt_sha256": sha256_bytes(checked_raw),
+        "producer_receipt_path": str(producer_path),
+        "checker_receipt_path": str(checker_receipt_path),
         "nc04b_included": False,
         "nc04b_status": "DEFERRED_TO_A0B_Q_LEFT_Q_RIGHT_PIN_PHASE",
         "binding_use_authorized": False,
