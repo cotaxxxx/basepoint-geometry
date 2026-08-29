@@ -1,6 +1,6 @@
 # F_lambda transport lemma receipt v1
 
-Status: `JUDGE_SIGNATURE_PENDING / NOT_BINDING / NOT_PROMOTED`
+Status: `JUDGE_SIGNATURE_EXTERNAL / NOT_BINDING / NOT_PROMOTED`
 
 LEMMA_ID=`F_LAMBDA_IS_LAMBDA_DERIVATIVE_OF_ROUTE_F_V1`  
 LEMMA_CLASS=`HUMAN_AUDITED_MATHEMATICAL_PRECONDITION`  
@@ -106,12 +106,14 @@ cells, plus the three expected fail-closed negative-control codes.
 
 ## Judge signature
 
-`JUDGE_VERDICT=PENDING`  
-`JUDGE_SCOPE=CURRENT_STRICT_INTERIOR_ENDPOINT_SCOPE`  
-`JUDGE_SIGNED_AT=PENDING`
+`JUDGE_SCOPE=CURRENT_STRICT_INTERIOR_ENDPOINT_SCOPE`
+
+The human Judge signature is not written into this receipt. It is recorded
+externally in `F_LAMBDA_TRANSPORT_LEMMA_V1_JUDGE_SIGNATURE.json` against the
+exact SHA-256 of this receipt.
 
 The gate `TRANSPORT_LEMMA_HUMAN_AUDIT=PASS_CURRENT_STRICT_INTERIOR_SCOPE` becomes
-true only after the human Judge explicitly changes `JUDGE_VERDICT` to `PASS`
-for this exact receipt content and the resulting receipt SHA-256 is re-pinned.
+true only when the external signature file's `receipt_sha256` exactly matches
+the SHA-256 of this receipt and its `judge_verdict` is `PASS`.
 
 `BINDING_USE_AUTHORIZED=NO`
