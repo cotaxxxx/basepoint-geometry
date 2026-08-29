@@ -1,0 +1,64 @@
+{
+  "binding_use_authorized": false,
+  "candidate_inputs": {
+    "W_nom": "1/4",
+    "cell_index": 0,
+    "lambda_end": "118/25",
+    "lambda_start": "3307749/1600000",
+    "q_left": "16379/16384",
+    "q_right": "37146414903064381231074827/38685626227668133590597632",
+    "rho_cap": "1/32",
+    "sigma": "1/2"
+  },
+  "cell_id": "CELL0",
+  "component": "TUBE_GEOMETRY",
+  "contract": "MONOTONE_TUBE_V1_1",
+  "cross_component_rectangle_identity": {
+    "required_consumers": [
+      "H_U_PRODUCTION_RECEIPT",
+      "F_LAMBDA_RECEIPT",
+      "JOIN_RECEIPT",
+      "MONOTONE_ASSEMBLY"
+    ],
+    "requirement": "all consumers must pin the exact same component1_geometry_receipt_sha256",
+    "role": "LOAD_BEARING",
+    "single_source": "THIS_RECEIPT_SHA256"
+  },
+  "derived_geometry": {
+    "lambda_hi": "3707749/1600000",
+    "lambda_lo": "3307749/1600000",
+    "q_hull_hi": "16379/16384",
+    "q_hull_lo": "37146414903064381231074827/38685626227668133590597632",
+    "r_hi": "32763/32768",
+    "r_lo": "37140511944960794174557707/38685626227668133590597632",
+    "rho": "5/32768"
+  },
+  "evidence_class": "PRODUCTION_CANDIDATE",
+  "nonclaims": [
+    "predictor provenance is reproducibility-only and is not a mathematical proof obligation of MONOTONE_TUBE_V1.1",
+    "this receipt does not authorize binding use by itself"
+  ],
+  "provenance_role": "REPRODUCIBILITY_ONLY_NOT_LOAD_BEARING",
+  "rectangle_identity_role": "LOAD_BEARING_SINGLE_SOURCE",
+  "schema": "monotone-tube-v1.1-component1-geometry-receipt-v1",
+  "source_provenance": {
+    "candidate_index": 0,
+    "execution_pins": {
+      "calibration_config_sha256": "f4ce912ac9ac8e1c78823f61454be80a778f5548a950e622955422ec25425e2d",
+      "flambda_checker_execution_head": "996bc349fdafe6d0c840c06e2c79a6a51e52b9b0",
+      "flambda_checker_receipt_sha256": "3e1e1894604e9b99f7413cbb6d3bbdb7c7b0ecb6babe1966ae955986bebe59a9",
+      "flambda_checker_source_sha256": "5be9dea3679f2dd9245c4df21aca7863c8743ac0395c7f8173950a7b37f5bb18",
+      "flambda_producer_receipt_sha256": "34f1a08a334e4c62fc3071427f7d91e863341cfb4c784405d0be26ed4d927d8e",
+      "flambda_producer_verdict": "PASS_BINDING_CANDIDATE",
+      "production_kernel_sha256": "77e7a93c594ba66ac7d98df29ec3c03107b0c63962a5aa60f8503559082c10ac",
+      "route_fragment_sha256": "93a511c33b8b68443b8ee7a56d0cfbd1f7cb023f54e0fddba6926c1dd96b5f30",
+      "shared_kernel_sha256": "26d3357132fee064293932df51208acd445e8bd14200d70862a2ee62ba4cc086"
+    },
+    "q_left_origin": "A0_OPERATIONAL_ROOT midpoint [2047/2048,8191/8192] = 16379/16384",
+    "q_right_origin": "production predictor: cell 0 right-end Newton predictor at lambda=3707749/1600000, 4 iterations from q_left",
+    "rho_cap_origin": "binding candidate tube radius = 1/32",
+    "sigma_origin": "binding calibration adaptive_safety_factor = 1/2",
+    "source_head": "b2457c9b1e7aaa3515bffecd1a559a569908a742",
+    "source_sha256": "f1b77313f29694765494d12e3edd043651162989758c9cecf8a00ef152f1776f"
+  }
+}
