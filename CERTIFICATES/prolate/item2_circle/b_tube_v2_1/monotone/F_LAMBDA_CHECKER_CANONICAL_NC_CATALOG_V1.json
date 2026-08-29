@@ -1,0 +1,42 @@
+{
+  "schema": "flambda-checker-canonical-nc-catalog-v1",
+  "catalog_id": "F_LAMBDA_CHECKER_CANONICAL_NC_CATALOG_V1",
+  "status": "FIXED_ID_LIST_NOT_YET_EXECUTED",
+  "scope": "F_LAMBDA_TRANSPORT_CHECKER_V1_FAIL_CLOSED_RECEIPT_AND_INDEPENDENCE_GATES",
+  "historical_catalog_claim": false,
+  "canonicalization_note": "This file establishes the canonical V1 list from this commit forward. It does not claim that NC01..NC20 previously existed as a complete historical catalog.",
+  "checker_execution_head": "996bc349fdafe6d0c840c06e2c79a6a51e52b9b0",
+  "component1_geometry_receipt_sha256": "f60c22cbc1d4a45e5593a64e64194f7e3dbc97df69e1547aca092d2d93b7911f",
+  "binding_use_authorized": false,
+  "controls": [
+    {"id":"NC01","mutation":"PRODUCER_SCHEMA_INVALID","expected_failure_code":"FAIL_PRODUCER_SCHEMA"},
+    {"id":"NC02","mutation":"PRODUCER_EVIDENCE_CLASS_INVALID","expected_failure_code":"FAIL_PRODUCER_EVIDENCE_CLASS"},
+    {"id":"NC03","mutation":"PRODUCER_BINDING_USE_AUTHORIZED_TRUE","expected_failure_code":"FAIL_PRODUCER_BINDING_STATE"},
+    {"id":"NC04","mutation":"WIDEN_BOTH_PHYSICAL_TUBE_ENDPOINTS_BY_DIAGNOSTIC_DELTA","expected_failure_code":"FAIL_TUBE_GEOMETRY_RECONSTRUCTION"},
+    {"id":"NC05","mutation":"CHECKER_REQUIRED_FALSE","expected_failure_code":"FAIL_PRODUCER_CHECKER_REQUIRED"},
+    {"id":"NC06","mutation":"HUMAN_PROMOTION_REQUIRED_FALSE","expected_failure_code":"FAIL_PRODUCER_HUMAN_PROMOTION_REQUIRED"},
+    {"id":"NC07","mutation":"PRODUCER_VERDICT_INVALID","expected_failure_code":"FAIL_PRODUCER_VERDICT"},
+    {"id":"NC08","mutation":"CANDIDATE_INDEX_BOOL","expected_failure_code":"FAIL_CANDIDATE_INDEX"},
+    {"id":"NC09","mutation":"PREDICTOR_OBJECT_REMOVED","expected_failure_code":"FAIL_PREDICTOR_INPUT"},
+    {"id":"NC10","mutation":"PREDICTOR_Q_LEFT_ZERO","expected_failure_code":"FAIL_PREDICTOR_HULL_INTERIOR"},
+    {"id":"NC11","mutation":"NOMINAL_LAMBDA_WIDTH_CORRUPTED","expected_failure_code":"FAIL_TUBE_GEOMETRY_RECONSTRUCTION"},
+    {"id":"NC12","mutation":"RADIUS_CAP_CORRUPTED","expected_failure_code":"FAIL_TUBE_GEOMETRY_RECONSTRUCTION"},
+    {"id":"NC13","mutation":"ADAPTIVE_RADIUS_CORRUPTED","expected_failure_code":"FAIL_TUBE_GEOMETRY_RECONSTRUCTION"},
+    {"id":"NC14","mutation":"TUBE_INTERVAL_LO_CORRUPTED","expected_failure_code":"FAIL_TUBE_GEOMETRY_RECONSTRUCTION"},
+    {"id":"NC15","mutation":"R_LO_CORRUPTED","expected_failure_code":"FAIL_TUBE_GEOMETRY_RECONSTRUCTION"},
+    {"id":"NC16","mutation":"R_HI_CORRUPTED","expected_failure_code":"FAIL_TUBE_GEOMETRY_RECONSTRUCTION"},
+    {"id":"NC17","mutation":"CELL_INDEX_BOOL","expected_failure_code":"FAIL_CELL_INDEX"},
+    {"id":"NC18","mutation":"CANDIDATE_PARENT_HI_CORRUPTED","expected_failure_code":"FAIL_LAMBDA_GEOMETRY_RECONSTRUCTION"},
+    {"id":"NC19","mutation":"TILES_FIRST_HI_CORRUPTED","expected_failure_code":"FAIL_LAMBDA_GEOMETRY_RECONSTRUCTION"},
+    {"id":"NC20","mutation":"RUNTIME_PRODUCER_GLUE_MODULE_INJECTION","expected_failure_code":"FAIL_PRODUCER_GLUE_DEPENDENCY"}
+  ],
+  "exact_id_list": ["NC01","NC02","NC03","NC04","NC05","NC06","NC07","NC08","NC09","NC10","NC11","NC12","NC13","NC14","NC15","NC16","NC17","NC18","NC19","NC20"],
+  "excluded_followup_controls": ["NC04b"],
+  "nc04b_role": "SEPARATE_POST_CATALOG_CONTROL_FOR_A0B_Q_LEFT_Q_RIGHT_PINNING",
+  "nonclaims": [
+    "No binding promotion is conferred by this catalog.",
+    "NC04b is not part of the V1 canonical 20-control run.",
+    "This catalog does not replace the independent checker positive execution.",
+    "This catalog does not by itself establish the MONOTONE tube theorem."
+  ]
+}
