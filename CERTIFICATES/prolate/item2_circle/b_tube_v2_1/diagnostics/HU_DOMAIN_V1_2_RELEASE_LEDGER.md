@@ -82,7 +82,7 @@ All production-stage executable/content pins in this ledger and the cell-0 final
 
 The production checker allowlists exactly the frozen cell-0 replay producer and the cell-independent production producer. It has no positive-control result-SHA pin and no positive-control execution-head equality pin. It requires the Component-1 geometry receipt SHA in the production attestation, reconstructs the exact parent from that receipt, checks `receipt.parent` exactly, verifies the receipt execution head exists as a Git commit, and delegates finite-stage semantics, budgets, exact cover, and margin to the shared core.
 
-## promotion rule
+## Promotion rule
 
 A production-checker PASS leaves evidence at `PRODUCTION_CANDIDATE`. It may record `READY_FOR_JUDGE_PROMOTION`, but it must keep `binding_use_authorized=false` and `monotone_narrow_interface_authorized=false`. Binding use requires a separate Judge promotion/signature.
 
