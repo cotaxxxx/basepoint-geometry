@@ -1,17 +1,28 @@
 {
   "checker_contract": {
+    "box_id_naming": {
+      "lambda_refine_by_4_child": "/l4_k",
+      "lambda_subdivide_32_child": "/l32_k",
+      "r_bisect_children": [
+        "/r0",
+        "/r1"
+      ]
+    },
     "fail_closed": true,
     "independent_reconstruction": [
       "stage order and operation",
       "MAX_NEW_BOXES rule",
       "first-passing stop",
       "resolved-leaf immutability by prefix-free terminal set",
-      "per-stage and total budget accounting",
+      "raw evaluated-box PASS/ABORT accounting",
+      "raw evaluated-box per-box and per-stage budget accounting",
+      "raw evaluated-box to terminal-leaf PASS consistency",
       "exact parent cover",
       "certified cover margin"
     ],
     "numerical_reevaluation": false,
     "raw_evidence_inputs": [
+      "producer receipt evaluated_boxes",
       "producer receipt stage_ledger",
       "producer receipt terminal_leaves exact endpoints",
       "producer receipt terminal_leaves exact lo/hi/width",
@@ -28,9 +39,9 @@
   },
   "pins": {
     "independent_checker_path": "CERTIFICATES/prolate/item2_circle/b_tube_v2_1/diagnostics/hu_domain_v1_2_independent_checker.py",
-    "independent_checker_sha256": "5647ebedc23681b911ffe7ef95a71e3ad1f841daefbe585fdb2a4d49cdf1c041",
+    "independent_checker_sha256": "TO_BE_PINNED_AFTER_RAW_DIFF_AUDIT",
     "producer_runner_path": "CERTIFICATES/prolate/item2_circle/b_tube_v2_1/diagnostics/hu_domain_v1_2_cell0_positive_control.py",
-    "producer_runner_sha256": "8ca7d1fd8d28a2b4c51f5d3a109f30af9e68c02e081fc9e3f682b8596d36c4a0",
+    "producer_runner_sha256": "e5bc568172befe3a368c4fc7c6f0ae18f70dffe685e560a638bf3efb20fb6f50",
     "stage_policy_path": "CERTIFICATES/prolate/item2_circle/b_tube_v2_1/diagnostics/hu_domain_v1_2_stage_policy.json",
     "stage_policy_sha256": "ce1a4c3415e976f69ebd71c3ab97a4e642b9d91219d3e0dbd19de202ea3a5876"
   },
@@ -50,10 +61,10 @@
     "cover_margin_is_true_minimum": false,
     "evaluated_box_count": 221,
     "evidence_class": "POSITIVE_CONTROL_NOT_BINDING",
-    "execution_head": "83bacd03fe5f120c4e73669e8510287a98666fab",
+    "execution_head": "0e3d8954ccd97adf1522088233e65c9729030b4f",
     "first_passing_stage": "S7_L32",
     "head_unchanged_during_run": true,
-    "result_json_sha256": "8b01638f339f3fdf99b5392197403d441c0cca046a0fcc66b5506a8ddcff3374",
+    "result_json_sha256": "f4f9320678aa14a8f7b169580d3b1783c4aacb48b73822b4647323d731650043",
     "source_baseline_commit": "996bc349fdafe6d0c840c06e2c79a6a51e52b9b0",
     "source_tree_post_clean": true,
     "source_tree_pre_clean": true,
@@ -63,6 +74,6 @@
   },
   "release_parent_commit": "83bacd03fe5f120c4e73669e8510287a98666fab",
   "release_sha_rule": "THE_GIT_COMMIT_CONTAINING_THIS_CONTRACT_AND_THE_PINNED_CHECKER_IS_THE_V1_2_RELEASE_SHA",
-  "release_status": "RELEASED_AFTER_POSITIVE_CONTROL_PASS",
+  "release_status": "RELEASE_CANDIDATE_PENDING_CHECKER_SHA_AND_RAW_AUDIT",
   "schema": "production-hu-domain-contract-v1.2-release-v1"
 }
