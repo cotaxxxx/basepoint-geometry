@@ -1,0 +1,68 @@
+{
+  "checker_contract": {
+    "fail_closed": true,
+    "independent_reconstruction": [
+      "stage order and operation",
+      "MAX_NEW_BOXES rule",
+      "first-passing stop",
+      "resolved-leaf immutability by prefix-free terminal set",
+      "per-stage and total budget accounting",
+      "exact parent cover",
+      "certified cover margin"
+    ],
+    "numerical_reevaluation": false,
+    "raw_evidence_inputs": [
+      "producer receipt stage_ledger",
+      "producer receipt terminal_leaves exact endpoints",
+      "producer receipt terminal_leaves exact lo/hi/width",
+      "producer receipt cover fields and cover margin"
+    ]
+  },
+  "contract_id": "PRODUCTION_HU_DOMAIN_CONTRACT_V1_2",
+  "nonbinding_revision_observation": {
+    "binding_effect_on_v1_2": "NONE",
+    "candidate_change": "Consider inserting an exact L8 stage before L32 in V1.3.",
+    "observation": "At S7_L32, six unresolved depth-6 r boxes produced 192 lambda boxes; all 192 passed with 91994 total evaluations, about 479 evaluations per box.",
+    "status": "RECORDED_NOT_ADOPTED_NOT_TESTED",
+    "target": "V1.3_CANDIDATE_ONLY"
+  },
+  "pins": {
+    "independent_checker_path": "CERTIFICATES/prolate/item2_circle/b_tube_v2_1/diagnostics/hu_domain_v1_2_independent_checker.py",
+    "independent_checker_sha256": "5647ebedc23681b911ffe7ef95a71e3ad1f841daefbe585fdb2a4d49cdf1c041",
+    "producer_runner_path": "CERTIFICATES/prolate/item2_circle/b_tube_v2_1/diagnostics/hu_domain_v1_2_cell0_positive_control.py",
+    "producer_runner_sha256": "8ca7d1fd8d28a2b4c51f5d3a109f30af9e68c02e081fc9e3f682b8596d36c4a0",
+    "stage_policy_path": "CERTIFICATES/prolate/item2_circle/b_tube_v2_1/diagnostics/hu_domain_v1_2_stage_policy.json",
+    "stage_policy_sha256": "ce1a4c3415e976f69ebd71c3ab97a4e642b9d91219d3e0dbd19de202ea3a5876"
+  },
+  "positive_control": {
+    "abort_count": 20,
+    "abort_reason": "ANGULAR_EVALUATION_BUDGET",
+    "binding_use_authorized": false,
+    "cover_checks": {
+      "lambda_endpoints_exact": true,
+      "no_gaps": true,
+      "no_interior_overlaps": true,
+      "r_endpoints_exact": true,
+      "union_equals_parent": true
+    },
+    "cover_margin_box_id": "CELL0/r0",
+    "cover_margin_exact": "195183136874220758369618400321652771495342842368573/196159429230833773869868419475239575503198607639501078528",
+    "cover_margin_is_true_minimum": false,
+    "evaluated_box_count": 221,
+    "evidence_class": "POSITIVE_CONTROL_NOT_BINDING",
+    "execution_head": "83bacd03fe5f120c4e73669e8510287a98666fab",
+    "first_passing_stage": "S7_L32",
+    "head_unchanged_during_run": true,
+    "result_json_sha256": "8b01638f339f3fdf99b5392197403d441c0cca046a0fcc66b5506a8ddcff3374",
+    "source_baseline_commit": "996bc349fdafe6d0c840c06e2c79a6a51e52b9b0",
+    "source_tree_post_clean": true,
+    "source_tree_pre_clean": true,
+    "terminal_leaf_count": 201,
+    "total_eval": 606635,
+    "verdict": "POSITIVE_CONTROL_PASS"
+  },
+  "release_parent_commit": "83bacd03fe5f120c4e73669e8510287a98666fab",
+  "release_sha_rule": "THE_GIT_COMMIT_CONTAINING_THIS_CONTRACT_AND_THE_PINNED_CHECKER_IS_THE_V1_2_RELEASE_SHA",
+  "release_status": "RELEASED_AFTER_POSITIVE_CONTROL_PASS",
+  "schema": "production-hu-domain-contract-v1.2-release-v1"
+}
