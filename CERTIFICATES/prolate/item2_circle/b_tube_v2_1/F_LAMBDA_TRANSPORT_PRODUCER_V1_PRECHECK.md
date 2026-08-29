@@ -3,8 +3,8 @@
 Status: `PROTOTYPE / BINDING_CANDIDATE_DESIGN / NOT_PROMOTED`
 
 Producer source: `flambda_transport_producer_v1.py`  
-Producer source commit: `b5951c4d14d97eeee55bc17102628e6fd7c800e8`  
-Expected producer-source SHA-256 from the submitted UTF-8 source bytes: `5d224cdaf487dca1bc64077e680e728ee8167d5b6e531295409c059beed14e36`  
+Producer source commit: `54b6f4618bc57ee6641d74b691fdc4aa8e617f30`  
+Expected producer-source SHA-256 from the submitted UTF-8 source bytes: `05c49599bb84704ce5966d11b73aae90536ca9a389ed3683974aa1eac909c4da`  
 Byte authority remains the repository file and the subsequent hash-harvest/pin step.
 
 ## Target claim
@@ -26,9 +26,10 @@ No new mathematical evaluator is introduced.
    - `_candidate_pairs`;
    - `_cell_partition`;
    - `_load_a0_start_interval`;
-   - `_newton_predictor`;
+   - `exact_newton_predictor` from `exact_lambda_transport.py`;
    - `AffinePredictor.range_hull`;
    - `_adaptive_radius`.
+   The producer calls `exact_newton_predictor` directly with `ExactLambdaRoutedEvaluator`; this is the same exact-lambda predictor that `install_exact_lambda_call_sites()` installs into the binding production candidate path, avoiding an unpinned raw-kernel predictor reconstruction.
 2. Exact `F` anchors use the existing `ExactLambdaRoutedEvaluator._evaluate_exact` API with `quantity="F"`, a point `r` interval, exact point lambda, `f_nonzero=True`, and `record=False`.
 3. Native derivative tiles use the audited B-LOCAL v2.3 API `blocal_v23_boundary.enclose_route("F_lambda", ...)` with explicit `required_sign="NEG"`, no custom accept predicate, and the pinned native route.
 4. The new file is orchestration/receipt glue only. It does not alter the shared mathematical kernel, frozen v2.2 files, route normalization, or candidate geometry rules.
