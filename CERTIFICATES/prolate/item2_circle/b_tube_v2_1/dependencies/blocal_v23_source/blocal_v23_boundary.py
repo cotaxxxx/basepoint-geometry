@@ -17,6 +17,20 @@ FLAMBDA_ROUTE_ID="BLOCAL_FLAMBDA_ROUTE_V1"
 TRANSPORT_LEMMA_ID="F_LAMBDA_IS_LAMBDA_DERIVATIVE_OF_ROUTE_F_V1"
 
 
+class ContractFailure(ValueError):
+    """Fail-closed contract error with a stable machine-readable code."""
+    def __init__(self, code: str):
+        super().__init__(code)
+        self.code = code
+
+
+def _require_explicit_neg(required_sign: str | None) -> None:
+    if required_sign is None:
+        raise ContractFailure("FAIL_REQUIRED_SIGN_MISSING")
+    if required_sign != "NEG":
+        raise ContractFailure("FAIL_SIGN_CONTRACT")
+
+
 def _taylor_cell(kernel,adapter,acb_type,arb_type,fmpq_type,cell,u0,u1,s0,s1,eps,max_gamma_depth):
     base._reset_gamma_trace(); rb=base._r_ball(arb_type,fmpq_type,u0,u1); lb=base._lambda_ball(arb_type,fmpq_type,s0,s1); z=arb_type(0)
     rj=base.J2(rb,z,z,z,z,z); lj=base.J2(lb,z,z,z,z,z); am=(cell.a0+cell.a1)/2; bm=(cell.b0+cell.b1)/2
@@ -54,8 +68,8 @@ def _policy(config):
 
 def enclose_flambda(kernel:Any,adapter:Any,acb_type:Any,arb_type:Any,fmpq_type:Any,
                     config:dict[str,Any],u0:Fraction,u1:Fraction,s0:Fraction,s1:Fraction,
-                    required_sign:str="NEG",evaluation_cap:int|None=None):
-    model.need(required_sign=="NEG","F_lambda required_sign must be NEG")
+                    required_sign:str|None,evaluation_cap:int|None=None):
+    _require_explicit_neg(required_sign)
     model.need(Fraction(0)<=u0<=u1<=Fraction(1,4),"route u"); model.need(-model.S_NEG<=s0<=s1,"route s")
     pcfg=_policy(config); cap=pcfg["max_evaluations"] if evaluation_cap is None else evaluation_cap
     model.need(isinstance(cap,int) and 0<cap<=pcfg["max_evaluations"],"route evaluation cap")
@@ -132,8 +146,10 @@ def enclose_route(quantity:str,kernel:Any,adapter:Any,acb_type:Any,arb_type:Any,
                   u0:Fraction,u1:Fraction,s0:Fraction,s1:Fraction,required_sign:str|None=None,
                   accept:Callable[[dict[str,Any]],bool]|None=None,evaluation_cap:int|None=None):
     if quantity=="F_lambda":
-        model.need(accept is None,"binding F_lambda custom accept forbidden")
-        return enclose_flambda(kernel,adapter,acb_type,arb_type,fmpq_type,config,u0,u1,s0,s1,"NEG" if required_sign is None else required_sign,evaluation_cap)
+        if accept is not None:
+            raise ContractFailure("FAIL_CUSTOM_PREDICATE_FORBIDDEN")
+        _require_explicit_neg(required_sign)
+        return enclose_flambda(kernel,adapter,acb_type,arb_type,fmpq_type,config,u0,u1,s0,s1,required_sign,evaluation_cap)
     return base.enclose_route(quantity,kernel,adapter,acb_type,arb_type,fmpq_type,config,u0,u1,s0,s1,required_sign,accept,evaluation_cap)
 
-__all__=["FLAMBDA_ROUTE_ID","TRANSPORT_LEMMA_ID","enclose_flambda","enclose_route"]
+__all__=["ContractFailure","FLAMBDA_ROUTE_ID","TRANSPORT_LEMMA_ID","enclose_flambda","enclose_route"]
