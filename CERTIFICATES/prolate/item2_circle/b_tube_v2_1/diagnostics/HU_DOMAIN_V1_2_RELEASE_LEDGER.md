@@ -40,12 +40,14 @@ Frozen release producer:
 Cell-independent production producer:
 
 - `hu_domain_v1_2_production_producer.py`
-- SHA256 `56b28657f3d8483bcd0e63de2f97a0e3867f1d274b4b2bd05a427f8473bc40a4`
+- SHA256 `d5d54e31daa6aa45c75782b54f40db92a7075c24f567d1d9acf7b481021e22d8`
 - role: `CELL_INDEPENDENT_PRODUCTION_PRODUCER`
 - policy `parent` is ignored; parent comes from the Component-1 geometry receipt.
 - execution requires explicit `--expected-head`, `SOURCE_TREE_PRE=CLEAN`, `SOURCE_TREE_POST=CLEAN`, and `HEAD_UNCHANGED_DURING_RUN=TRUE`.
 
-Runtime dependency content pins mirror the F_lambda precheck dependency set: model, adapter, boundary v2.2, boundary v2.3, policy, symbolic audit, B-LOCAL config, route fragment, `calibration_runner.py`, and `exact_lambda_transport.py`; the v2.3 shared kernel and production kernel are pinned as well. Existing F_lambda SHA256 pins are reused where available. `calibration_runner.py` and `exact_lambda_transport.py` are pinned by Git blob SHA-1 at the explicitly pinned clean execution HEAD (`a98e95f0696fd8a43e69676df2bba594d2501d7e`, `e4c5be230fe6d86269c764f750baa1f9ff9b5202`).
+Runtime dependency pins are **content SHA-256 only**. Git blob SHA-1 is not used for runtime dependency verification. The immutable runtime baseline is commit `7d3b8e8b0e41d913f6b3bd7944914fd0119e0824`; the producer computes SHA-256 over the exact bytes at that baseline and requires exact equality with the current clean working-tree bytes. Independent historical SHA-256 constants are additionally cross-checked where already available, including `blocal_phase4_model.py = 92bc9010cbaf7e3c61a79aa6bb05e2f717a99486e1faac416e0f3dd3ee5f327a` and `exact_lambda_transport.py = adee7587a7519e8c0274470a63ddda6c82f4b8ebd4117c18fcab1ce77fb0ce80`.
+
+The runtime pin set includes `blocal_phase4_model.py`, model, adapter, boundary v2.2, boundary v2.3, policy, symbolic audit, B-LOCAL config, route fragment, v2.3 shared kernel, `calibration_context.py`, `affine_geometry.py`, `numeric_schema.py`, `calibration_config.py`, `calibration_runner.py`, and `exact_lambda_transport.py`. The production kernel remains separately pinned by SHA-256 `77e7a93c594ba66ac7d98df29ec3c03107b0c63962a5aa60f8503559082c10ac`.
 
 ## Status vocabulary
 
@@ -73,7 +75,7 @@ Post-release production checking uses:
 - shared semantic core: `hu_domain_v1_2_checker_core.py`
 - core SHA256 `1075d0fefe31117a0cebe99b24321e9cb4e011590102011fb4d1873fcd2af4b2`
 - production checker: `hu_domain_v1_2_production_checker.py`
-- production checker Git blob SHA-1 `5815cb3a3eddfa1ecf4764a189c2edb7438ac92e`
+- production checker Git blob SHA-1 `e1f5688d9efb06317a0da32b714cc3d57b37bcb8`
 - role: `CELL_INDEPENDENT_PRODUCTION_CHECKER`.
 
 The production checker allowlists exactly the frozen cell-0 replay producer and the cell-independent production producer. It has no positive-control result-SHA pin and no positive-control execution-head equality pin. It requires the Component-1 geometry receipt SHA in the production attestation, reconstructs the exact parent from that receipt, checks `receipt.parent` exactly, verifies the receipt execution head exists as a Git commit, and delegates finite-stage semantics, budgets, exact cover, and margin to the shared core.
