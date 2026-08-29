@@ -2,9 +2,8 @@
 """Independent raw-evidence checker for PRODUCTION_HU_DOMAIN_CONTRACT_V1_2.
 
 No H_U numerical evaluation is performed. The checker reconstructs the finite
-stage policy, first-passing semantics, budget accounting, exact rectangle cover,
-and certified cover margin from the producer receipt's raw terminal leaves and
-stage ledger.
+stage policy, first-passing semantics, raw evaluated-box budget accounting,
+exact rectangle cover, and certified cover margin from the producer receipt.
 """
 from __future__ import annotations
 
@@ -266,6 +265,45 @@ def main() -> int:
         if has_strict_descendant(tid, terminal_ids):
             fail("RESOLVED_LEAF_REFINED:" + tid)
 
+    evaluated_records = receipt.get("evaluated_boxes")
+    if not isinstance(evaluated_records, list) or not evaluated_records:
+        fail("EVALUATED_BOXES")
+    evaluated_by_stage: dict[str, list[dict[str, Any]]] = {}
+    evaluated_ids: set[str] = set()
+    for i, rec in enumerate(evaluated_records):
+        if not isinstance(rec, dict):
+            fail("BAD_EVALUATED_RECORD")
+        box_from_record(rec, f"evaluated[{i}]")
+        bid = rec.get("box_id")
+        if bid in evaluated_ids:
+            fail("DUPLICATE_EVALUATED_ID:" + str(bid))
+        evaluated_ids.add(bid)
+        sid = rec.get("stage_id")
+        if not isinstance(sid, str) or not sid:
+            fail("EVALUATED_STAGE_ID")
+        status = rec.get("status")
+        if status not in ("PASS_POS", "ABORT"):
+            fail("EVALUATED_STATUS:" + str(bid))
+        ev = rec.get("evaluation_count")
+        if not isinstance(ev, int) or ev < 0 or ev > policy["per_box_cap"]:
+            fail("EVALUATED_CAP:" + str(bid))
+        if rec.get("effective_evaluation_cap") != policy["per_box_cap"]:
+            fail("EVALUATED_EFFECTIVE_CAP:" + str(bid))
+        if status == "ABORT":
+            if rec.get("abort_reason") != "ANGULAR_EVALUATION_BUDGET":
+                fail("ABORT_REASON:" + str(bid))
+            if rec.get("lo") is not None or rec.get("hi") is not None:
+                fail("ABORT_INTERVAL_PRESENT:" + str(bid))
+        else:
+            if rec.get("abort_reason") is not None:
+                fail("PASS_ABORT_REASON:" + str(bid))
+            lo = parse_exact(rec.get("lo"), f"evaluated[{i}].lo")
+            hi = parse_exact(rec.get("hi"), f"evaluated[{i}].hi")
+            width = parse_exact(rec.get("width"), f"evaluated[{i}].width")
+            if width != hi - lo or lo <= 0:
+                fail("EVALUATED_PASS_INTERVAL:" + str(bid))
+        evaluated_by_stage.setdefault(sid, []).append(rec)
+
     ledger = receipt.get("stage_ledger")
     stages = policy.get("stages")
     if not isinstance(ledger, list) or not isinstance(stages, list) or not ledger:
@@ -276,12 +314,17 @@ def main() -> int:
     current = [parent]
     reconstructed = []
     terminal_seen: set[str] = set()
-    total_eval = 0
+    raw_total_eval = 0
+    raw_total_boxes = 0
+    raw_abort_count = 0
+    ledger_stage_ids: set[str] = set()
 
     for i, led in enumerate(ledger):
         stage = stages[i]
-        if led.get("stage_id") != stage.get("stage_id") or led.get("op") != stage.get("op"):
+        sid = stage.get("stage_id")
+        if led.get("stage_id") != sid or led.get("op") != stage.get("op"):
             fail("STAGE_ORDER_OR_OP:" + str(i))
+        ledger_stage_ids.add(sid)
 
         unresolved_parent_count = len(current)
         if i == 0:
@@ -305,10 +348,53 @@ def main() -> int:
         if led.get("declared_stage_max_eval") != declared:
             fail("LEDGER_DECLARED_BUDGET:" + str(i))
 
-        actual = led.get("actual_stage_eval")
-        if not isinstance(actual, int) or actual < 0 or actual > declared:
-            fail("LEDGER_ACTUAL_BUDGET:" + str(i))
-        total_eval += actual
+        raw_stage = evaluated_by_stage.get(sid, [])
+        if len(raw_stage) != expected_new:
+            fail("RAW_STAGE_BOX_COUNT:" + str(i))
+        raw_by_id = {rec["box_id"]: rec for rec in raw_stage}
+        if len(raw_by_id) != len(raw_stage):
+            fail("RAW_STAGE_DUPLICATE_ID:" + str(i))
+        child_by_id = {c.box_id: c for c in children}
+        if set(raw_by_id) != set(child_by_id):
+            fail("RAW_STAGE_CHILD_SET:" + str(i))
+
+        raw_stage_eval = 0
+        raw_pass_count = 0
+        raw_stage_abort = 0
+        for bid, child in child_by_id.items():
+            rec = raw_by_id[bid]
+            observed_box = box_from_record(rec, "evaluated_stage." + bid)
+            if observed_box != child:
+                fail("RAW_BOX_GEOMETRY:" + bid)
+            raw_stage_eval += rec["evaluation_count"]
+            if rec["status"] == "PASS_POS":
+                raw_pass_count += 1
+                if bid not in terminal_ids:
+                    fail("RAW_PASS_NOT_TERMINAL:" + bid)
+                terminal_rec = terminal_by_id[bid]
+                for key in (
+                    "r_lo", "r_hi", "lambda_lo", "lambda_hi", "lo", "hi", "width",
+                    "evaluation_count", "status", "required_sign", "effective_evaluation_cap",
+                ):
+                    if rec.get(key) != terminal_rec.get(key):
+                        fail("RAW_TERMINAL_MISMATCH:" + bid + ":" + key)
+            else:
+                raw_stage_abort += 1
+                if not has_strict_descendant(bid, terminal_ids):
+                    fail("RAW_ABORT_WITHOUT_DESCENDANT:" + bid)
+
+        if raw_pass_count + raw_stage_abort != expected_new:
+            fail("RAW_PASS_ABORT_COUNT:" + str(i))
+        if raw_stage_eval != led.get("actual_stage_eval"):
+            fail("RAW_STAGE_EVAL_LEDGER:" + str(i))
+        if raw_stage_eval > declared:
+            fail("RAW_STAGE_BUDGET:" + str(i))
+        if raw_pass_count != led.get("pass_count"):
+            fail("RAW_PASS_LEDGER:" + str(i))
+
+        raw_total_eval += raw_stage_eval
+        raw_total_boxes += len(raw_stage)
+        raw_abort_count += raw_stage_abort
 
         next_current = []
         pass_count = 0
@@ -325,13 +411,15 @@ def main() -> int:
             fail("LEDGER_PASS_COUNT:" + str(i))
         if led.get("unresolved_count_after_stage") != len(next_current):
             fail("LEDGER_UNRESOLVED_AFTER:" + str(i))
+        if raw_stage_abort != len(next_current):
+            fail("RAW_ABORT_UNRESOLVED_COUNT:" + str(i))
 
         reconstructed.append({
-            "stage_id": stage["stage_id"],
+            "stage_id": sid,
             "unresolved_parent_count": unresolved_parent_count,
             "new_child_count": expected_new,
             "declared_stage_max_eval": declared,
-            "actual_stage_eval": actual,
+            "actual_stage_eval": raw_stage_eval,
             "pass_count": pass_count,
             "unresolved_count_after_stage": len(next_current),
         })
@@ -342,6 +430,8 @@ def main() -> int:
                 fail("NOT_FIRST_PASSING_STOP")
             break
 
+    if set(evaluated_by_stage) != ledger_stage_ids:
+        fail("RAW_UNDECLARED_STAGE_IDS")
     if current:
         fail("LEDGER_ENDED_WITH_UNRESOLVED")
     if terminal_seen != terminal_ids:
@@ -350,7 +440,9 @@ def main() -> int:
         fail("TERMINAL_LEAF_COUNT")
     if sum(x["pass_count"] for x in reconstructed) != len(terminal_ids):
         fail("PASS_COUNT_SUM")
-    if receipt.get("total_eval") != total_eval:
+    if raw_total_boxes != len(evaluated_records):
+        fail("RAW_TOTAL_BOX_COUNT")
+    if raw_total_eval != receipt.get("total_eval"):
         fail("TOTAL_EVAL")
 
     cover = exact_cover(parent, terminal_boxes)
@@ -376,9 +468,13 @@ def main() -> int:
     print("STAGE_ORDER=PASS")
     print("FIRST_PASSING=PASS")
     print("RESOLVED_LEAF_IMMUTABLE=PASS")
+    print("RAW_EVALUATED_BOX_ACCOUNTING=PASS")
     print("BUDGET_ACCOUNTING=PASS")
+    print("EVALUATED_BOX_COUNT=" + str(raw_total_boxes))
+    print("ABORT_COUNT=" + str(raw_abort_count))
+    print("ABORT_REASON=ANGULAR_EVALUATION_BUDGET")
     print("TERMINAL_LEAF_COUNT=" + str(len(terminal_ids)))
-    print("TOTAL_EVAL=" + str(total_eval))
+    print("TOTAL_EVAL=" + str(raw_total_eval))
     print("R_ENDPOINTS_EXACT=TRUE")
     print("LAMBDA_ENDPOINTS_EXACT=TRUE")
     print("NO_GAPS=TRUE")
