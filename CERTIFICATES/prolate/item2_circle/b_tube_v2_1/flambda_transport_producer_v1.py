@@ -342,7 +342,7 @@ def _anchor_record(
     required_sign: str,
     config: dict[str, Any],
 ) -> dict[str, Any]:
-    _, interval, detail, used = evaluator._evaluate_exact(
+    _, interval, evidence = evaluator._evaluate_exact(
         "F",
         DyadicInterval.point(endpoint),
         lam,
@@ -353,6 +353,12 @@ def _anchor_record(
         record=False,
         f_nonzero=True,
     )
+    _need(isinstance(evidence, dict), "FAIL_ANCHOR_EVIDENCE")
+    _need(evidence.get("quantity") == "F", "FAIL_ANCHOR_QUANTITY")
+    _need(evidence.get("post_failure_fallback") is False,
+          "FAIL_ANCHOR_POST_FAILURE_FALLBACK")
+    used = evidence.get("boundary_route_evaluation_count_delta")
+    detail = evidence.get("detail")
     _need(isinstance(used, int) and 0 <= used <= ANCHOR_CALL_CAP,
           "FAIL_ANCHOR_BUDGET")
     if required_sign == "NEG":
