@@ -75,8 +75,10 @@ Post-release production checking uses:
 - shared semantic core: `hu_domain_v1_2_checker_core.py`
 - core SHA256 `1075d0fefe31117a0cebe99b24321e9cb4e011590102011fb4d1873fcd2af4b2`
 - production checker: `hu_domain_v1_2_production_checker.py`
-- production checker Git blob SHA-1 `e1f5688d9efb06317a0da32b714cc3d57b37bcb8`
+- production checker SHA256 `a629bb79fb31c24a7d74c973b224728459bf4121d40ccb4c77ac50a801b9fa5a`
 - role: `CELL_INDEPENDENT_PRODUCTION_CHECKER`.
+
+All production-stage executable/content pins in this ledger and the cell-0 finalizer use SHA-256 over file bytes; Git blob SHA-1 is not used as a cross-component or runtime content pin.
 
 The production checker allowlists exactly the frozen cell-0 replay producer and the cell-independent production producer. It has no positive-control result-SHA pin and no positive-control execution-head equality pin. It requires the Component-1 geometry receipt SHA in the production attestation, reconstructs the exact parent from that receipt, checks `receipt.parent` exactly, verifies the receipt execution head exists as a Git commit, and delegates finite-stage semantics, budgets, exact cover, and margin to the shared core.
 
