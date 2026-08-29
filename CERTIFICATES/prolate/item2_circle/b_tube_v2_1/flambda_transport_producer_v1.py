@@ -61,10 +61,12 @@ from calibration_numeric import (  # noqa: E402
     _candidate_pairs,
     _cell_partition,
     _load_a0_start_interval,
-    _newton_predictor,
 )
 from calibration_runner import load_production_kernel  # noqa: E402
-from exact_lambda_transport import ExactLambdaRoutedEvaluator  # noqa: E402
+from exact_lambda_transport import (  # noqa: E402
+    ExactLambdaRoutedEvaluator,
+    exact_newton_predictor,
+)
 
 
 class ProducerFailure(RuntimeError):
@@ -199,7 +201,7 @@ def _precheck(expected_head: str) -> dict[str, Any]:
 def _reconstruct_geometry(
     *,
     config: dict[str, Any],
-    raw_kernel: Any,
+    exact_kernel: Any,
     arb_type: Any,
     candidate_index: int,
     cell_index: int,
@@ -231,8 +233,8 @@ def _reconstruct_geometry(
     for index, (left, right) in enumerate(cells[: cell_index + 1]):
         q_left = anchor if index == 0 else seed
         iterations = 4 if index % refresh == 0 else 1
-        q_right = _newton_predictor(
-            raw_kernel,
+        q_right = exact_newton_predictor(
+            exact_kernel,
             arb_type,
             right,
             q_left,
@@ -424,9 +426,11 @@ def produce(
     from flint import acb, arb, fmpq, ctx
     ctx.dps = config["dps"]
 
+    exact_f = ExactLambdaRoutedEvaluator(raw_kernel, arb, config)
+    exact_f.set_phase(f"CANDIDATE:{candidate_index}")
     geometry = _reconstruct_geometry(
         config=config,
-        raw_kernel=raw_kernel,
+        exact_kernel=exact_f,
         arb_type=arb,
         candidate_index=candidate_index,
         cell_index=cell_index,
@@ -437,7 +441,6 @@ def produce(
     r_lo = geometry["domain"].lo
     r_hi = geometry["domain"].hi
 
-    exact_f = ExactLambdaRoutedEvaluator(raw_kernel, arb, config)
     anchor_hi = _anchor_record(
         evaluator=exact_f,
         endpoint=r_hi,
