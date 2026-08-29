@@ -21,6 +21,7 @@ PRIOR_LOG=Path(os.environ.get("PRIOR_REPLAY_LOG",str(Path.home()/"blocal-v23-nat
 PRIOR_HEAD="956ea04ba95b8f9fadfe332d0837c11f32a2d1b2"
 PRIOR_LOG_SHA256="bb930ad4bda4fa9b2c9822d35b9c3001920c30610c6af9fe931b4501d53266c2"
 BOUNDARY_REPO_PATH="CERTIFICATES/prolate/item2_circle/b_tube_v2_1/dependencies/blocal_v23_source/blocal_v23_boundary.py"
+PIN_REPO_PATH="CERTIFICATES/prolate/item2_circle/b_tube_v2_1/dependencies/blocal_v23_source/BLOCAL_V23_EXPLICIT_NEG_REPLAY_PINS.json"
 EXPECTED_HEAD=os.environ.get("EXPECTED_HEAD")
 if not EXPECTED_HEAD: raise SystemExit("STOP: set EXPECTED_HEAD to the exact repinned replay commit")
 
@@ -47,7 +48,22 @@ print("REPLAY_SCRIPT_SHA256="+actual_replay)
 print("PRIOR_REPLAY_LOG_SHA256="+sha(PRIOR_LOG))
 for key,actual in (("boundary_sha256",actual_boundary),("shared_kernel_sha256",actual_kernel),("replay_script_sha256",actual_replay)):
     if pins[key]!=actual: fail(key+" pin mismatch")
-if pins["expected_head"]!=EXPECTED_HEAD: fail("pin-file HEAD mismatch")
+
+source_baseline_head=pins.get("source_baseline_head")
+if not isinstance(source_baseline_head,str) or len(source_baseline_head)!=40:
+    fail("source baseline HEAD pin malformed")
+try:
+    subprocess.check_call(
+        ["git","-C",str(ROOT),"merge-base","--is-ancestor",source_baseline_head,EXPECTED_HEAD],
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+    )
+except subprocess.CalledProcessError:
+    fail("source baseline is not an ancestor of execution HEAD")
+changed=[x for x in git("diff","--name-only",f"{source_baseline_head}..{EXPECTED_HEAD}").splitlines() if x]
+unexpected=[x for x in changed if x!=PIN_REPO_PATH]
+if unexpected: fail("unexpected source changes after baseline: "+",".join(unexpected))
+if PIN_REPO_PATH not in changed: fail("pin file not introduced after source baseline")
+
 if pins["prior_head"]!=PRIOR_HEAD: fail("prior HEAD pin mismatch")
 if pins["prior_replay_log_sha256"]!=PRIOR_LOG_SHA256: fail("prior log contract pin mismatch")
 if sha(PRIOR_LOG)!=PRIOR_LOG_SHA256: fail("prior replay log SHA mismatch")
@@ -84,6 +100,8 @@ print("PRODUCER_DPS="+str(cal["dps"]))
 print("CELL_CAP=24000")
 print("REQUIRED_SIGN_INPUT=EXPLICIT_NEG")
 print("REGRESSION_EXPECTATION=BIT_IDENTICAL_TO_PRIOR_NATIVE_REPLAY")
+print("SOURCE_BASELINE_HEAD="+source_baseline_head)
+print("EXECUTION_HEAD="+EXPECTED_HEAD)
 print("BINDING_USE_AUTHORIZED=NO")
 
 total=0
