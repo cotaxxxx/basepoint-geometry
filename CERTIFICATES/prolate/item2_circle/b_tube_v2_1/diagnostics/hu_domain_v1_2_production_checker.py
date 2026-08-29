@@ -14,10 +14,10 @@ RELEASE_TAG="hu-domain-v1.2"
 RELEASE_SHA="6d705c6fbf37ae77d35232a40842692a3e92713e"
 POLICY_SHA256="ce1a4c3415e976f69ebd71c3ab97a4e642b9d91219d3e0dbd19de202ea3a5876"
 REPLAY_PRODUCER_SHA256="e5bc568172befe3a368c4fc7c6f0ae18f70dffe685e560a638bf3efb20fb6f50"
-PRODUCTION_PRODUCER_SHA256="760100397141d3e8983190e256e3e49aefb1b320fdb7d52cc94434321dec99b3"
+PRODUCTION_PRODUCER_SHA256="56b28657f3d8483bcd0e63de2f97a0e3867f1d274b4b2bd05a427f8473bc40a4"
 FROZEN_POSITIVE_CONTROL_CHECKER_SHA256="d83d5767c2fcaede1adc0f1c97cd10920b358b402d24d632b0b31bb5f9d26327"
-CORE_SHA256="16a8ab78fef3cbd6754d17b015ea8b90059af1145beec8c5ca3316ca0d33f628"
-GEOMETRY_MODULE_SHA256="9d2a8557d4761b9b30d05bc22c7923f117dba199a63e850c516700ff40097d6a"
+CORE_SHA256="1075d0fefe31117a0cebe99b24321e9cb4e011590102011fb4d1873fcd2af4b2"
+GEOMETRY_MODULE_SHA256="b0489c3c6201b44c54838b3d72c8692a99a25c939d692074761c51da73e63300"
 
 REL_DIR="CERTIFICATES/prolate/item2_circle/b_tube_v2_1/diagnostics"
 REL_POLICY=REL_DIR+"/hu_domain_v1_2_stage_policy.json"
@@ -75,6 +75,8 @@ def main()->int:
     if att.get("binding_use_authorized") is not False: fail("ATTESTATION_BINDING_STATE")
     if att.get("raw_result_sha256")!=raw_sha: fail("ATTESTATION_RAW_SHA")
     if att.get("checker_status")!="PENDING": fail("ATTESTATION_CHECKER_STATUS")
+    geometry_sha=sha(geom_path)
+    if att.get("tube_geometry_receipt_sha256")!=geometry_sha: fail("ATTESTATION_GEOMETRY_RECEIPT_SHA")
     if receipt.get("policy_sha256")!=POLICY_SHA256: fail("RECEIPT_POLICY_SHA")
 
     observed_producer=receipt.get("runner_sha256")
@@ -112,7 +114,7 @@ def main()->int:
     for key in ("r_lo","r_hi","lambda_lo","lambda_hi"):
         if parent.get(key)!=derived[key]: fail("DERIVED_PARENT_MISMATCH:"+key)
     if observed_producer==PRODUCTION_PRODUCER_SHA256:
-        if receipt.get("geometry_source_sha256")!=sha(geom_path): fail("RECEIPT_GEOMETRY_SOURCE_SHA")
+        if receipt.get("geometry_source_sha256")!=geometry_sha: fail("RECEIPT_GEOMETRY_SOURCE_SHA")
         if receipt.get("geometry_module_sha256")!=GEOMETRY_MODULE_SHA256: fail("RECEIPT_GEOMETRY_MODULE_SHA")
 
     policy=json.loads(paths["policy"].read_text())
@@ -138,6 +140,7 @@ def main()->int:
     print("RESOLVED_LEAF_IMMUTABLE=PASS")
     print("RAW_EVALUATED_BOX_ACCOUNTING=PASS")
     print("BUDGET_ACCOUNTING=PASS")
+    print("REFINABLE_STATUS_COUNTS="+json.dumps(result["refinable_status_counts"],sort_keys=True,separators=(",",":")))
     print("UNION_EQUALS_PARENT=TRUE")
     print("ALL_TERMINAL_LO_POSITIVE=TRUE")
     print("CERTIFIED_COVER_MARGIN_EXACT="+result["margin_exact"])
