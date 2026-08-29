@@ -8,6 +8,12 @@ partition inputs lambda_start, W_nom, lambda_end, cell_index.
 from __future__ import annotations
 from fractions import Fraction
 from typing import Any
+import re
+
+GEOMETRY_SCHEMA = "monotone-tube-v1.1-component1-geometry-receipt-v1"
+GEOMETRY_EVIDENCE_CLASS = "PRODUCTION_CANDIDATE"
+PROVENANCE_ROLE = "REPRODUCIBILITY_ONLY_NOT_LOAD_BEARING"
+RECTANGLE_IDENTITY_ROLE = "LOAD_BEARING_SINGLE_SOURCE"
 
 class GeometryError(RuntimeError):
     pass
@@ -30,6 +36,31 @@ def fstr(q: Fraction) -> str:
     return f"{q.numerator}/{q.denominator}"
 
 def derive_parent(component1: dict[str, Any]) -> dict[str, str]:
+    if component1.get("schema") != GEOMETRY_SCHEMA:
+        fail("GEOMETRY_SCHEMA")
+    if component1.get("evidence_class") != GEOMETRY_EVIDENCE_CLASS:
+        fail("GEOMETRY_EVIDENCE_CLASS")
+    if component1.get("binding_use_authorized") is not False:
+        fail("GEOMETRY_BINDING_STATE")
+    if component1.get("provenance_role") != PROVENANCE_ROLE:
+        fail("GEOMETRY_PROVENANCE_ROLE")
+    if component1.get("rectangle_identity_role") != RECTANGLE_IDENTITY_ROLE:
+        fail("GEOMETRY_RECTANGLE_IDENTITY_ROLE")
+    provenance = component1.get("source_provenance")
+    if not isinstance(provenance, dict):
+        fail("GEOMETRY_SOURCE_PROVENANCE")
+    source_head = provenance.get("source_head")
+    source_sha256 = provenance.get("source_sha256")
+    candidate_index = provenance.get("candidate_index")
+    if not isinstance(source_head, str) or re.fullmatch(r"[0-9a-f]{40}", source_head) is None:
+        fail("GEOMETRY_SOURCE_HEAD")
+    if not isinstance(source_sha256, str) or re.fullmatch(r"[0-9a-f]{64}", source_sha256) is None:
+        fail("GEOMETRY_SOURCE_SHA256")
+    if not isinstance(candidate_index, int) or candidate_index < 0:
+        fail("GEOMETRY_CANDIDATE_INDEX_PROVENANCE")
+    for key in ("q_left_origin", "q_right_origin", "sigma_origin", "rho_cap_origin"):
+        if not isinstance(provenance.get(key), str) or not provenance.get(key):
+            fail("GEOMETRY_PROVENANCE_FIELD:" + key)
     if component1.get("contract") != "MONOTONE_TUBE_V1_1":
         fail("GEOMETRY_CONTRACT")
     if component1.get("component") != "TUBE_GEOMETRY":
