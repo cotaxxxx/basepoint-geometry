@@ -2,11 +2,11 @@
   "schema": "f-joint-c1-judge-signature-v1",
   "lemma_id": "F_JOINT_C1",
   "lemma_path": "CERTIFICATES/prolate/item2_circle/b_tube_v2_1/monotone/F_JOINT_C1_LEMMA_V1.md",
-  "lemma_commit": "64caaf59360e948c9ca393bb2a4611db40671400",
-  "lemma_sha256": "TO_BE_PINNED_BY_JUDGE",
+  "lemma_commit": "af674a1cc5ab45542f4c201e377a1f3c5a93172a",
+  "lemma_sha256": "e04f63e5b6b7f050bf227dfc3066ec08dbb34a53c664b98a78a661682ea099e3",
   "evidence_class_after_approval": "HUMAN_AUDITED",
-  "judge_signature_status": "PENDING",
-  "binding_use_authorized": false,
-  "approved_claim": null,
+  "judge_signature_status": "APPROVED",
+  "binding_use_authorized": true,
+  "approved_claim": "F is jointly C^1 in (r,lambda) on an open neighborhood of every MONOTONE_TUBE_V1.1 tube rectangle and start/end join hull; the implicit-function theorem may be applied at zeros where F_r != 0.",
   "nonclaims_preserved": true
 }
