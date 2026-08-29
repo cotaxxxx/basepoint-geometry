@@ -3,8 +3,9 @@
 
 The released V1.2 policy supplies only finite stage semantics/cap/dps.
 The parent is reconstructed from the Component-1 geometry receipt; policy.parent
-is ignored for production. Runtime bytes are content-pinned and the source tree
-must remain clean at one explicitly pinned execution HEAD.
+is ignored for production. Runtime bytes are content-SHA256 pinned against one
+immutable runtime baseline, and the source tree must remain clean at one
+explicitly pinned execution HEAD.
 """
 from __future__ import annotations
 import argparse, hashlib, json, os, platform, subprocess, sys
@@ -21,7 +22,31 @@ REL_V23 = REL_BT + "/dependencies/blocal_v23_source"
 POLICY_SHA256 = "ce1a4c3415e976f69ebd71c3ab97a4e642b9d91219d3e0dbd19de202ea3a5876"
 GEOMETRY_MODULE_SHA256 = "b0489c3c6201b44c54838b3d72c8692a99a25c939d692074761c51da73e63300"
 KERNEL_SHA256 = "77e7a93c594ba66ac7d98df29ec3c03107b0c63962a5aa60f8503559082c10ac"
-RUNTIME_SHA256 = {
+RUNTIME_BASELINE_HEAD = "7d3b8e8b0e41d913f6b3bd7944914fd0119e0824"
+RUNTIME_CONTENT_PATHS = (
+    REL_V23 + "/blocal_phase4_model.py",
+    REL_V23 + "/blocal_v22_model.py",
+    REL_V23 + "/blocal_arb_adapter.py",
+    REL_V23 + "/blocal_v22_boundary.py",
+    REL_V23 + "/blocal_v23_boundary.py",
+    REL_V23 + "/blocal_v22_policy.py",
+    REL_V23 + "/blocal_v22_symbolic_audit.py",
+    REL_V23 + "/config.blocal-v2.2-run.json",
+    REL_V23 + "/BLOCAL_V23_ROUTE_CONFIG.fragment.json",
+    REL_V23 + "/blocal_v23_flambda_kernel.py",
+    REL_BT + "/calibration_context.py",
+    REL_BT + "/affine_geometry.py",
+    REL_BT + "/numeric_schema.py",
+    REL_BT + "/calibration_config.py",
+    REL_BT + "/calibration_runner.py",
+    REL_BT + "/exact_lambda_transport.py",
+)
+# Independent known content-SHA256 cross-checks inherited from the F_lambda
+# precheck/released dependency manifests.  Every runtime path, including those
+# without a separate historical constant here, is pinned by SHA256 of the bytes
+# at RUNTIME_BASELINE_HEAD and compared with the working-tree bytes.
+KNOWN_CONTENT_SHA256 = {
+    REL_V23 + "/blocal_phase4_model.py": "92bc9010cbaf7e3c61a79aa6bb05e2f717a99486e1faac416e0f3dd3ee5f327a",
     REL_V23 + "/blocal_v22_model.py": "8e9bcb0d9519cd6feb2375486985dddde43735dcb327cded28e96a33c61acb16",
     REL_V23 + "/blocal_arb_adapter.py": "99e640fba88cfe353ea360190a03df7a9de8840637922f9f56fa6b7168d94e66",
     REL_V23 + "/blocal_v22_boundary.py": "aea768c02644fdb08c8c32455207efe7424c7dc34efe378ad545c3ab9418abf9",
@@ -31,35 +56,34 @@ RUNTIME_SHA256 = {
     REL_V23 + "/config.blocal-v2.2-run.json": "dab371fa62ed10a00029cd31b0002e503952277ef072fb8f5d7fd5222965d469",
     REL_V23 + "/BLOCAL_V23_ROUTE_CONFIG.fragment.json": "93a511c33b8b68443b8ee7a56d0cfbd1f7cb023f54e0fddba6926c1dd96b5f30",
     REL_V23 + "/blocal_v23_flambda_kernel.py": "26d3357132fee064293932df51208acd445e8bd14200d70862a2ee62ba4cc086",
-}
-RUNTIME_GIT_BLOB_SHA1 = {
-    REL_BT + "/calibration_runner.py": "a98e95f0696fd8a43e69676df2bba594d2501d7e",
-    REL_BT + "/exact_lambda_transport.py": "e4c5be230fe6d86269c764f750baa1f9ff9b5202",
+    REL_BT + "/exact_lambda_transport.py": "adee7587a7519e8c0274470a63ddda6c82f4b8ebd4117c18fcab1ce77fb0ce80",
 }
 REFINABLE = {"UNRESOLVED_SIGN", "ABORT_BUDGET", "ABORT_INCOMPLETE_COVER"}
 HARD_FAIL = {"ABORT_NONFINITE", "ABORT_INTERNAL"}
 
 def fail(code: str) -> None: raise SystemExit("STOP:" + code)
-def sha(path: Path) -> str: return hashlib.sha256(path.read_bytes()).hexdigest()
+def sha_bytes(data: bytes) -> str: return hashlib.sha256(data).hexdigest()
+def sha(path: Path) -> str: return sha_bytes(path.read_bytes())
 def git(repo: Path, *args: str) -> str: return subprocess.check_output(["git","-C",str(repo),*args],text=True).strip()
+def git_show_bytes(repo: Path, ref: str, rel: str) -> bytes: return subprocess.check_output(["git","-C",str(repo),"show",f"{ref}:{rel}"])
 def fstr(q: Fraction) -> str: return f"{q.numerator}/{q.denominator}"
 
 def precheck(repo: Path, expected_head: str) -> dict[str,str]:
     if len(expected_head)!=40 or git(repo,"rev-parse","HEAD")!=expected_head: fail("HEAD_PIN_MISMATCH")
     if git(repo,"status","--porcelain"): fail("SOURCE_TREE_PRE_DIRTY")
+    if subprocess.run(["git","-C",str(repo),"cat-file","-e",RUNTIME_BASELINE_HEAD+"^{commit}"],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL).returncode!=0:
+        fail("RUNTIME_BASELINE_HEAD_MISSING")
     if sha(repo/REL_POLICY)!=POLICY_SHA256: fail("POLICY_SHA")
     if sha(repo/REL_GEOM)!=GEOMETRY_MODULE_SHA256: fail("GEOMETRY_MODULE_SHA")
     actual={}
-    for rel,expected in RUNTIME_SHA256.items():
+    for rel in RUNTIME_CONTENT_PATHS:
         path=repo/rel
         if not path.is_file(): fail("RUNTIME_FILE_MISSING:"+rel)
+        expected_sha=sha_bytes(git_show_bytes(repo,RUNTIME_BASELINE_HEAD,rel))
+        known=KNOWN_CONTENT_SHA256.get(rel)
+        if known is not None and expected_sha!=known: fail("RUNTIME_BASELINE_KNOWN_SHA256_MISMATCH:"+rel)
         got=sha(path); actual[rel]=got
-        if got!=expected: fail("RUNTIME_SHA256_MISMATCH:"+rel)
-    for rel,expected in RUNTIME_GIT_BLOB_SHA1.items():
-        path=repo/rel
-        if not path.is_file(): fail("RUNTIME_FILE_MISSING:"+rel)
-        got=git(repo,"rev-parse",expected_head+":"+rel); actual[rel]=got
-        if got!=expected: fail("RUNTIME_GIT_BLOB_MISMATCH:"+rel)
+        if got!=expected_sha: fail("RUNTIME_CONTENT_SHA256_MISMATCH:"+rel)
     return actual
 
 class Box:
@@ -159,9 +183,10 @@ def main() -> int:
     post_head=git(repo,"rev-parse","HEAD"); post_clean=not bool(git(repo,"status","--porcelain"))
     if post_head!=ns.expected_head: fail("HEAD_CHANGED_DURING_RUN")
     if not post_clean: fail("SOURCE_TREE_POST_DIRTY")
-    receipt={"schema":"production-hu-domain-v1.2-production-raw-v2","contract_id":"PRODUCTION_HU_DOMAIN_CONTRACT_V1_2","evidence_class":"PRODUCTION_CANDIDATE","binding_use_authorized":False,"policy_sha256":POLICY_SHA256,"runner_sha256":sha(repo/REL_RUNNER),"geometry_source_sha256":sha(geom_path),"geometry_module_sha256":GEOMETRY_MODULE_SHA256,"execution_head":ns.expected_head,"source_tree_pre_clean":True,"source_tree_post_clean":True,"head_unchanged_during_run":True,"runtime_dependency_pins":runtime_actual,"quantity":"H_U","required_sign":"POS","dps":60,"per_box_cap":24000,"parent":parent.record(),"stage_ledger":ledger,"evaluated_boxes":evaluated,"status_counts":status_counts,"terminal_leaves":sorted(terminal.values(),key=lambda r:r["box_id"]),"final_unresolved":[b.record() for b in current],"terminal_leaf_count":len(terminal),"final_unresolved_count":len(current),"total_eval":total_eval,"cover_checks":{},"all_terminal_lo_positive":bool(terminal) and all(Fraction(r["lo"])>0 for r in terminal.values()),"certified_cover_margin_exact":None if margin is None else fstr(margin[0]),"certified_cover_margin_box_id":None if margin is None else margin[1],"cover_margin_is_true_minimum":False,"verdict":verdict}
+    receipt={"schema":"production-hu-domain-v1.2-production-raw-v2","contract_id":"PRODUCTION_HU_DOMAIN_CONTRACT_V1_2","evidence_class":"PRODUCTION_CANDIDATE","binding_use_authorized":False,"policy_sha256":POLICY_SHA256,"runner_sha256":sha(repo/REL_RUNNER),"geometry_source_sha256":sha(geom_path),"geometry_module_sha256":GEOMETRY_MODULE_SHA256,"execution_head":ns.expected_head,"runtime_baseline_head":RUNTIME_BASELINE_HEAD,"runtime_pin_algorithm":"SHA256_CONTENT_BYTES_ONLY","source_tree_pre_clean":True,"source_tree_post_clean":True,"head_unchanged_during_run":True,"runtime_dependency_sha256":runtime_actual,"quantity":"H_U","required_sign":"POS","dps":60,"per_box_cap":24000,"parent":parent.record(),"stage_ledger":ledger,"evaluated_boxes":evaluated,"status_counts":status_counts,"terminal_leaves":sorted(terminal.values(),key=lambda r:r["box_id"]),"final_unresolved":[b.record() for b in current],"terminal_leaf_count":len(terminal),"final_unresolved_count":len(current),"total_eval":total_eval,"cover_checks":{},"all_terminal_lo_positive":bool(terminal) and all(Fraction(r["lo"])>0 for r in terminal.values()),"certified_cover_margin_exact":None if margin is None else fstr(margin[0]),"certified_cover_margin_box_id":None if margin is None else margin[1],"cover_margin_is_true_minimum":False,"verdict":verdict}
     receipt["cover_checks"]={"r_endpoints_exact":not current,"lambda_endpoints_exact":not current,"no_gaps":not current,"no_interior_overlaps":not current,"union_equals_parent":not current}
     ns.out_json.parent.mkdir(parents=True,exist_ok=True); ns.out_json.write_text(json.dumps(receipt,indent=2,sort_keys=True)+"\n")
+    print("RUNTIME_PIN_ALGORITHM=SHA256_CONTENT_BYTES_ONLY"); print("RUNTIME_BASELINE_HEAD="+RUNTIME_BASELINE_HEAD)
     print("SOURCE_TREE_PRE=CLEAN"); print("SOURCE_TREE_POST=CLEAN"); print("HEAD_UNCHANGED_DURING_RUN=TRUE")
     print("EVIDENCE_CLASS=PRODUCTION_CANDIDATE"); print("BINDING_USE_AUTHORIZED=FALSE"); print("VERDICT="+verdict)
     return 0 if not current else 2
