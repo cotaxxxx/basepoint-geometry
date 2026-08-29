@@ -1,0 +1,12 @@
+{
+  "schema": "f-joint-c1-judge-signature-v1",
+  "lemma_id": "F_JOINT_C1",
+  "lemma_path": "CERTIFICATES/prolate/item2_circle/b_tube_v2_1/monotone/F_JOINT_C1_LEMMA_V1.md",
+  "lemma_commit": "64caaf59360e948c9ca393bb2a4611db40671400",
+  "lemma_sha256": "TO_BE_PINNED_BY_JUDGE",
+  "evidence_class_after_approval": "HUMAN_AUDITED",
+  "judge_signature_status": "PENDING",
+  "binding_use_authorized": false,
+  "approved_claim": null,
+  "nonclaims_preserved": true
+}
