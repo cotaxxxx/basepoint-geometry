@@ -1,0 +1,35 @@
+{
+  "judge_receipt": "CELL0_HU_PRODUCTION_PROMOTION_V1",
+  "production_receipt_sha256": "5f3feb5ec12aa09d40eb906d6023efa51676327b0b6af3f51d3c5439a765d39b",
+  "component1_geometry_receipt_sha256": "f60c22cbc1d4a45e5593a64e64194f7e3dbc97df69e1547aca092d2d93b7911f",
+  "production_checker_sha256": "9d8ad733677826411635fd266cc5ad052aca8f9aaa6e9c3f65c16a4ff808dbaa",
+  "release_sha": "6d705c6fbf37ae77d35232a40842692a3e92713e",
+  "narrow_interface": {
+    "all_terminal_lo_positive": true,
+    "union_equals_parent": true,
+    "certified_cover_margin_exact": "195183136874220758369618400321652771495342842368573/196159429230833773869868419475239575503198607639501078528"
+  },
+  "scope": "CELL0_HU_COMPONENT_ONLY",
+  "consumption": "MONOTONE_TUBE_V1_1_ASSEMBLY_ONLY_WITH_SAME_COMPONENT1_SHA",
+  "not_a_tube_theorem_promotion": true,
+  "independent_check": "CHAT_VERIFIED_POSITIVE_CONTROL_CONTENT_AND_COMPONENT1_RECEIPT",
+  "judge_verdict": "PASS",
+  "signed_at": "2026-08-30",
+  "signer_role": "HUMAN_JUDGE",
+  "promotion_effect": {
+    "binding_use_authorized": true,
+    "source_production_receipt_mutated": false,
+    "authorization_source": "THIS_PROMOTION_RECEIPT",
+    "authorized_component": "CELL0_HU_COMPONENT_ONLY"
+  },
+  "cross_component_identity_requirement": {
+    "component1_geometry_receipt_sha256": "f60c22cbc1d4a45e5593a64e64194f7e3dbc97df69e1547aca092d2d93b7911f",
+    "required_for": [
+      "H_U_PRODUCTION",
+      "F_LAMBDA",
+      "JOIN",
+      "MONOTONE_ASSEMBLY"
+    ],
+    "assembly_must_fail_closed_on_sha_mismatch": true
+  }
+}
