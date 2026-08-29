@@ -179,6 +179,14 @@ def main() -> int:
     if evaluations > CAP:
         fail("evaluation cap exceeded")
 
+    post_head = git(repo, "rev-parse", "HEAD")
+    post_clean = not bool(git(repo, "status", "--porcelain"))
+    head_unchanged = post_head == head
+    if not head_unchanged:
+        fail("HEAD changed during run")
+    if not post_clean:
+        fail("SOURCE_TREE_POST dirty")
+
     verdict = "START_JOIN_UNION_MONOTONICITY_PASS" if status == "PASS_POS" else "UNRESOLVED"
     receipt = {
         "schema": "monotone-tube-v1.1-cell0-start-join-union-hu-v1",
@@ -213,15 +221,10 @@ def main() -> int:
         "start_join_union_monotonicity": "PASS" if status == "PASS_POS" else "UNRESOLVED",
         "verdict": verdict,
         "source_tree_pre_clean": True,
+        "source_tree_post_clean": post_clean,
+        "head_unchanged_during_run": head_unchanged,
     }
     ns.out_json.write_text(json.dumps(receipt, indent=2, sort_keys=True) + "\n")
-
-    post_head = git(repo, "rev-parse", "HEAD")
-    post_clean = not bool(git(repo, "status", "--porcelain"))
-    if post_head != head:
-        fail("HEAD changed during run")
-    if not post_clean:
-        fail("SOURCE_TREE_POST dirty")
 
     print("CONTRACT=MONOTONE_TUBE_V1_1")
     print("COMPONENT=START_JOIN_UNION_MONOTONICITY_CERTIFICATE")
@@ -237,6 +240,9 @@ def main() -> int:
     print("EVAL=" + str(evaluations))
     if abort_reason:
         print("ABORT_REASON=" + abort_reason)
+    print("SOURCE_TREE_PRE=CLEAN")
+    print("SOURCE_TREE_POST=CLEAN")
+    print("HEAD_UNCHANGED_DURING_RUN=TRUE")
     print("START_JOIN_UNION_MONOTONICITY=" + receipt["start_join_union_monotonicity"])
     print("VERDICT=" + verdict)
     return 0 if status == "PASS_POS" else 2
