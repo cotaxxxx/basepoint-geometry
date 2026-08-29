@@ -73,7 +73,7 @@ The derivative transport direction introduces no opposing cancellation term: str
 - Parent total cap is `2*24000 + 2*n*24000`, where `n` is the exact derivative-tile count.
 - Post-hoc cap increase is forbidden.
 
-For a `1/4` parent (`n=4`) the declared parent cap is `240000`; for `1/8`, `192000`; for `1/16`, `144000`. A narrower exact residual-only parent (`n=1`) has the same `144000` formula because two anchors and two derivative calls are still counted; any different role-level accounting must be explicitly versioned rather than inferred.
+Therefore the declared parent caps are: `n=4 -> 240000`, `n=3 -> 192000`, `n=2 -> 144000`, and `n=1 -> 96000`. For the nominal parent widths used by the current calibration this corresponds to `1/4 -> 240000`, `1/8 -> 144000`, and `1/16 -> 96000`; an exact residual tiling that yields another tile count uses the formula directly.
 
 ## Fail-closed / abort criteria
 
