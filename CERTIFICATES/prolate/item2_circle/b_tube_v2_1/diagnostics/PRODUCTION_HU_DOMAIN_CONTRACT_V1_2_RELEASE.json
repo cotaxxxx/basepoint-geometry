@@ -39,7 +39,7 @@
   },
   "pins": {
     "independent_checker_path": "CERTIFICATES/prolate/item2_circle/b_tube_v2_1/diagnostics/hu_domain_v1_2_independent_checker.py",
-    "independent_checker_sha256": "TO_BE_PINNED_AFTER_RAW_DIFF_AUDIT",
+    "independent_checker_sha256": "d83d5767c2fcaede1adc0f1c97cd10920b358b402d24d632b0b31bb5f9d26327",
     "producer_runner_path": "CERTIFICATES/prolate/item2_circle/b_tube_v2_1/diagnostics/hu_domain_v1_2_cell0_positive_control.py",
     "producer_runner_sha256": "e5bc568172befe3a368c4fc7c6f0ae18f70dffe685e560a638bf3efb20fb6f50",
     "stage_policy_path": "CERTIFICATES/prolate/item2_circle/b_tube_v2_1/diagnostics/hu_domain_v1_2_stage_policy.json",
@@ -74,6 +74,6 @@
   },
   "release_parent_commit": "83bacd03fe5f120c4e73669e8510287a98666fab",
   "release_sha_rule": "THE_GIT_COMMIT_CONTAINING_THIS_CONTRACT_AND_THE_PINNED_CHECKER_IS_THE_V1_2_RELEASE_SHA",
-  "release_status": "RELEASE_CANDIDATE_PENDING_CHECKER_SHA_AND_RAW_AUDIT",
+  "release_status": "RELEASED_AFTER_POSITIVE_CONTROL_PASS",
   "schema": "production-hu-domain-contract-v1.2-release-v1"
 }
