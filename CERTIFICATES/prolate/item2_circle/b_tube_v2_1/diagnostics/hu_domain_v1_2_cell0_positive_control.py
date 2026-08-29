@@ -272,6 +272,7 @@ def main() -> int:
 
     terminal: dict[str, dict[str, Any]] = {}
     stage_ledger: list[dict[str, Any]] = []
+    evaluated_boxes: list[dict[str, Any]] = []
     total_eval = 0
 
     def evaluate_box(box: Box) -> dict[str, Any]:
@@ -380,6 +381,9 @@ def main() -> int:
         passed = 0
         for child in children:
             rec = evaluate_box(child)
+            evaluated_rec = dict(rec)
+            evaluated_rec["stage_id"] = sid
+            evaluated_boxes.append(evaluated_rec)
             if rec["status"] == "PASS_POS":
                 terminal[child.box_id] = rec
                 passed += 1
@@ -478,6 +482,7 @@ def main() -> int:
         "per_box_cap": cap,
         "parent": parent.as_json(),
         "stage_ledger": stage_ledger,
+        "evaluated_boxes": evaluated_boxes,
         "terminal_leaves": sorted(terminal.values(), key=lambda r: r["box_id"]),
         "final_unresolved": [b.as_json() for b in final_unresolved],
         "terminal_leaf_count": len(terminal),
