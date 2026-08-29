@@ -217,26 +217,48 @@ def validate_semantics(policy: dict[str, Any], receipt: dict[str, Any]) -> dict[
         if not isinstance(sid, str) or not sid:
             fail("EVALUATED_STAGE_ID")
         status = rec.get("status")
-        if status not in ("PASS_POS", "ABORT"):
+        refinable_statuses = {"UNRESOLVED_SIGN", "ABORT_BUDGET", "ABORT_INCOMPLETE_COVER"}
+        hard_fail_statuses = {"ABORT_NONFINITE", "ABORT_INTERNAL"}
+        allowed_statuses = {"PASS_POS", *refinable_statuses, *hard_fail_statuses}
+        if status not in allowed_statuses:
             fail("EVALUATED_STATUS:" + str(bid))
+        if status in hard_fail_statuses:
+            fail("HARD_FAIL_STATUS:" + str(bid) + ":" + str(status))
         ev = rec.get("evaluation_count")
         if not isinstance(ev, int) or ev < 0 or ev > policy["per_box_cap"]:
             fail("EVALUATED_CAP:" + str(bid))
         if rec.get("effective_evaluation_cap") != policy["per_box_cap"]:
             fail("EVALUATED_EFFECTIVE_CAP:" + str(bid))
-        if status == "ABORT":
-            if rec.get("abort_reason") != "ANGULAR_EVALUATION_BUDGET":
-                fail("ABORT_REASON:" + str(bid))
-            if rec.get("lo") is not None or rec.get("hi") is not None:
-                fail("ABORT_INTERVAL_PRESENT:" + str(bid))
-        else:
+        if status == "PASS_POS":
             if rec.get("abort_reason") is not None:
                 fail("PASS_ABORT_REASON:" + str(bid))
+            if rec.get("complete_closed_cover") is not True:
+                fail("PASS_INCOMPLETE_COVER:" + str(bid))
             lo = parse_exact(rec.get("lo"), f"evaluated[{i}].lo")
             hi = parse_exact(rec.get("hi"), f"evaluated[{i}].hi")
             width = parse_exact(rec.get("width"), f"evaluated[{i}].width")
             if width != hi - lo or lo <= 0:
                 fail("EVALUATED_PASS_INTERVAL:" + str(bid))
+        elif status == "UNRESOLVED_SIGN":
+            if rec.get("abort_reason") is not None:
+                fail("UNRESOLVED_SIGN_ABORT_REASON:" + str(bid))
+            if rec.get("complete_closed_cover") is not True:
+                fail("UNRESOLVED_SIGN_COVER:" + str(bid))
+            lo = parse_exact(rec.get("lo"), f"evaluated[{i}].lo")
+            hi = parse_exact(rec.get("hi"), f"evaluated[{i}].hi")
+            width = parse_exact(rec.get("width"), f"evaluated[{i}].width")
+            if width != hi - lo or lo > 0:
+                fail("UNRESOLVED_SIGN_INTERVAL:" + str(bid))
+        elif status == "ABORT_BUDGET":
+            if rec.get("abort_reason") != "ANGULAR_EVALUATION_BUDGET":
+                fail("ABORT_BUDGET_REASON:" + str(bid))
+            if rec.get("lo") is not None or rec.get("hi") is not None or rec.get("width") is not None:
+                fail("ABORT_BUDGET_INTERVAL_PRESENT:" + str(bid))
+        elif status == "ABORT_INCOMPLETE_COVER":
+            if rec.get("abort_reason") != "INCOMPLETE_ANGULAR_COVER":
+                fail("ABORT_INCOMPLETE_COVER_REASON:" + str(bid))
+            if rec.get("complete_closed_cover") is not False:
+                fail("ABORT_INCOMPLETE_COVER_FLAG:" + str(bid))
         evaluated_by_stage.setdefault(sid, []).append(rec)
 
     ledger = receipt.get("stage_ledger")
@@ -251,6 +273,7 @@ def validate_semantics(policy: dict[str, Any], receipt: dict[str, Any]) -> dict[
     raw_total_eval = 0
     raw_total_boxes = 0
     raw_abort_count = 0
+    refinable_status_counts = {"UNRESOLVED_SIGN": 0, "ABORT_BUDGET": 0, "ABORT_INCOMPLETE_COVER": 0}
     ledger_stage_ids: set[str] = set()
 
     for i, led in enumerate(ledger):
@@ -312,8 +335,9 @@ def validate_semantics(policy: dict[str, Any], receipt: dict[str, Any]) -> dict[
                         fail("RAW_TERMINAL_MISMATCH:" + bid + ":" + key)
             else:
                 raw_stage_abort += 1
+                refinable_status_counts[rec["status"]] += 1
                 if not has_strict_descendant(bid, terminal_ids):
-                    fail("RAW_ABORT_WITHOUT_DESCENDANT:" + bid)
+                    fail("RAW_REFINABLE_WITHOUT_DESCENDANT:" + bid)
 
         if raw_pass_count + raw_stage_abort != expected_new:
             fail("RAW_PASS_ABORT_COUNT:" + str(i))
@@ -387,6 +411,7 @@ def validate_semantics(policy: dict[str, Any], receipt: dict[str, Any]) -> dict[
     return {
         "evaluated_box_count": raw_total_boxes,
         "abort_count": raw_abort_count,
+        "refinable_status_counts": refinable_status_counts,
         "terminal_leaf_count": len(terminal_ids),
         "total_eval": raw_total_eval,
         "cover": cover,
