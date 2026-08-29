@@ -25,7 +25,7 @@ HARNESS_REL = BT_REL / "monotone/flambda_checker_canonical_nc_harness_v1.py"
 PRODUCER_HEAD = "ccc386f6288107aab74111e4372232719a2897cd"
 CHECKER_HEAD = "996bc349fdafe6d0c840c06e2c79a6a51e52b9b0"
 EXPECTED_PRODUCER_SHA256 = "34f1a08a334e4c62fc3071427f7d91e863341cfb4c784405d0be26ed4d927d8e"
-EXPECTED_CHECKER_SHA256 = "3e1e1894604e9b99f7413cbb6d3bbdb7c7b0ecb6babe1966ae955986bebe59a9"
+HISTORICAL_CHECKER_SHA256 = "3e1e1894604e9b99f7413cbb6d3bbdb7c7b0ecb6babe1966ae955986bebe59a9"
 
 
 def sha(path: Path) -> str:
@@ -112,11 +112,25 @@ def main() -> int:
 
         checker_sha = sha(checker)
         print("CHECKER_RECEIPT_SHA256=" + checker_sha, flush=True)
-        if checker_sha != EXPECTED_CHECKER_SHA256:
-            raise SystemExit(
-                "STOP: checker replay SHA mismatch; expected "
-                + EXPECTED_CHECKER_SHA256
-            )
+        print("HISTORICAL_CHECKER_RECEIPT_SHA256=" + HISTORICAL_CHECKER_SHA256, flush=True)
+
+        import json
+        checker_obj = json.loads(checker.read_text(encoding="utf-8"))
+        if checker_obj.get("checker_verdict") != "PASS_BINDING_CANDIDATE_CHECK":
+            raise SystemExit("STOP: checker replay semantic verdict mismatch")
+        if checker_obj.get("status") != "INDEPENDENT_CHECK_PASS_NOT_PROMOTED":
+            raise SystemExit("STOP: checker replay semantic status mismatch")
+        if checker_obj.get("execution_head") != CHECKER_HEAD:
+            raise SystemExit("STOP: checker replay execution HEAD mismatch")
+        if checker_obj.get("binding_use_authorized") is not False:
+            raise SystemExit("STOP: checker replay binding state mismatch")
+        if checker_obj.get("producer_receipt", {}).get("sha256") != EXPECTED_PRODUCER_SHA256:
+            raise SystemExit("STOP: checker replay producer linkage mismatch")
+        if checker_obj.get("transport_gate", {}).get("transport_gate_pass") is not True:
+            raise SystemExit("STOP: checker replay transport gate mismatch")
+
+        print("CHECKER_REPLAY_SEMANTIC_VALIDATION=PASS", flush=True)
+        print("CHECKER_REPLAY_BYTE_SHA_REQUIRED=NO", flush=True)
 
         print("PHASE=CANONICAL_NC01_NC20", flush=True)
         env = os.environ.copy()

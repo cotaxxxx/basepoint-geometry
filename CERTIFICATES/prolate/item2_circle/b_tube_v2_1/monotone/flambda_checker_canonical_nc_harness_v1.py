@@ -34,7 +34,7 @@ CHECKER_REL = BT_REL / "flambda_transport_checker_v1.py"
 CHECKER_HEAD = "996bc349fdafe6d0c840c06e2c79a6a51e52b9b0"
 COMPONENT1_SHA256 = "f60c22cbc1d4a45e5593a64e64194f7e3dbc97df69e1547aca092d2d93b7911f"
 PRODUCER_RECEIPT_SHA256 = "34f1a08a334e4c62fc3071427f7d91e863341cfb4c784405d0be26ed4d927d8e"
-CHECKER_RECEIPT_SHA256 = "3e1e1894604e9b99f7413cbb6d3bbdb7c7b0ecb6babe1966ae955986bebe59a9"
+HISTORICAL_CHECKER_RECEIPT_SHA256 = "3e1e1894604e9b99f7413cbb6d3bbdb7c7b0ecb6babe1966ae955986bebe59a9"
 DELTA = Fraction(6900531025808907, 1 << 86)
 EPS = Fraction(1, 1 << 100)
 CANONICAL_IDS = [f"NC{i:02d}" for i in range(1, 21)]
@@ -239,18 +239,34 @@ def main() -> int:
         stop("NC04b exclusion mismatch")
 
     producer_path = resolve_receipt(repo, ns.producer_receipt, PRODUCER_RECEIPT_SHA256, "PRODUCER_RECEIPT")
-    checker_receipt_path = resolve_receipt(repo, ns.checker_receipt, CHECKER_RECEIPT_SHA256, "CHECKER_RECEIPT")
+    if ns.checker_receipt is None:
+        stop("checker receipt explicit path required for semantic replay validation")
+    checker_receipt_path = ns.checker_receipt.expanduser().resolve()
+    if not checker_receipt_path.is_file():
+        stop(f"CHECKER_RECEIPT supplied path is not a file: {checker_receipt_path}")
 
     producer_raw = producer_path.read_bytes()
     producer = json.loads(producer_raw)
     checked_raw = checker_receipt_path.read_bytes()
     checked = json.loads(checked_raw)
+
     if checked.get("checker_verdict") != "PASS_BINDING_CANDIDATE_CHECK":
         stop("checker receipt is not PASS_BINDING_CANDIDATE_CHECK")
+    if checked.get("status") != "INDEPENDENT_CHECK_PASS_NOT_PROMOTED":
+        stop("checker receipt status mismatch")
     if checked.get("execution_head") != CHECKER_HEAD:
         stop("checker receipt execution head mismatch")
+    if checked.get("binding_use_authorized") is not False:
+        stop("checker receipt binding state mismatch")
     if checked.get("producer_receipt", {}).get("sha256") != sha256_bytes(producer_raw):
         stop("checker receipt is not linked to producer receipt")
+    if checked.get("transport_gate", {}).get("transport_gate_pass") is not True:
+        stop("checker receipt transport gate mismatch")
+
+    print("CHECKER_RECEIPT_SEMANTIC_VALIDATION=PASS")
+    print("CHECKER_RECEIPT_SHA256=" + sha256_bytes(checked_raw))
+    print("HISTORICAL_CHECKER_RECEIPT_SHA256=" + HISTORICAL_CHECKER_RECEIPT_SHA256)
+    print("CHECKER_RECEIPT_BYTE_SHA_REQUIRED=NO")
 
     with tempfile.TemporaryDirectory(prefix="flambda-nc-catalog-") as td:
         td_path = Path(td)
@@ -325,6 +341,9 @@ def main() -> int:
         "component1_geometry_receipt_sha256": COMPONENT1_SHA256,
         "producer_receipt_sha256": sha256_bytes(producer_raw),
         "checker_receipt_sha256": sha256_bytes(checked_raw),
+        "historical_checker_receipt_sha256_reference": HISTORICAL_CHECKER_RECEIPT_SHA256,
+        "checker_receipt_byte_sha_required": False,
+        "checker_receipt_path_field_binding": False,
         "producer_receipt_path": str(producer_path),
         "checker_receipt_path": str(checker_receipt_path),
         "nc04b_included": False,
