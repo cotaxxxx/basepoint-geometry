@@ -3,7 +3,7 @@
 Status: `PROTOTYPE / BINDING_CANDIDATE_DESIGN / NOT_PROMOTED`
 
 Producer source: `flambda_transport_producer_v1.py`  
-Producer source commit: `418dc05261554402061568424100d65816fa0c68`  
+Producer source commit: `e6b33ed67952beaed005c9a2ee633bd4a6c19b6c`  
 Producer-source SHA-256 is harvested from these committed UTF-8 bytes and pinned only in `F_LAMBDA_TRANSPORT_PRODUCER_V1_PINS.json`; this document does not self-pin that value.  
 Byte authority remains the repository file plus the subsequent hash-harvest/pin step.
 
@@ -30,7 +30,7 @@ No new mathematical evaluator is introduced.
    - `AffinePredictor.range_hull`;
    - `_adaptive_radius`.
    The producer calls `exact_newton_predictor` directly with `ExactLambdaRoutedEvaluator`; this is the same exact-lambda predictor that `install_exact_lambda_call_sites()` installs into the binding production candidate path, avoiding an unpinned raw-kernel predictor reconstruction.
-2. Exact `F` anchors use the existing `ExactLambdaRoutedEvaluator._evaluate_exact` API with `quantity="F"`, a point `r` interval, exact point lambda, `f_nonzero=True`, and `record=False`.
+2. Exact `F` anchors use the existing `ExactLambdaRoutedEvaluator._evaluate_exact` API with `quantity="F"`, a point `r` interval, exact point lambda, `f_nonzero=True`, and `record=False`. The frozen API returns `(value, interval, evidence)`; the producer reads the per-call count from `evidence["boundary_route_evaluation_count_delta"]` and the route detail from `evidence["detail"]`. It does not assume a fourth return value.
 3. Native derivative tiles use the audited B-LOCAL v2.3 API `blocal_v23_boundary.enclose_route("F_lambda", ...)` with explicit `required_sign="NEG"`, no custom accept predicate, and the pinned native route.
 4. The producer is orchestration/receipt glue only. It does not alter the shared mathematical kernel, frozen v2.2 files, route normalization, or candidate geometry rules.
 
