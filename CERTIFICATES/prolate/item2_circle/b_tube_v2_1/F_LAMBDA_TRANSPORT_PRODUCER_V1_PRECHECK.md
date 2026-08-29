@@ -3,9 +3,9 @@
 Status: `PROTOTYPE / BINDING_CANDIDATE_DESIGN / NOT_PROMOTED`
 
 Producer source: `flambda_transport_producer_v1.py`  
-Producer source commit: `54b6f4618bc57ee6641d74b691fdc4aa8e617f30`  
-Expected producer-source SHA-256 from the submitted UTF-8 source bytes: `05c49599bb84704ce5966d11b73aae90536ca9a389ed3683974aa1eac909c4da`  
-Byte authority remains the repository file and the subsequent hash-harvest/pin step.
+Producer source commit: `418dc05261554402061568424100d65816fa0c68`  
+Producer-source SHA-256 is harvested from these committed UTF-8 bytes and pinned only in `F_LAMBDA_TRANSPORT_PRODUCER_V1_PINS.json`; this document does not self-pin that value.  
+Byte authority remains the repository file plus the subsequent hash-harvest/pin step.
 
 ## Target claim
 
@@ -32,7 +32,39 @@ No new mathematical evaluator is introduced.
    The producer calls `exact_newton_predictor` directly with `ExactLambdaRoutedEvaluator`; this is the same exact-lambda predictor that `install_exact_lambda_call_sites()` installs into the binding production candidate path, avoiding an unpinned raw-kernel predictor reconstruction.
 2. Exact `F` anchors use the existing `ExactLambdaRoutedEvaluator._evaluate_exact` API with `quantity="F"`, a point `r` interval, exact point lambda, `f_nonzero=True`, and `record=False`.
 3. Native derivative tiles use the audited B-LOCAL v2.3 API `blocal_v23_boundary.enclose_route("F_lambda", ...)` with explicit `required_sign="NEG"`, no custom accept predicate, and the pinned native route.
-4. The new file is orchestration/receipt glue only. It does not alter the shared mathematical kernel, frozen v2.2 files, route normalization, or candidate geometry rules.
+4. The producer is orchestration/receipt glue only. It does not alter the shared mathematical kernel, frozen v2.2 files, route normalization, or candidate geometry rules.
+
+## Runtime dependency closure
+
+Before any numerical work, the producer reads the pinned v2.3 source manifest and verifies the exact SHA-256 of every file named by its `legacy_snapshot` against the repository bytes in `dependencies/blocal_v23_source/`. This includes the frozen adapter, v2.2 boundary/model/policy support, phase4 model, symbolic-audit source, and `config.blocal-v2.2-run.json`.
+
+The producer also requires:
+
+- source-manifest `binding_use_authorized=false`;
+- native route ID and quantity pins;
+- explicit mandatory `required_sign=NEG` policy;
+- boundary and shared-kernel SHA agreement with the source manifest;
+- `symbolic_reaudit_required=false` and `symbolic_reaudit_status=PASS_CONTENT_LEVEL`;
+- formula IDs present in the source manifest;
+- the transport receipt and external Judge signature to match the current transport pins with Judge verdict `PASS` and strict-interior scope.
+
+Thus a frozen runtime-support byte mismatch is an abort, not a warning.
+
+## Native proof-object closure
+
+Every native `F_lambda` tile must satisfy the strict NEG sign and cover checks and must also agree with the runtime-pinned proof contract. The producer verifies:
+
+- `native_quantity=true`;
+- ordinary formula ID;
+- Duffy formula ID;
+- transport lemma ID;
+- angular, denominator, square-root, gamma, q-lower-bound, and normalization policy IDs;
+- route policy object equality with the pinned `F_LAMBDA_ROUTE` policy;
+- `effective_evaluation_cap=24000`;
+- normalization-bit equality with the frozen model;
+- route ID, quantity, explicit NEG sign, complete closed cover, and `monkeypatch_used=false`.
+
+These proof fields are copied into the candidate receipt so the independent checker can compare them without trusting the producer verdict.
 
 ## Proof direction
 
@@ -82,11 +114,11 @@ Abort rather than weaken the claim on any of the following:
 
 - HEAD/source/config/kernel/route/formula/transport-receipt/Judge-signature pin mismatch;
 - dirty source tree or unexpected post-baseline file mutation;
+- frozen legacy runtime-support SHA mismatch against the source manifest;
 - reconstructed candidate/parent/endpoint mismatch or endpoint outside the strict interior scope;
 - derivative tiling gap, overlap, reversal, or residual mismatch;
 - anchor `CAP_FAIL`, nonfinite result, unresolved sign, or wrong strict sign;
-- derivative `CAP_FAIL`, nonfinite result, non-NEG enclosure, incomplete cover, route mismatch, quantity mismatch, implicit/wrong sign contract, or monkeypatch use;
-- normalization/manifest mismatch;
+- derivative `CAP_FAIL`, nonfinite result, non-NEG enclosure, incomplete cover, route mismatch, quantity mismatch, implicit/wrong sign contract, proof-contract mismatch, policy mismatch, normalization mismatch, or monkeypatch use;
 - any per-call or parent budget excess;
 - any evidence-class or authorization-state mismatch.
 
