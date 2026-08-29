@@ -219,7 +219,7 @@ def main() -> int:
 
     pyver = platform.python_version()
     pyflint = getattr(flint, "__version__", "UNKNOWN")
-    flintver = getattr(flint, "__flint_version__", "UNKNOWN")
+    flintver = getattr(flint, "__FLINT_VERSION__", "UNKNOWN")
     print("PYTHON_VERSION=" + pyver)
     print("PYTHON_FLINT_VERSION=" + str(pyflint))
     print("FLINT_VERSION=" + str(flintver))
