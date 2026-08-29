@@ -321,8 +321,8 @@ def main() -> int:
             total_eval += ev
             rec["evaluation_count"] = ev
             rec["abort_reason"] = exc.reason
-        except Exception as exc:
-            rec["abort_reason"] = type(exc).__name__ + ":" + str(exc)
+        except Exception:
+            raise
         print("BOX=" + box.box_id)
         print("R_LO=" + fstr(box.r_lo) + " R_HI=" + fstr(box.r_hi))
         print("LAMBDA_LO=" + fstr(box.lambda_lo) + " LAMBDA_HI=" + fstr(box.lambda_hi))
