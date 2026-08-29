@@ -957,6 +957,13 @@ def check_receipt(
 
     ctx.dps = config["checker_dps"]
 
+    # Load the frozen routed-evaluator dependency namespace first.
+    # Native v2.3 modules are imported only after this origin gate succeeds.
+    exact_f = ExactLambdaRoutedEvaluator(raw_kernel, arb, config)
+    exact_f.set_phase(
+        f"CHECKER:CANDIDATE:{producer['candidate_index']}:CELL:{producer['cell_index']}"
+    )
+
     import blocal_arb_adapter as adapter
     import blocal_v22_model as model
     import blocal_v23_boundary as route
@@ -971,11 +978,6 @@ def check_receipt(
     _need(
         transport_gate["transport_gate_pass"] is True,
         "FAIL_TRANSPORT_GATE",
-    )
-
-    exact_f = ExactLambdaRoutedEvaluator(raw_kernel, arb, config)
-    exact_f.set_phase(
-        f"CHECKER:CANDIDATE:{producer['candidate_index']}:CELL:{producer['cell_index']}"
     )
 
     checker_anchors: dict[str, dict[str, Any]] = {}
