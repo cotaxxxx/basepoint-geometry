@@ -111,6 +111,21 @@ def _load_json(path: Path) -> dict[str, Any]:
     return obj
 
 
+def _verify_legacy_snapshot(manifest: dict[str, Any]) -> dict[str, str]:
+    snapshot = manifest.get("legacy_snapshot")
+    _need(isinstance(snapshot, dict) and snapshot, "FAIL_LEGACY_SNAPSHOT_MANIFEST")
+    actual: dict[str, str] = {}
+    for name, expected in sorted(snapshot.items()):
+        _need(isinstance(name, str) and isinstance(expected, str),
+              "FAIL_LEGACY_SNAPSHOT_ENTRY")
+        path = V23 / name
+        _need(path.is_file(), "FAIL_LEGACY_RUNTIME_FILE_MISSING", name)
+        got = _sha(path)
+        _need(got == expected, "FAIL_LEGACY_RUNTIME_SHA", name)
+        actual[name] = got
+    return actual
+
+
 def _precheck(expected_head: str) -> dict[str, Any]:
     _need(len(expected_head) == 40, "FAIL_EXPECTED_HEAD_FORMAT")
     _need(_git("rev-parse", "HEAD") == expected_head, "FAIL_HEAD_MISMATCH")
@@ -156,6 +171,9 @@ def _precheck(expected_head: str) -> dict[str, Any]:
         _need(pins.get(key) == got, "FAIL_PIN_MISMATCH", key)
 
     manifest = _load_json(SOURCE_MANIFEST)
+    _need(manifest.get("binding_use_authorized") is False,
+          "FAIL_MANIFEST_BINDING_AUTHORIZATION")
+    legacy_actual = _verify_legacy_snapshot(manifest)
     native = manifest.get("native_route", {})
     _need(native.get("route_id") == FLAMBDA_ROUTE_ID, "FAIL_ROUTE_ID_PIN")
     _need(native.get("quantity") == "F_lambda", "FAIL_QUANTITY_PIN")
@@ -168,6 +186,14 @@ def _precheck(expected_head: str) -> dict[str, Any]:
           "FAIL_KERNEL_MANIFEST_PIN")
     _need(native.get("transport_lemma_id") == TRANSPORT_LEMMA_ID,
           "FAIL_TRANSPORT_LEMMA_ID")
+    _need(native.get("symbolic_reaudit_required") is False,
+          "FAIL_SYMBOLIC_REAUDIT_REQUIRED")
+    _need(native.get("symbolic_reaudit_status") == "PASS_CONTENT_LEVEL",
+          "FAIL_SYMBOLIC_REAUDIT_STATUS")
+    _need(isinstance(native.get("ordinary_formula_id"), str),
+          "FAIL_ORDINARY_FORMULA_ID_PIN")
+    _need(isinstance(native.get("duffy_formula_id"), str),
+          "FAIL_DUFFY_FORMULA_ID_PIN")
 
     lemma_pins = _load_json(TRANSPORT_PIN_FILE)
     _need(lemma_pins.get("receipt_sha256") == actual["transport_receipt_sha256"],
@@ -195,7 +221,13 @@ def _precheck(expected_head: str) -> dict[str, Any]:
           "FAIL_EVIDENCE_CLASS_PIN")
     _need(pins.get("binding_use_authorized") is False,
           "FAIL_BINDING_AUTHORIZATION_STATE")
-    return {"pins": pins, "actual": actual, "source_baseline_head": source_baseline}
+    return {
+        "pins": pins,
+        "actual": actual,
+        "source_baseline_head": source_baseline,
+        "native_manifest": native,
+        "legacy_snapshot": legacy_actual,
+    }
 
 
 def _reconstruct_geometry(
@@ -350,6 +382,7 @@ def _flambda_records(
     bcfg: dict[str, Any],
     endpoint: Any,
     tiles: list[tuple[Fraction, Fraction]],
+    proof_expectations: dict[str, Any],
 ) -> list[dict[str, Any]]:
     r = endpoint.as_fraction()
     u = Fraction(1) - r
@@ -394,6 +427,15 @@ def _flambda_records(
               "FAIL_FLAMBDA_REQUIRED_SIGN", str(index))
         _need(proof.get("monkeypatch_used") is False,
               "FAIL_FLAMBDA_MONKEYPATCH", str(index))
+        for key, expected in proof_expectations.items():
+            _need(proof.get(key) == expected,
+                  "FAIL_FLAMBDA_PROOF_CONTRACT", f"{index}:{key}")
+        _need(proof.get("policy") == bcfg["route_policies"]["F_LAMBDA_ROUTE"],
+              "FAIL_FLAMBDA_POLICY", str(index))
+        _need(proof.get("effective_evaluation_cap") == FLAMBDA_CELL_CALL_CAP,
+              "FAIL_FLAMBDA_EFFECTIVE_CAP", str(index))
+        _need(proof.get("normalization_bits") == model.NORMALIZATION_BITS,
+              "FAIL_FLAMBDA_NORMALIZATION_BITS", str(index))
         _need(isinstance(used, int) and 0 <= used <= FLAMBDA_CELL_CALL_CAP,
               "FAIL_FLAMBDA_BUDGET", str(index))
         records.append({
@@ -404,6 +446,12 @@ def _flambda_records(
             "proof_id": proof.get("proof_id"),
             "route_id": proof.get("route_id"),
             "complete_closed_cover": proof.get("complete_closed_cover"),
+            "proof_contract": {
+                key: proof.get(key) for key in sorted(proof_expectations)
+            },
+            "policy": proof.get("policy"),
+            "effective_evaluation_cap": proof.get("effective_evaluation_cap"),
+            "normalization_bits": proof.get("normalization_bits"),
             "ordered_children": proof.get("ordered_children"),
             "split_reasons": proof.get("split_reasons"),
         })
@@ -460,16 +508,36 @@ def produce(
     import blocal_v22_model as model
     import blocal_v23_boundary as route
 
+    native = pre["native_manifest"]
+    _need(native.get("ordinary_formula_id") == route.fk.ORDINARY_FORMULA_ID,
+          "FAIL_ORDINARY_FORMULA_RUNTIME_ID")
+    _need(native.get("duffy_formula_id") == route.fk.DUFFY_FORMULA_ID,
+          "FAIL_DUFFY_FORMULA_RUNTIME_ID")
+    _need(route.TRANSPORT_LEMMA_ID == TRANSPORT_LEMMA_ID,
+          "FAIL_TRANSPORT_RUNTIME_ID")
+    proof_expectations = {
+        "native_quantity": True,
+        "ordinary_formula_id": route.fk.ORDINARY_FORMULA_ID,
+        "duffy_formula_id": route.fk.DUFFY_FORMULA_ID,
+        "transport_lemma_id": TRANSPORT_LEMMA_ID,
+        "angular_policy_id": route.policy.ANGULAR_POLICY_ID,
+        "denominator_policy_id": route.policy.DENOMINATOR_POLICY_ID,
+        "sqrt_policy_id": route.policy.SQRT_POLICY_ID,
+        "gamma_policy_id": route.policy.GAMMA_POLICY_ID,
+        "q_lo_policy_id": route.policy.Q_LO_POLICY_ID,
+        "normalization_policy_id": route.policy.NORMALIZATION_POLICY_ID,
+    }
+
     bcfg = _load_v23_boundary_config()
     hi_cells = _flambda_records(
         route=route, model=model, adapter=adapter, raw_kernel=raw_kernel,
         acb_type=acb, arb_type=arb, fmpq_type=fmpq, bcfg=bcfg,
-        endpoint=r_hi, tiles=tiles,
+        endpoint=r_hi, tiles=tiles, proof_expectations=proof_expectations,
     )
     lo_cells = _flambda_records(
         route=route, model=model, adapter=adapter, raw_kernel=raw_kernel,
         acb_type=acb, arb_type=arb, fmpq_type=fmpq, bcfg=bcfg,
-        endpoint=r_lo, tiles=tiles,
+        endpoint=r_lo, tiles=tiles, proof_expectations=proof_expectations,
     )
 
     total_anchor = anchor_hi["evaluation_count"] + anchor_lo["evaluation_count"]
@@ -495,6 +563,7 @@ def produce(
         "source_baseline_head": pre["source_baseline_head"],
         "producer_source_sha256": pre["actual"]["producer_source_sha256"],
         "pins": pre["pins"],
+        "legacy_snapshot_verified": pre["legacy_snapshot"],
         "production_kernel": {
             "path": kernel_path.relative_to(REPO_ROOT).as_posix(),
             "sha256": hashlib.sha256(kernel_path.read_bytes()).hexdigest(),
@@ -524,6 +593,7 @@ def produce(
         "flambda": {
             "route_id": FLAMBDA_ROUTE_ID,
             "required_sign": "NEG",
+            "proof_expectations": proof_expectations,
             "R_HI": hi_cells,
             "R_LO": lo_cells,
         },
