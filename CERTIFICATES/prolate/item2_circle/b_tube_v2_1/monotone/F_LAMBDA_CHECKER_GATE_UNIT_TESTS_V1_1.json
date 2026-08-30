@@ -1,0 +1,42 @@
+{
+  "schema": "flambda-checker-gate-unit-tests-v1.1",
+  "status": "DEFINED_NOT_EXECUTED",
+  "tests": [
+    {
+      "id": "NC10",
+      "gate": "FLAMBDA_CELL_RESULT_SIGN_GATE",
+      "synthetic_enclosure": "strict_positive",
+      "expected_code": "FAIL_SIGN",
+      "end_to_end": false
+    },
+    {
+      "id": "NC11",
+      "gate": "FLAMBDA_CELL_RESULT_SIGN_GATE",
+      "synthetic_enclosure": "zero_containing",
+      "expected_code": "FAIL_UNRESOLVED",
+      "end_to_end": false
+    },
+    {
+      "id": "NC15a",
+      "gate": "ANCHOR_RESULT_SIGN_GATE",
+      "expected_sign": "NEG",
+      "synthetic_enclosure": "violates_NEG",
+      "expected_code": "FAIL_ANCHOR_SIGN_NEG",
+      "end_to_end": false
+    },
+    {
+      "id": "NC15b",
+      "gate": "ANCHOR_RESULT_SIGN_GATE",
+      "expected_sign": "POS",
+      "synthetic_enclosure": "violates_POS",
+      "expected_code": "FAIL_ANCHOR_SIGN_POS",
+      "end_to_end": false
+    }
+  ],
+  "nonclaims": [
+    "gate unit tests only",
+    "not end-to-end numerical transport",
+    "do not replace NC16/NC17",
+    "do not mutate frozen kernel"
+  ]
+}

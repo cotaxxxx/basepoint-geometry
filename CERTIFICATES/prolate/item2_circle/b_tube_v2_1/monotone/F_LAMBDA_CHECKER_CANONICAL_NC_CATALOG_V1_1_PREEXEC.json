@@ -1,0 +1,29 @@
+{
+  "schema": "flambda-checker-canonical-nc-catalog-v1.1-preexec",
+  "status": "PREEXEC_REVISION_READY_FOR_DRY_PRECHECK_AND_A0B_PIN",
+  "binding_use_authorized": false,
+  "execution_authorized": false,
+  "base_commit": "8fb78fc2be8032d9e9e649fbd1c8067720465bd1",
+  "static_contract_coverage": "31/31",
+  "single_exact_subcode_policy": true,
+  "gate_unit_test_controls": [
+    "NC10",
+    "NC11",
+    "NC15a",
+    "NC15b"
+  ],
+  "numeric_tiny_cap_controls": [
+    "NC16",
+    "NC17"
+  ],
+  "authorization_rule": [
+    "dry-precheck exact subcodes frozen",
+    "A0B pin exists and Component1 exact-match",
+    "NC04b frozen",
+    "gate harness raw-reviewed",
+    "clean pinned source tree"
+  ],
+  "controls_file": "F_LAMBDA_CHECKER_CANONICAL_NC_V1_1_PREEXEC_CONTROLS.tsv",
+  "gate_unit_tests_file": "F_LAMBDA_CHECKER_GATE_UNIT_TESTS_V1_1.json",
+  "a0b_pin_extractor": "make_a0b_predictor_pin_v1.py"
+}
