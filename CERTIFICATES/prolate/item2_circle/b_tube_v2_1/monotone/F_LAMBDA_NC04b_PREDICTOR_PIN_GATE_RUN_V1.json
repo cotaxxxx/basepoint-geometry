@@ -1,0 +1,40 @@
+{
+  "a0b_predictor_pin_sha256": "e76380c45f30dbe84a002ced1778415965340ed084796996180f52bbeca2cc2e",
+  "a0b_start_anchors_sha256": "8e70bc71a5dfe564802fc72b0dc187eb67388bab94af068870ada6168a58a334",
+  "all_mutations_pass": true,
+  "binding_use_authorized": false,
+  "component1_geometry_receipt_sha256": "f60c22cbc1d4a45e5593a64e64194f7e3dbc97df69e1547aca092d2d93b7911f",
+  "contract": "F_LAMBDA_CONTRACT_V1.1",
+  "control_id": "NC04b",
+  "end_to_end": false,
+  "execution_head": "2c5ab383facf1b9ffe65ea362dbec75ad515c73f",
+  "expected_exact_code": "FAIL_PREDICTOR_INPUT_PIN",
+  "gate_source_sha256": "0b015fd5956e70055c3edd5a9d19f74ba8f3e2c77e29995c8234f4cb1b8256ab",
+  "head_unchanged_during_run": true,
+  "historical_checker_modified": false,
+  "method": "RECEIPT_MUTATION",
+  "mutation_results": [
+    {
+      "expected_failure_code": "FAIL_PREDICTOR_INPUT_PIN",
+      "mutation_case": "q_left_mutated",
+      "observed_detail": "q_left",
+      "observed_failure_code": "FAIL_PREDICTOR_INPUT_PIN",
+      "status": "PASS"
+    },
+    {
+      "expected_failure_code": "FAIL_PREDICTOR_INPUT_PIN",
+      "mutation_case": "q_right_mutated",
+      "observed_detail": "q_right",
+      "observed_failure_code": "FAIL_PREDICTOR_INPUT_PIN",
+      "status": "PASS"
+    }
+  ],
+  "needs_numerics": false,
+  "pinned_q_left": "16379/16384",
+  "pinned_q_right": "37146414903064381231074827/38685626227668133590597632",
+  "positive_control_exact_pin_match": true,
+  "schema": "flambda-nc04b-predictor-pin-gate-run-v1",
+  "source_tree_post_clean": true,
+  "source_tree_pre_clean": true,
+  "verdict": "NC04b_EXACT_SUBCODE_PASS_NOT_PROMOTED"
+}
