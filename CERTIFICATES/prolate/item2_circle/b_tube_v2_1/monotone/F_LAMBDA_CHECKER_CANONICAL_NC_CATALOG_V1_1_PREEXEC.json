@@ -7,10 +7,18 @@
   "static_contract_coverage": "31/31",
   "single_exact_subcode_policy": true,
   "gate_unit_test_controls": [
+    "NC07",
     "NC10",
     "NC11",
     "NC15a",
-    "NC15b"
+    "NC15b",
+    "NC18",
+    "NC19",
+    "NC22",
+    "NC28a",
+    "NC28b",
+    "NC28c",
+    "NC28d"
   ],
   "numeric_tiny_cap_controls": [
     "NC16",
@@ -25,5 +33,6 @@
   ],
   "controls_file": "F_LAMBDA_CHECKER_CANONICAL_NC_V1_1_PREEXEC_CONTROLS.tsv",
   "gate_unit_tests_file": "F_LAMBDA_CHECKER_GATE_UNIT_TESTS_V1_1.json",
+  "gate_unit_harness_file": "flambda_gate_unit_harness_v1_1.py",
   "a0b_pin_extractor": "make_a0b_predictor_pin_v1.py"
 }

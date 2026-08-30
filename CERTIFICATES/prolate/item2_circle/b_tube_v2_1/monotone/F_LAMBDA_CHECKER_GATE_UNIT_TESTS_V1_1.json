@@ -31,6 +31,62 @@
       "synthetic_enclosure": "violates_POS",
       "expected_code": "FAIL_ANCHOR_SIGN_POS",
       "end_to_end": false
+    },
+    {
+      "id": "NC07",
+      "gate": "LAMBDA_TILING_GATE",
+      "expected_code": "FAIL_LAMBDA_TILING",
+      "end_to_end": false,
+      "implementation_ref": "flambda_nc07_cell_count_gate_v1.py::check_count"
+    },
+    {
+      "id": "NC18",
+      "gate": "PARENT_TOTAL_BUDGET_GATE",
+      "expected_code": "FAIL_CHECKER_PARENT_TOTAL_BUDGET",
+      "end_to_end": false,
+      "implementation_ref": "flambda_transport_checker_v1.py::check_receipt::parent_total_budget"
+    },
+    {
+      "id": "NC19",
+      "gate": "FLAMBDA_CAP_PIN_GATE",
+      "expected_code": "FAIL_CHECKER_FLAMBDA_CAP_PIN",
+      "end_to_end": false,
+      "implementation_ref": "flambda_transport_checker_v1.py::_precheck::checker_flambda_cell_call_cap"
+    },
+    {
+      "id": "NC22",
+      "gate": "PRODUCER_EVIDENCE_CLASS_GATE",
+      "expected_code": "FAIL_PRODUCER_EVIDENCE_CLASS",
+      "end_to_end": false,
+      "implementation_ref": "flambda_transport_checker_v1.py::_load_producer_receipt::evidence_class"
+    },
+    {
+      "id": "NC28a",
+      "gate": "TRANSPORT_LEMMA_ID_GATE",
+      "expected_code": "FAIL_TRANSPORT_LEMMA_ID",
+      "end_to_end": false,
+      "implementation_ref": "flambda_transport_checker_v1.py::_verify_transport_gate::lemma_id"
+    },
+    {
+      "id": "NC28b",
+      "gate": "TRANSPORT_HUMAN_AUDIT_GATE",
+      "expected_code": "FAIL_TRANSPORT_HUMAN_AUDIT",
+      "end_to_end": false,
+      "implementation_ref": "flambda_transport_checker_v1.py::_verify_transport_gate::transport_lemma_human_audit"
+    },
+    {
+      "id": "NC28c",
+      "gate": "JUDGE_VERDICT_GATE",
+      "expected_code": "FAIL_JUDGE_VERDICT",
+      "end_to_end": false,
+      "implementation_ref": "flambda_transport_checker_v1.py::_verify_transport_gate::judge_verdict"
+    },
+    {
+      "id": "NC28d",
+      "gate": "SIGNATURE_RECEIPT_LINK_GATE",
+      "expected_code": "FAIL_SIGNATURE_RECEIPT_LINK",
+      "end_to_end": false,
+      "implementation_ref": "flambda_transport_checker_v1.py::_verify_transport_gate::signature_receipt_sha256"
     }
   ],
   "nonclaims": [
