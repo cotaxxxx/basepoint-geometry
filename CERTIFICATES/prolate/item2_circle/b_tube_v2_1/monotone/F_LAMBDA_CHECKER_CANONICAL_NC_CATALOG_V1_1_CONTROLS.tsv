@@ -1,0 +1,28 @@
+CONTRACT_NC_ID	MUTATION	EXPECTED_IMPLEMENTATION_SUBCODE	CONTRACT_CODE	METHOD	STATUS_OR_NOTE
+NC01	mutate producer/checker F_lambda source pin	FAIL_SOURCE_BASELINE_PIN or FAIL_PIN_MISMATCH	FAIL_SOURCE_PIN	PRECHECK_MUTATION	dedicated control required
+NC02	mutate ordinary formula ID; separately mutate Duffy formula ID	FAIL_ORDINARY_FORMULA_ID_PIN / FAIL_DUFFY_FORMULA_ID_PIN	FAIL_FORMULA_ID	PRECHECK_MUTATION	two subcases under one contract row
+NC03	"submit binding proof object with quantity=""F"" diagnostic route"	FAIL_FLAMBDA_QUANTITY or FAIL_ROUTE_FRAGMENT_QUANTITY	FAIL_ROUTE_QUANTITY_CLASS	RECEIPT_MUTATION	dedicated binding-route quantity-class control
+NC05	remove exact rational portion between adjacent lambda cells	FAIL_LAMBDA_GEOMETRY_RECONSTRUCTION or FAIL_TILE_GAP_OR_OVERLAP	FAIL_LAMBDA_COVER	RECEIPT_MUTATION	dedicated gap control
+NC06	overlap adjacent lambda cell interiors	FAIL_LAMBDA_GEOMETRY_RECONSTRUCTION or FAIL_TILE_GAP_OR_OVERLAP	FAIL_LAMBDA_COVER	RECEIPT_MUTATION	dedicated overlap control
+NC07	use wrong cell count for supported nominal parent width	FAIL_PARENT_WIDTH / FAIL_TILE_WIDTH / FAIL_LAMBDA_GEOMETRY_RECONSTRUCTION	FAIL_LAMBDA_TILING	RECEIPT_MUTATION	freeze one exact emitted subcode after dry precheck
+NC08	use right anchor endpoint for NEG transport	FAIL_ANCHOR_SIDE_DERIVATION	FAIL_WRONG_ANCHOR_ENDPOINT	RECEIPT_MUTATION	
+NC09	use left anchor endpoint for POS transport	FAIL_ANCHOR_SIDE_DERIVATION	FAIL_WRONG_ANCHOR_ENDPOINT	RECEIPT_MUTATION	
+NC10	make/check a cell enclosure with strict positive lo under NEG result contract	FAIL_SIGN or checker-equivalent result-side sign failure	FAIL_SIGN	RECEIPT_MUTATION	keep distinct from REPLAY_NC10_WRONG_SIGN_REQUEST
+NC11	make/check a cell enclosure that contains zero so hi<0 is not proved	FAIL_UNRESOLVED or checker-equivalent enclosure failure	FAIL_UNRESOLVED	RECEIPT_MUTATION	
+NC12	mutate normalization policy / one_over_pi / bits	FAIL_FLAMBDA_NORMALIZATION_BITS	FAIL_NORMALIZATION_MISMATCH	PRECHECK_MUTATION	
+NC13	replace Profile A binding anchor evidence with DIAGNOSTIC_NOT_BINDING artifact	FAIL_ANCHOR_EVIDENCE	FAIL_ANCHOR_EVIDENCE_CLASS	RECEIPT_MUTATION	
+NC14	alter pinned Profile A receipt SHA	FAIL_TRANSPORT_RECEIPT_PIN or FAIL_SIGNATURE_RECEIPT_LINK	FAIL_ANCHOR_PIN	RECEIPT_MUTATION	exact subcode to freeze after targeted dry precheck
+NC15	mutate anchor enclosure/sign to violate strict expected sign	FAIL_ANCHOR_SIGN_NEG / FAIL_ANCHOR_SIGN_POS / FAIL_ANCHOR_SIGN_CONTRACT	FAIL_ANCHOR_SIGN	RECEIPT_MUTATION	select side-specific subcase(s)
+NC16	force F_lambda cell declared call cap exhaustion	FAIL_FLAMBDA_BUDGET	FAIL_BUDGET	NUMERIC_TINY_CAP	numerical control unless receipt mutation chosen
+NC17	force Profile B anchor declared cap exhaustion	FAIL_ANCHOR_BUDGET	FAIL_BUDGET	NUMERIC_TINY_CAP	numerical control unless receipt mutation chosen
+NC18	mutate aggregate evaluations above predeclared parent cap	FAIL_PARENT_TOTAL_BUDGET or FAIL_CHECKER_PARENT_TOTAL_BUDGET	FAIL_PARENT_BUDGET	RECEIPT_MUTATION	
+NC19	mutate final receipt cap so it differs from start-of-contract declared cap	FAIL_FLAMBDA_CAP_PIN / FAIL_ANCHOR_CAP_PIN / FAIL_CHECKER_FLAMBDA_CAP_PIN / FAIL_CHECKER_ANCHOR_CAP_PIN	FAIL_BUDGET_CONTRACT_MUTATION	RECEIPT_MUTATION	choose one load-bearing cap field and freeze exact emitted subcode
+NC21	set candidate nominal parent width outside {1/4,1/8,1/16}	FAIL_PARENT_WIDTH	FAIL_UNSUPPORTED_NOMINAL_WIDTH	PRECHECK_MUTATION	dedicated unsupported-width control
+NC22	change producer evidence class BINDING_CANDIDATE to BINDING	FAIL_PRODUCER_EVIDENCE_CLASS or FAIL_PRODUCER_BINDING_STATE	FAIL_EVIDENCE_CLASS	RECEIPT_MUTATION	self-promotion specific
+NC23	set checker_dps below producer_dps	FAIL_CHECKER_DPS_CONTRACT	FAIL_CHECKER_PRECISION	RECEIPT_MUTATION	
+NC24	mutate supplied lambda_L away from reconstructed value for candidate+cell index	FAIL_LAMBDA_GEOMETRY_RECONSTRUCTION	FAIL_PARENT_GEOMETRY_RECONSTRUCTION	RECEIPT_MUTATION	left-endpoint-specific
+NC25	dirty source tree or move HEAD between pre/post state	FAIL_DIRTY_SOURCE_TREE / FAIL_HEAD_MISMATCH / FAIL_POST_HEAD_MOVED / FAIL_POST_SOURCE_DIRTY	FAIL_SOURCE_STATE	PRECHECK_MUTATION	two subfamilies allowed under one contract row
+NC26	mutate residual: omit/duplicate/non-final/nonpositive/too-wide/wrong final endpoint	FAIL_TILE_* or FAIL_LAMBDA_GEOMETRY_RECONSTRUCTION	FAIL_LAMBDA_TILING	RECEIPT_MUTATION	dedicated residual control; one or more subcases
+NC27	mutate shared frozen F_lambda kernel SHA pin	FAIL_KERNEL_MANIFEST_PIN	FAIL_SOURCE_PIN	PRECHECK_MUTATION	
+NC28	remove/mutate transport lemma ID/audit/Judge/signature receipt link	FAIL_TRANSPORT_LEMMA_ID / FAIL_TRANSPORT_HUMAN_AUDIT / FAIL_JUDGE_VERDICT / FAIL_SIGNATURE_RECEIPT_LINK	FAIL_TRANSPORT_LEMMA	RECEIPT_MUTATION	freeze at least one exact subcase; optionally all
+NC04b	mutate q_left or q_right while leaving A0B exact pin record unchanged	NEW: FAIL_PREDICTOR_INPUT_PIN	FAIL_PREDICTOR_INPUT_PIN	RECEIPT_MUTATION	blocked until A0B exact pin record exists; do not alias existing predictor controls for execution

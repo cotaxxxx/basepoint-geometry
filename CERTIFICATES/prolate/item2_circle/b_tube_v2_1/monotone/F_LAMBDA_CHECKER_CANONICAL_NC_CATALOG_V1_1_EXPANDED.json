@@ -1,0 +1,256 @@
+{
+  "schema": "flambda-checker-canonical-nc-catalog-v1.1-expanded-draft",
+  "status": "DEDICATED_CONTROL_DEFINITIONS_COMPLETE_NOT_EXECUTED",
+  "binding_use_authorized": false,
+  "execution_authorized": false,
+  "base_commit": "f4f9aa65f576a8bb9bbb17b47003d6263fb389c6",
+  "base_contract_sha256": "82ef959461c01444461fc04d65a7f1a697ebc01f31c3d0a6c99f22c64babc0b8",
+  "base_crosswalk_sha256": "3018839625620bca3c7ec6c654630398deb533aa65434dd9e390aad5b7369729",
+  "base_catalog_sha256": "ad56ce74dcffad6359745bcf5b9887978268bc6baa7cad3de71c4e0e76b01c3a",
+  "population": {
+    "total_contract_rows": 31,
+    "already_covered_rows": [
+      "NC04",
+      "NC20",
+      "NC32",
+      "CUSTOM_ACCEPT"
+    ],
+    "dedicated_controls_added": 27,
+    "target_static_coverage_after_definition": "31/31"
+  },
+  "code_policy": {
+    "contract_code_names_are_canonical": true,
+    "implementation_specific_codes_may_be_declared_subcodes": true,
+    "implementation_renaming_required": false
+  },
+  "special_rules": {
+    "NC10_contract_result_side_is_distinct_from_replay_request_side": true,
+    "NC20_shared_pinned_kernel_import_allowed": true,
+    "NC20_producer_glue_or_verdict_logic_import_forbidden": true,
+    "NC04b_requires_A0B_exact_pin_record_before_execution": true,
+    "no_numerical_execution_in_this_stage": true
+  },
+  "controls": [
+    {
+      "contract_nc_id": "NC01",
+      "mutation": "mutate producer/checker F_lambda source pin",
+      "expected_implementation_subcode": "FAIL_SOURCE_BASELINE_PIN or FAIL_PIN_MISMATCH",
+      "contract_code": "FAIL_SOURCE_PIN",
+      "method": "PRECHECK_MUTATION",
+      "status_or_note": "dedicated control required"
+    },
+    {
+      "contract_nc_id": "NC02",
+      "mutation": "mutate ordinary formula ID; separately mutate Duffy formula ID",
+      "expected_implementation_subcode": "FAIL_ORDINARY_FORMULA_ID_PIN / FAIL_DUFFY_FORMULA_ID_PIN",
+      "contract_code": "FAIL_FORMULA_ID",
+      "method": "PRECHECK_MUTATION",
+      "status_or_note": "two subcases under one contract row"
+    },
+    {
+      "contract_nc_id": "NC03",
+      "mutation": "submit binding proof object with quantity=\"F\" diagnostic route",
+      "expected_implementation_subcode": "FAIL_FLAMBDA_QUANTITY or FAIL_ROUTE_FRAGMENT_QUANTITY",
+      "contract_code": "FAIL_ROUTE_QUANTITY_CLASS",
+      "method": "RECEIPT_MUTATION",
+      "status_or_note": "dedicated binding-route quantity-class control"
+    },
+    {
+      "contract_nc_id": "NC05",
+      "mutation": "remove exact rational portion between adjacent lambda cells",
+      "expected_implementation_subcode": "FAIL_LAMBDA_GEOMETRY_RECONSTRUCTION or FAIL_TILE_GAP_OR_OVERLAP",
+      "contract_code": "FAIL_LAMBDA_COVER",
+      "method": "RECEIPT_MUTATION",
+      "status_or_note": "dedicated gap control"
+    },
+    {
+      "contract_nc_id": "NC06",
+      "mutation": "overlap adjacent lambda cell interiors",
+      "expected_implementation_subcode": "FAIL_LAMBDA_GEOMETRY_RECONSTRUCTION or FAIL_TILE_GAP_OR_OVERLAP",
+      "contract_code": "FAIL_LAMBDA_COVER",
+      "method": "RECEIPT_MUTATION",
+      "status_or_note": "dedicated overlap control"
+    },
+    {
+      "contract_nc_id": "NC07",
+      "mutation": "use wrong cell count for supported nominal parent width",
+      "expected_implementation_subcode": "FAIL_PARENT_WIDTH / FAIL_TILE_WIDTH / FAIL_LAMBDA_GEOMETRY_RECONSTRUCTION",
+      "contract_code": "FAIL_LAMBDA_TILING",
+      "method": "RECEIPT_MUTATION",
+      "status_or_note": "freeze one exact emitted subcode after dry precheck"
+    },
+    {
+      "contract_nc_id": "NC08",
+      "mutation": "use right anchor endpoint for NEG transport",
+      "expected_implementation_subcode": "FAIL_ANCHOR_SIDE_DERIVATION",
+      "contract_code": "FAIL_WRONG_ANCHOR_ENDPOINT",
+      "method": "RECEIPT_MUTATION",
+      "status_or_note": ""
+    },
+    {
+      "contract_nc_id": "NC09",
+      "mutation": "use left anchor endpoint for POS transport",
+      "expected_implementation_subcode": "FAIL_ANCHOR_SIDE_DERIVATION",
+      "contract_code": "FAIL_WRONG_ANCHOR_ENDPOINT",
+      "method": "RECEIPT_MUTATION",
+      "status_or_note": ""
+    },
+    {
+      "contract_nc_id": "NC10",
+      "mutation": "make/check a cell enclosure with strict positive lo under NEG result contract",
+      "expected_implementation_subcode": "FAIL_SIGN or checker-equivalent result-side sign failure",
+      "contract_code": "FAIL_SIGN",
+      "method": "RECEIPT_MUTATION",
+      "status_or_note": "keep distinct from REPLAY_NC10_WRONG_SIGN_REQUEST"
+    },
+    {
+      "contract_nc_id": "NC11",
+      "mutation": "make/check a cell enclosure that contains zero so hi<0 is not proved",
+      "expected_implementation_subcode": "FAIL_UNRESOLVED or checker-equivalent enclosure failure",
+      "contract_code": "FAIL_UNRESOLVED",
+      "method": "RECEIPT_MUTATION",
+      "status_or_note": ""
+    },
+    {
+      "contract_nc_id": "NC12",
+      "mutation": "mutate normalization policy / one_over_pi / bits",
+      "expected_implementation_subcode": "FAIL_FLAMBDA_NORMALIZATION_BITS",
+      "contract_code": "FAIL_NORMALIZATION_MISMATCH",
+      "method": "PRECHECK_MUTATION",
+      "status_or_note": ""
+    },
+    {
+      "contract_nc_id": "NC13",
+      "mutation": "replace Profile A binding anchor evidence with DIAGNOSTIC_NOT_BINDING artifact",
+      "expected_implementation_subcode": "FAIL_ANCHOR_EVIDENCE",
+      "contract_code": "FAIL_ANCHOR_EVIDENCE_CLASS",
+      "method": "RECEIPT_MUTATION",
+      "status_or_note": ""
+    },
+    {
+      "contract_nc_id": "NC14",
+      "mutation": "alter pinned Profile A receipt SHA",
+      "expected_implementation_subcode": "FAIL_TRANSPORT_RECEIPT_PIN or FAIL_SIGNATURE_RECEIPT_LINK",
+      "contract_code": "FAIL_ANCHOR_PIN",
+      "method": "RECEIPT_MUTATION",
+      "status_or_note": "exact subcode to freeze after targeted dry precheck"
+    },
+    {
+      "contract_nc_id": "NC15",
+      "mutation": "mutate anchor enclosure/sign to violate strict expected sign",
+      "expected_implementation_subcode": "FAIL_ANCHOR_SIGN_NEG / FAIL_ANCHOR_SIGN_POS / FAIL_ANCHOR_SIGN_CONTRACT",
+      "contract_code": "FAIL_ANCHOR_SIGN",
+      "method": "RECEIPT_MUTATION",
+      "status_or_note": "select side-specific subcase(s)"
+    },
+    {
+      "contract_nc_id": "NC16",
+      "mutation": "force F_lambda cell declared call cap exhaustion",
+      "expected_implementation_subcode": "FAIL_FLAMBDA_BUDGET",
+      "contract_code": "FAIL_BUDGET",
+      "method": "NUMERIC_TINY_CAP",
+      "status_or_note": "numerical control unless receipt mutation chosen"
+    },
+    {
+      "contract_nc_id": "NC17",
+      "mutation": "force Profile B anchor declared cap exhaustion",
+      "expected_implementation_subcode": "FAIL_ANCHOR_BUDGET",
+      "contract_code": "FAIL_BUDGET",
+      "method": "NUMERIC_TINY_CAP",
+      "status_or_note": "numerical control unless receipt mutation chosen"
+    },
+    {
+      "contract_nc_id": "NC18",
+      "mutation": "mutate aggregate evaluations above predeclared parent cap",
+      "expected_implementation_subcode": "FAIL_PARENT_TOTAL_BUDGET or FAIL_CHECKER_PARENT_TOTAL_BUDGET",
+      "contract_code": "FAIL_PARENT_BUDGET",
+      "method": "RECEIPT_MUTATION",
+      "status_or_note": ""
+    },
+    {
+      "contract_nc_id": "NC19",
+      "mutation": "mutate final receipt cap so it differs from start-of-contract declared cap",
+      "expected_implementation_subcode": "FAIL_FLAMBDA_CAP_PIN / FAIL_ANCHOR_CAP_PIN / FAIL_CHECKER_FLAMBDA_CAP_PIN / FAIL_CHECKER_ANCHOR_CAP_PIN",
+      "contract_code": "FAIL_BUDGET_CONTRACT_MUTATION",
+      "method": "RECEIPT_MUTATION",
+      "status_or_note": "choose one load-bearing cap field and freeze exact emitted subcode"
+    },
+    {
+      "contract_nc_id": "NC21",
+      "mutation": "set candidate nominal parent width outside {1/4,1/8,1/16}",
+      "expected_implementation_subcode": "FAIL_PARENT_WIDTH",
+      "contract_code": "FAIL_UNSUPPORTED_NOMINAL_WIDTH",
+      "method": "PRECHECK_MUTATION",
+      "status_or_note": "dedicated unsupported-width control"
+    },
+    {
+      "contract_nc_id": "NC22",
+      "mutation": "change producer evidence class BINDING_CANDIDATE to BINDING",
+      "expected_implementation_subcode": "FAIL_PRODUCER_EVIDENCE_CLASS or FAIL_PRODUCER_BINDING_STATE",
+      "contract_code": "FAIL_EVIDENCE_CLASS",
+      "method": "RECEIPT_MUTATION",
+      "status_or_note": "self-promotion specific"
+    },
+    {
+      "contract_nc_id": "NC23",
+      "mutation": "set checker_dps below producer_dps",
+      "expected_implementation_subcode": "FAIL_CHECKER_DPS_CONTRACT",
+      "contract_code": "FAIL_CHECKER_PRECISION",
+      "method": "RECEIPT_MUTATION",
+      "status_or_note": ""
+    },
+    {
+      "contract_nc_id": "NC24",
+      "mutation": "mutate supplied lambda_L away from reconstructed value for candidate+cell index",
+      "expected_implementation_subcode": "FAIL_LAMBDA_GEOMETRY_RECONSTRUCTION",
+      "contract_code": "FAIL_PARENT_GEOMETRY_RECONSTRUCTION",
+      "method": "RECEIPT_MUTATION",
+      "status_or_note": "left-endpoint-specific"
+    },
+    {
+      "contract_nc_id": "NC25",
+      "mutation": "dirty source tree or move HEAD between pre/post state",
+      "expected_implementation_subcode": "FAIL_DIRTY_SOURCE_TREE / FAIL_HEAD_MISMATCH / FAIL_POST_HEAD_MOVED / FAIL_POST_SOURCE_DIRTY",
+      "contract_code": "FAIL_SOURCE_STATE",
+      "method": "PRECHECK_MUTATION",
+      "status_or_note": "two subfamilies allowed under one contract row"
+    },
+    {
+      "contract_nc_id": "NC26",
+      "mutation": "mutate residual: omit/duplicate/non-final/nonpositive/too-wide/wrong final endpoint",
+      "expected_implementation_subcode": "FAIL_TILE_* or FAIL_LAMBDA_GEOMETRY_RECONSTRUCTION",
+      "contract_code": "FAIL_LAMBDA_TILING",
+      "method": "RECEIPT_MUTATION",
+      "status_or_note": "dedicated residual control; one or more subcases"
+    },
+    {
+      "contract_nc_id": "NC27",
+      "mutation": "mutate shared frozen F_lambda kernel SHA pin",
+      "expected_implementation_subcode": "FAIL_KERNEL_MANIFEST_PIN",
+      "contract_code": "FAIL_SOURCE_PIN",
+      "method": "PRECHECK_MUTATION",
+      "status_or_note": ""
+    },
+    {
+      "contract_nc_id": "NC28",
+      "mutation": "remove/mutate transport lemma ID/audit/Judge/signature receipt link",
+      "expected_implementation_subcode": "FAIL_TRANSPORT_LEMMA_ID / FAIL_TRANSPORT_HUMAN_AUDIT / FAIL_JUDGE_VERDICT / FAIL_SIGNATURE_RECEIPT_LINK",
+      "contract_code": "FAIL_TRANSPORT_LEMMA",
+      "method": "RECEIPT_MUTATION",
+      "status_or_note": "freeze at least one exact subcase; optionally all"
+    },
+    {
+      "contract_nc_id": "NC04b",
+      "mutation": "mutate q_left or q_right while leaving A0B exact pin record unchanged",
+      "expected_implementation_subcode": "NEW: FAIL_PREDICTOR_INPUT_PIN",
+      "contract_code": "FAIL_PREDICTOR_INPUT_PIN",
+      "method": "RECEIPT_MUTATION",
+      "status_or_note": "blocked until A0B exact pin record exists; do not alias existing predictor controls for execution"
+    }
+  ],
+  "execution_blockers": [
+    "targeted dry-precheck needed where exact emitted implementation subcode is still given as alternatives",
+    "NC04b blocked until A0B exact q_left/q_right pin record is created",
+    "NC16 and NC17 require declared tiny-cap numerical runs unless checker-gate receipt mutation is explicitly selected and documented"
+  ]
+}
