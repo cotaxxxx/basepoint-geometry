@@ -1,267 +1,430 @@
 {
   "schema": "flambda-checker-canonical-nc-catalog-v1.1-draft",
-  "status": "DRAFT_STATIC_CROSSWALK_NOT_EXECUTED",
+  "status": "STATIC_CROSSWALK_COMPLETE_NOT_EXECUTED",
   "binding_use_authorized": false,
-  "canonical_v1_execution_observed": "20/20 PASS",
-  "contract_row_population": "NC01..NC28 + NC32 + NC04b + CUSTOM_ACCEPT = 31 rows",
-  "historical_contract_number_to_semantics_table_recovered": false,
-  "unrecovered_contract_rows_must_not_be_guessed": true,
-  "existing_canonical_v1_controls": [
+  "execution_authorized": false,
+  "contract_source": {
+    "artifact": "F_LAMBDA_CONTRACT_V1_1_NEGATIVE_CONTROLS_RECOVERED.tsv",
+    "source": "design chat 2026-08-29 (F_LAMBDA_CONTRACT_DRAFT_V1 §14, V1.1 §6, explicit-NEG replay additions)",
+    "recovered_by": "AI2 (chat) from primary contract drafts exchanged in design session",
+    "status": "CONTRACT_SIDE_POPULATION_FOR_CROSSWALK",
+    "row_count": 31,
+    "code_policy": "contract code names canonical; implementation-specific codes are declared sub-codes in crosswalk"
+  },
+  "canonical_v1_observed": {
+    "count": 20,
+    "result": "20/20 PASS"
+  },
+  "coverage_counts": {
+    "COVERED": 4,
+    "PARTIAL": 8,
+    "MISSING": 19
+  },
+  "contract_rows": [
     {
-      "id": "NC01",
-      "mutation": "PRODUCER_SCHEMA_INVALID",
-      "expected_failure_code": "FAIL_PRODUCER_SCHEMA"
+      "contract_nc_id": "NC01",
+      "name": "SOURCE_SHA_MISMATCH",
+      "mutation_trigger": "mutate producer/checker F_lambda source pin",
+      "contract_expected_code": "FAIL_SOURCE_PIN",
+      "needs_numerics": "no",
+      "catalog_ids": [],
+      "catalog_observed_code": "",
+      "implementation_subcode_mapping": "FAIL_SOURCE_BASELINE_PIN;FAIL_PIN_MISMATCH -> FAIL_SOURCE_PIN",
+      "coverage": "MISSING",
+      "note": "dedicated contract control still needed"
     },
     {
-      "id": "NC02",
-      "mutation": "PRODUCER_EVIDENCE_CLASS_INVALID",
-      "expected_failure_code": "FAIL_PRODUCER_EVIDENCE_CLASS"
+      "contract_nc_id": "NC02",
+      "name": "FORMULA_ID_MISMATCH",
+      "mutation_trigger": "ordinary or Duffy formula ID wrong",
+      "contract_expected_code": "FAIL_FORMULA_ID",
+      "needs_numerics": "no",
+      "catalog_ids": [],
+      "catalog_observed_code": "",
+      "implementation_subcode_mapping": "FAIL_ORDINARY_FORMULA_ID_PIN;FAIL_DUFFY_FORMULA_ID_PIN -> FAIL_FORMULA_ID",
+      "coverage": "MISSING",
+      "note": ""
     },
     {
-      "id": "NC03",
-      "mutation": "PRODUCER_BINDING_USE_AUTHORIZED_TRUE",
-      "expected_failure_code": "FAIL_PRODUCER_BINDING_STATE"
+      "contract_nc_id": "NC03",
+      "name": "DIAGNOSTIC_MONKEYPATCH_AS_BINDING",
+      "mutation_trigger": "submit quantity=\"F\" diagnostic proof object",
+      "contract_expected_code": "FAIL_ROUTE_QUANTITY_CLASS",
+      "needs_numerics": "no",
+      "catalog_ids": [],
+      "catalog_observed_code": "",
+      "implementation_subcode_mapping": "FAIL_FLAMBDA_QUANTITY;FAIL_ROUTE_FRAGMENT_QUANTITY -> FAIL_ROUTE_QUANTITY_CLASS",
+      "coverage": "MISSING",
+      "note": ""
     },
     {
-      "id": "NC04",
-      "mutation": "WIDEN_BOTH_PHYSICAL_TUBE_ENDPOINTS_BY_DIAGNOSTIC_DELTA",
-      "expected_failure_code": "FAIL_TUBE_GEOMETRY_RECONSTRUCTION"
+      "contract_nc_id": "NC04",
+      "name": "TUBE_ENDPOINT_LITERAL_SUBSTITUTION",
+      "mutation_trigger": "alter recorded r endpoint (±Δ) without altering candidate geometry",
+      "contract_expected_code": "FAIL_TUBE_GEOMETRY_RECONSTRUCTION",
+      "needs_numerics": "no",
+      "catalog_ids": [
+        "CANONICAL_V1_NC04"
+      ],
+      "catalog_observed_code": "FAIL_TUBE_GEOMETRY_RECONSTRUCTION",
+      "implementation_subcode_mapping": "identity",
+      "coverage": "COVERED",
+      "note": ""
     },
     {
-      "id": "NC05",
-      "mutation": "CHECKER_REQUIRED_FALSE",
-      "expected_failure_code": "FAIL_PRODUCER_CHECKER_REQUIRED"
+      "contract_nc_id": "NC05",
+      "name": "CELL_GAP",
+      "mutation_trigger": "remove exact rational portion between adjacent λ cells",
+      "contract_expected_code": "FAIL_LAMBDA_COVER",
+      "needs_numerics": "no",
+      "catalog_ids": [
+        "CANONICAL_V1_NC19"
+      ],
+      "catalog_observed_code": "FAIL_LAMBDA_GEOMETRY_RECONSTRUCTION",
+      "implementation_subcode_mapping": "FAIL_LAMBDA_GEOMETRY_RECONSTRUCTION -> FAIL_LAMBDA_COVER (scope differs)",
+      "coverage": "PARTIAL",
+      "note": "dedicated gap control required"
     },
     {
-      "id": "NC06",
-      "mutation": "HUMAN_PROMOTION_REQUIRED_FALSE",
-      "expected_failure_code": "FAIL_PRODUCER_HUMAN_PROMOTION_REQUIRED"
+      "contract_nc_id": "NC06",
+      "name": "CELL_OVERLAP",
+      "mutation_trigger": "overlap adjacent λ cell interiors",
+      "contract_expected_code": "FAIL_LAMBDA_COVER",
+      "needs_numerics": "no",
+      "catalog_ids": [
+        "CANONICAL_V1_NC19"
+      ],
+      "catalog_observed_code": "FAIL_LAMBDA_GEOMETRY_RECONSTRUCTION",
+      "implementation_subcode_mapping": "FAIL_LAMBDA_GEOMETRY_RECONSTRUCTION -> FAIL_LAMBDA_COVER (scope differs)",
+      "coverage": "PARTIAL",
+      "note": "dedicated overlap control required"
     },
     {
-      "id": "NC07",
-      "mutation": "PRODUCER_VERDICT_INVALID",
-      "expected_failure_code": "FAIL_PRODUCER_VERDICT"
+      "contract_nc_id": "NC07",
+      "name": "WRONG_CELL_COUNT",
+      "mutation_trigger": "4 cells for width 1/8, or 2 for width 1/4",
+      "contract_expected_code": "FAIL_LAMBDA_TILING",
+      "needs_numerics": "no",
+      "catalog_ids": [],
+      "catalog_observed_code": "",
+      "implementation_subcode_mapping": "FAIL_TILE_WIDTH/FAIL_PARENT_WIDTH candidates -> FAIL_LAMBDA_TILING",
+      "coverage": "MISSING",
+      "note": ""
     },
     {
-      "id": "NC08",
-      "mutation": "CANDIDATE_INDEX_BOOL",
-      "expected_failure_code": "FAIL_CANDIDATE_INDEX"
+      "contract_nc_id": "NC08",
+      "name": "WRONG_ANCHOR_ENDPOINT_RHI",
+      "mutation_trigger": "right anchor used for NEG transport",
+      "contract_expected_code": "FAIL_WRONG_ANCHOR_ENDPOINT",
+      "needs_numerics": "no",
+      "catalog_ids": [],
+      "catalog_observed_code": "",
+      "implementation_subcode_mapping": "FAIL_ANCHOR_SIDE_DERIVATION -> FAIL_WRONG_ANCHOR_ENDPOINT",
+      "coverage": "MISSING",
+      "note": ""
     },
     {
-      "id": "NC09",
-      "mutation": "PREDICTOR_OBJECT_REMOVED",
-      "expected_failure_code": "FAIL_PREDICTOR_INPUT"
+      "contract_nc_id": "NC09",
+      "name": "WRONG_ANCHOR_ENDPOINT_RLO",
+      "mutation_trigger": "left anchor used for POS transport",
+      "contract_expected_code": "FAIL_WRONG_ANCHOR_ENDPOINT",
+      "needs_numerics": "no",
+      "catalog_ids": [],
+      "catalog_observed_code": "",
+      "implementation_subcode_mapping": "FAIL_ANCHOR_SIDE_DERIVATION -> FAIL_WRONG_ANCHOR_ENDPOINT",
+      "coverage": "MISSING",
+      "note": ""
     },
     {
-      "id": "NC10",
-      "mutation": "PREDICTOR_Q_LEFT_ZERO",
-      "expected_failure_code": "FAIL_PREDICTOR_HULL_INTERIOR"
+      "contract_nc_id": "NC10",
+      "name": "FLAMBDA_STRICT_POS",
+      "mutation_trigger": "checker obtains lo>0 on any F_lambda cell",
+      "contract_expected_code": "FAIL_SIGN",
+      "needs_numerics": "yes_or_receipt_mutation",
+      "catalog_ids": [
+        "REPLAY_NC10_WRONG_SIGN_REQUEST"
+      ],
+      "catalog_observed_code": "FAIL_SIGN_CONTRACT",
+      "implementation_subcode_mapping": "request-side replay is distinct; result-side FAIL_SIGN still required",
+      "coverage": "PARTIAL",
+      "note": "keep replay control separate"
     },
     {
-      "id": "NC11",
-      "mutation": "NOMINAL_LAMBDA_WIDTH_CORRUPTED",
-      "expected_failure_code": "FAIL_TUBE_GEOMETRY_RECONSTRUCTION"
+      "contract_nc_id": "NC11",
+      "name": "FLAMBDA_ZERO_CONTAINING",
+      "mutation_trigger": "checker cannot prove hi<0 on a cell",
+      "contract_expected_code": "FAIL_UNRESOLVED",
+      "needs_numerics": "yes_or_receipt_mutation",
+      "catalog_ids": [],
+      "catalog_observed_code": "",
+      "implementation_subcode_mapping": "FAIL_FLAMBDA_SIGN/FAIL_FLAMBDA_BUDGET_OR_ENCLOSURE candidate -> FAIL_UNRESOLVED",
+      "coverage": "MISSING",
+      "note": ""
     },
     {
-      "id": "NC12",
-      "mutation": "RADIUS_CAP_CORRUPTED",
-      "expected_failure_code": "FAIL_TUBE_GEOMETRY_RECONSTRUCTION"
+      "contract_nc_id": "NC12",
+      "name": "NORMALIZATION_MUTATION",
+      "mutation_trigger": "alter normalization policy / one_over_pi / bits",
+      "contract_expected_code": "FAIL_NORMALIZATION_MISMATCH",
+      "needs_numerics": "no",
+      "catalog_ids": [],
+      "catalog_observed_code": "",
+      "implementation_subcode_mapping": "FAIL_FLAMBDA_NORMALIZATION_BITS -> FAIL_NORMALIZATION_MISMATCH",
+      "coverage": "MISSING",
+      "note": ""
     },
     {
-      "id": "NC13",
-      "mutation": "ADAPTIVE_RADIUS_CORRUPTED",
-      "expected_failure_code": "FAIL_TUBE_GEOMETRY_RECONSTRUCTION"
+      "contract_nc_id": "NC13",
+      "name": "ANCHOR_DIAGNOSTIC_RECEIPT_AS_PROFILE_A",
+      "mutation_trigger": "supply DIAGNOSTIC_NOT_BINDING anchor artifact as Profile A",
+      "contract_expected_code": "FAIL_ANCHOR_EVIDENCE_CLASS",
+      "needs_numerics": "no",
+      "catalog_ids": [],
+      "catalog_observed_code": "",
+      "implementation_subcode_mapping": "FAIL_ANCHOR_EVIDENCE -> FAIL_ANCHOR_EVIDENCE_CLASS",
+      "coverage": "MISSING",
+      "note": ""
     },
     {
-      "id": "NC14",
-      "mutation": "TUBE_INTERVAL_LO_CORRUPTED",
-      "expected_failure_code": "FAIL_TUBE_GEOMETRY_RECONSTRUCTION"
+      "contract_nc_id": "NC14",
+      "name": "ANCHOR_RECEIPT_SHA_MISMATCH",
+      "mutation_trigger": "Profile A receipt altered",
+      "contract_expected_code": "FAIL_ANCHOR_PIN",
+      "needs_numerics": "no",
+      "catalog_ids": [],
+      "catalog_observed_code": "",
+      "implementation_subcode_mapping": "FAIL_TRANSPORT_RECEIPT_PIN/FAIL_SIGNATURE_RECEIPT_LINK candidate -> FAIL_ANCHOR_PIN",
+      "coverage": "MISSING",
+      "note": ""
     },
     {
-      "id": "NC15",
-      "mutation": "R_LO_CORRUPTED",
-      "expected_failure_code": "FAIL_TUBE_GEOMETRY_RECONSTRUCTION"
+      "contract_nc_id": "NC15",
+      "name": "ANCHOR_WRONG_SIGN",
+      "mutation_trigger": "left R_HI anchor not strict NEG or right R_LO anchor not strict POS",
+      "contract_expected_code": "FAIL_ANCHOR_SIGN",
+      "needs_numerics": "yes_or_receipt_mutation",
+      "catalog_ids": [],
+      "catalog_observed_code": "",
+      "implementation_subcode_mapping": "FAIL_ANCHOR_SIGN_NEG;FAIL_ANCHOR_SIGN_POS;FAIL_ANCHOR_SIGN_CONTRACT -> FAIL_ANCHOR_SIGN",
+      "coverage": "MISSING",
+      "note": ""
     },
     {
-      "id": "NC16",
-      "mutation": "R_HI_CORRUPTED",
-      "expected_failure_code": "FAIL_TUBE_GEOMETRY_RECONSTRUCTION"
+      "contract_nc_id": "NC16",
+      "name": "CELL_CAP_EXHAUSTION",
+      "mutation_trigger": "F_lambda cell reaches declared call cap",
+      "contract_expected_code": "FAIL_BUDGET",
+      "needs_numerics": "yes_tiny_cap",
+      "catalog_ids": [],
+      "catalog_observed_code": "",
+      "implementation_subcode_mapping": "FAIL_FLAMBDA_BUDGET -> FAIL_BUDGET",
+      "coverage": "MISSING",
+      "note": ""
     },
     {
-      "id": "NC17",
-      "mutation": "CELL_INDEX_BOOL",
-      "expected_failure_code": "FAIL_CELL_INDEX"
+      "contract_nc_id": "NC17",
+      "name": "ANCHOR_CAP_EXHAUSTION",
+      "mutation_trigger": "Profile B anchor reaches declared cap",
+      "contract_expected_code": "FAIL_BUDGET",
+      "needs_numerics": "yes_tiny_cap",
+      "catalog_ids": [],
+      "catalog_observed_code": "",
+      "implementation_subcode_mapping": "FAIL_ANCHOR_BUDGET -> FAIL_BUDGET",
+      "coverage": "MISSING",
+      "note": ""
     },
     {
-      "id": "NC18",
-      "mutation": "CANDIDATE_PARENT_HI_CORRUPTED",
-      "expected_failure_code": "FAIL_LAMBDA_GEOMETRY_RECONSTRUCTION"
+      "contract_nc_id": "NC18",
+      "name": "PARENT_TOTAL_CAP_EXCEEDED",
+      "mutation_trigger": "aggregate evaluations exceed predeclared parent cap",
+      "contract_expected_code": "FAIL_PARENT_BUDGET",
+      "needs_numerics": "no_receipt_mutation",
+      "catalog_ids": [],
+      "catalog_observed_code": "",
+      "implementation_subcode_mapping": "FAIL_PARENT_TOTAL_BUDGET;FAIL_CHECKER_PARENT_TOTAL_BUDGET -> FAIL_PARENT_BUDGET",
+      "coverage": "MISSING",
+      "note": ""
     },
     {
-      "id": "NC19",
-      "mutation": "TILES_FIRST_HI_CORRUPTED",
-      "expected_failure_code": "FAIL_LAMBDA_GEOMETRY_RECONSTRUCTION"
+      "contract_nc_id": "NC19",
+      "name": "POST_HOC_CAP_MUTATION",
+      "mutation_trigger": "cap differs between contract start and final receipt",
+      "contract_expected_code": "FAIL_BUDGET_CONTRACT_MUTATION",
+      "needs_numerics": "no",
+      "catalog_ids": [],
+      "catalog_observed_code": "",
+      "implementation_subcode_mapping": "FAIL_FLAMBDA_CAP_PIN;FAIL_ANCHOR_CAP_PIN;FAIL_CHECKER_*_CAP_PIN -> FAIL_BUDGET_CONTRACT_MUTATION",
+      "coverage": "MISSING",
+      "note": ""
     },
     {
-      "id": "NC20",
-      "mutation": "RUNTIME_PRODUCER_GLUE_MODULE_INJECTION",
-      "expected_failure_code": "FAIL_PRODUCER_GLUE_DEPENDENCY"
+      "contract_nc_id": "NC20",
+      "name": "CHECKER_IMPORTS_PRODUCER_GLUE",
+      "mutation_trigger": "checker dependency graph contains producer glue/verdict logic; shared kernel import allowed",
+      "contract_expected_code": "FAIL_CHECKER_NOT_INDEPENDENT",
+      "needs_numerics": "no",
+      "catalog_ids": [
+        "CANONICAL_V1_NC20"
+      ],
+      "catalog_observed_code": "FAIL_PRODUCER_GLUE_DEPENDENCY",
+      "implementation_subcode_mapping": "FAIL_PRODUCER_GLUE_DEPENDENCY -> FAIL_CHECKER_NOT_INDEPENDENT",
+      "coverage": "COVERED",
+      "note": "shared pinned kernel remains allowed"
+    },
+    {
+      "contract_nc_id": "NC21",
+      "name": "UNSUPPORTED_NOMINAL_PARENT_WIDTH",
+      "mutation_trigger": "candidate nominal width not in {1/4,1/8,1/16}",
+      "contract_expected_code": "FAIL_UNSUPPORTED_NOMINAL_WIDTH",
+      "needs_numerics": "no",
+      "catalog_ids": [
+        "CANONICAL_V1_NC11"
+      ],
+      "catalog_observed_code": "FAIL_TUBE_GEOMETRY_RECONSTRUCTION",
+      "implementation_subcode_mapping": "FAIL_PARENT_WIDTH -> FAIL_UNSUPPORTED_NOMINAL_WIDTH",
+      "coverage": "PARTIAL",
+      "note": "existing v1 mutation is related but not dedicated unsupported-width control"
+    },
+    {
+      "contract_nc_id": "NC22",
+      "name": "EVIDENCE_CLASS_SELF_PROMOTION",
+      "mutation_trigger": "producer changes BINDING_CANDIDATE to BINDING",
+      "contract_expected_code": "FAIL_EVIDENCE_CLASS",
+      "needs_numerics": "no",
+      "catalog_ids": [
+        "CANONICAL_V1_NC02"
+      ],
+      "catalog_observed_code": "FAIL_PRODUCER_EVIDENCE_CLASS",
+      "implementation_subcode_mapping": "FAIL_PRODUCER_EVIDENCE_CLASS -> FAIL_EVIDENCE_CLASS",
+      "coverage": "PARTIAL",
+      "note": "need explicit BINDING_CANDIDATE->BINDING mutation"
+    },
+    {
+      "contract_nc_id": "NC23",
+      "name": "CHECKER_DPS_BELOW_PRODUCER",
+      "mutation_trigger": "checker_dps < producer_dps",
+      "contract_expected_code": "FAIL_CHECKER_PRECISION",
+      "needs_numerics": "no",
+      "catalog_ids": [],
+      "catalog_observed_code": "",
+      "implementation_subcode_mapping": "FAIL_CHECKER_DPS_CONTRACT -> FAIL_CHECKER_PRECISION",
+      "coverage": "MISSING",
+      "note": ""
+    },
+    {
+      "contract_nc_id": "NC24",
+      "name": "PARENT_LEFT_ENDPOINT_MISMATCH",
+      "mutation_trigger": "supplied λ_L differs from value reconstructed from candidate index + cell index",
+      "contract_expected_code": "FAIL_PARENT_GEOMETRY_RECONSTRUCTION",
+      "needs_numerics": "no",
+      "catalog_ids": [
+        "CANONICAL_V1_NC18"
+      ],
+      "catalog_observed_code": "FAIL_LAMBDA_GEOMETRY_RECONSTRUCTION",
+      "implementation_subcode_mapping": "FAIL_LAMBDA_GEOMETRY_RECONSTRUCTION -> FAIL_PARENT_GEOMETRY_RECONSTRUCTION",
+      "coverage": "PARTIAL",
+      "note": "existing mutation hits parent-hi not required left endpoint"
+    },
+    {
+      "contract_nc_id": "NC25",
+      "name": "SOURCE_STATE_MISMATCH",
+      "mutation_trigger": "pre/post HEAD mismatch or dirty tree",
+      "contract_expected_code": "FAIL_SOURCE_STATE",
+      "needs_numerics": "no",
+      "catalog_ids": [],
+      "catalog_observed_code": "",
+      "implementation_subcode_mapping": "FAIL_HEAD_MISMATCH;FAIL_DIRTY_SOURCE_TREE;FAIL_POST_HEAD_MOVED;FAIL_POST_SOURCE_DIRTY -> FAIL_SOURCE_STATE",
+      "coverage": "MISSING",
+      "note": ""
+    },
+    {
+      "contract_nc_id": "NC26",
+      "name": "RESIDUAL_TILING_MUTATION",
+      "mutation_trigger": "residual omitted / duplicated / non-final / width<=0 / width>=1/16 / final endpoint!=λ_R",
+      "contract_expected_code": "FAIL_LAMBDA_TILING",
+      "needs_numerics": "no",
+      "catalog_ids": [
+        "CANONICAL_V1_NC19"
+      ],
+      "catalog_observed_code": "FAIL_LAMBDA_GEOMETRY_RECONSTRUCTION",
+      "implementation_subcode_mapping": "FAIL_LAMBDA_GEOMETRY_RECONSTRUCTION/FAIL_TILE_* -> FAIL_LAMBDA_TILING",
+      "coverage": "PARTIAL",
+      "note": "dedicated residual control required"
+    },
+    {
+      "contract_nc_id": "NC27",
+      "name": "SHARED_FLAMBDA_KERNEL_PIN_MISMATCH",
+      "mutation_trigger": "shared frozen F_lambda kernel SHA differs",
+      "contract_expected_code": "FAIL_SOURCE_PIN",
+      "needs_numerics": "no",
+      "catalog_ids": [],
+      "catalog_observed_code": "",
+      "implementation_subcode_mapping": "FAIL_KERNEL_MANIFEST_PIN -> FAIL_SOURCE_PIN",
+      "coverage": "MISSING",
+      "note": ""
+    },
+    {
+      "contract_nc_id": "NC28",
+      "name": "TRANSPORT_LEMMA_PIN_OR_AUDIT_MISSING",
+      "mutation_trigger": "lemma ID / audit pin absent, Judge verdict != PASS, or signature receipt_sha != actual",
+      "contract_expected_code": "FAIL_TRANSPORT_LEMMA",
+      "needs_numerics": "no",
+      "catalog_ids": [],
+      "catalog_observed_code": "",
+      "implementation_subcode_mapping": "FAIL_TRANSPORT_LEMMA_ID;FAIL_TRANSPORT_HUMAN_AUDIT;FAIL_JUDGE_VERDICT;FAIL_SIGNATURE_RECEIPT_LINK -> FAIL_TRANSPORT_LEMMA",
+      "coverage": "MISSING",
+      "note": ""
+    },
+    {
+      "contract_nc_id": "NC32",
+      "name": "REQUIRED_SIGN_MISSING",
+      "mutation_trigger": "native F_lambda called with required_sign=None",
+      "contract_expected_code": "FAIL_REQUIRED_SIGN_MISSING",
+      "needs_numerics": "no",
+      "catalog_ids": [
+        "REPLAY_NC32_REQUIRED_SIGN_MISSING"
+      ],
+      "catalog_observed_code": "FAIL_REQUIRED_SIGN_MISSING",
+      "implementation_subcode_mapping": "identity",
+      "coverage": "COVERED",
+      "note": ""
+    },
+    {
+      "contract_nc_id": "NC04b",
+      "name": "PREDICTOR_INPUT_PIN_MUTATION",
+      "mutation_trigger": "alter q_left or q_right without altering the A0B pin record",
+      "contract_expected_code": "FAIL_PREDICTOR_INPUT_PIN",
+      "needs_numerics": "no",
+      "catalog_ids": [
+        "CANONICAL_V1_NC09",
+        "CANONICAL_V1_NC10"
+      ],
+      "catalog_observed_code": "FAIL_PREDICTOR_INPUT;FAIL_PREDICTOR_HULL_INTERIOR",
+      "implementation_subcode_mapping": "existing predictor controls are not exact A0B q_left/q_right pin mutation",
+      "coverage": "PARTIAL",
+      "note": "dedicated A0B pin control required"
+    },
+    {
+      "contract_nc_id": "CUSTOM_ACCEPT",
+      "name": "CUSTOM_PREDICATE_FORBIDDEN",
+      "mutation_trigger": "native F_lambda called with a custom accept predicate",
+      "contract_expected_code": "FAIL_CUSTOM_PREDICATE_FORBIDDEN",
+      "needs_numerics": "no",
+      "catalog_ids": [
+        "REPLAY_CUSTOM_ACCEPT"
+      ],
+      "catalog_observed_code": "FAIL_CUSTOM_PREDICATE_FORBIDDEN",
+      "implementation_subcode_mapping": "identity",
+      "coverage": "COVERED",
+      "note": ""
     }
   ],
-  "v1_1_additions": [
-    {
-      "id": "V11_SOURCE_PIN",
-      "contract_rows": [
-        "NC01"
-      ],
-      "mutation": "SOURCE_PIN_MISMATCH",
-      "expected_failure_code": "FAIL_SOURCE_PIN",
-      "status": "BLOCKED_CODE_NOT_PRESENT_IN_CURRENT_SURFACE"
-    },
-    {
-      "id": "V11_TILE_GAP",
-      "contract_rows": [
-        "NC05"
-      ],
-      "mutation": "INSERT_DERIVATIVE_TILE_GAP",
-      "expected_failure_code": "FAIL_TILE_GAP_OR_OVERLAP",
-      "status": "READY_TO_IMPLEMENT"
-    },
-    {
-      "id": "V11_TILE_OVERLAP",
-      "contract_rows": [
-        "NC06"
-      ],
-      "mutation": "INSERT_DERIVATIVE_TILE_OVERLAP",
-      "expected_failure_code": "FAIL_TILE_GAP_OR_OVERLAP",
-      "status": "READY_TO_IMPLEMENT"
-    },
-    {
-      "id": "V11_FLAMBDA_STRICT_POS",
-      "contract_rows": [
-        "NC10"
-      ],
-      "mutation": "STRICT_POS_FLAMBDA_UNDER_NEG_CONTRACT",
-      "expected_failure_code": "FAIL_SIGN",
-      "status": "NUMERIC_CONTROL_REQUIRED"
-    },
-    {
-      "id": "V11_FLAMBDA_ZERO_CONTAINING",
-      "contract_rows": [
-        "NC11"
-      ],
-      "mutation": "ZERO_CONTAINING_FLAMBDA_ENCLOSURE",
-      "expected_failure_code": "FAIL_UNRESOLVED",
-      "status": "NUMERIC_CONTROL_REQUIRED"
-    },
-    {
-      "id": "V11_NORMALIZATION",
-      "contract_rows": [
-        "NC12"
-      ],
-      "mutation": "MUTATE_FLAMBDA_NORMALIZATION_BITS",
-      "expected_failure_code": "FAIL_FLAMBDA_NORMALIZATION_BITS",
-      "status": "READY_TO_IMPLEMENT"
-    },
-    {
-      "id": "V11_FLAMBDA_CELL_BUDGET",
-      "contract_rows": [
-        "NC16"
-      ],
-      "mutation": "EXCEED_FLAMBDA_CELL_BUDGET",
-      "expected_failure_code": "FAIL_FLAMBDA_BUDGET",
-      "status": "NUMERIC_CONTROL_REQUIRED"
-    },
-    {
-      "id": "V11_ANCHOR_BUDGET",
-      "contract_rows": [
-        "NC17"
-      ],
-      "mutation": "EXCEED_ANCHOR_BUDGET",
-      "expected_failure_code": "FAIL_ANCHOR_BUDGET",
-      "status": "NUMERIC_CONTROL_REQUIRED"
-    },
-    {
-      "id": "V11_PARENT_BUDGET",
-      "contract_rows": [
-        "NC18"
-      ],
-      "mutation": "EXCEED_PARENT_TOTAL_BUDGET",
-      "expected_failure_code": "FAIL_PARENT_TOTAL_BUDGET",
-      "status": "READY_TO_IMPLEMENT_OR_NUMERIC"
-    },
-    {
-      "id": "V11_UNSUPPORTED_WIDTH",
-      "contract_rows": [
-        "NC21"
-      ],
-      "mutation": "UNSUPPORTED_NOMINAL_WIDTH",
-      "expected_failure_code": "FAIL_PARENT_WIDTH",
-      "status": "READY_TO_IMPLEMENT"
-    },
-    {
-      "id": "V11_CHECKER_DPS",
-      "contract_rows": [
-        "NC23"
-      ],
-      "mutation": "CHECKER_DPS_BELOW_PRODUCER_DPS",
-      "expected_failure_code": "FAIL_CHECKER_DPS_CONTRACT",
-      "status": "READY_TO_IMPLEMENT"
-    },
-    {
-      "id": "V11_RESIDUAL_TILING",
-      "contract_rows": [
-        "NC26"
-      ],
-      "mutation": "CORRUPT_FINAL_RESIDUAL_TILE",
-      "expected_failure_code": "FAIL_LAMBDA_GEOMETRY_RECONSTRUCTION",
-      "status": "READY_TO_IMPLEMENT"
-    },
-    {
-      "id": "V11_SHARED_KERNEL_PIN",
-      "contract_rows": [
-        "NC27"
-      ],
-      "mutation": "MUTATE_SHARED_KERNEL_MANIFEST_PIN",
-      "expected_failure_code": "FAIL_KERNEL_MANIFEST_PIN",
-      "status": "READY_TO_IMPLEMENT"
-    },
-    {
-      "id": "V11_REQUIRED_SIGN_MISSING",
-      "contract_rows": [
-        "NC32"
-      ],
-      "mutation": "OMIT_REQUIRED_SIGN",
-      "expected_failure_code": "FAIL_REQUIRED_SIGN_MISSING",
-      "status": "EXISTING_NATIVE_CONTROL"
-    },
-    {
-      "id": "V11_CUSTOM_ACCEPT",
-      "contract_rows": [
-        "CUSTOM_ACCEPT"
-      ],
-      "mutation": "SUPPLY_CUSTOM_ACCEPT_PREDICATE",
-      "expected_failure_code": "FAIL_CUSTOM_PREDICATE_FORBIDDEN",
-      "status": "EXISTING_NATIVE_CONTROL"
-    }
-  ],
-  "blocked_pending_contract_recovery_or_human_refreeze": [
-    "NC02",
-    "NC03",
-    "NC04",
-    "NC07",
-    "NC08",
-    "NC09",
-    "NC13",
-    "NC14",
-    "NC15",
-    "NC19",
-    "NC20",
-    "NC22",
-    "NC24",
-    "NC25",
-    "NC28",
-    "NC04b"
-  ],
-  "execution_authorized": false
+  "rules": {
+    "partial_and_missing_must_be_added_to_v1_1": true,
+    "replay_nc10_wrong_sign_request_is_distinct_from_contract_nc10_result_side": true,
+    "shared_pinned_flambda_kernel_import_allowed": true,
+    "producer_glue_or_verdict_import_forbidden": true,
+    "nc04b_requires_dedicated_a0b_pin_control": true,
+    "no_numerical_execution_before_static_coverage_closed": true
+  }
 }

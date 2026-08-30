@@ -1,0 +1,32 @@
+CONTRACT_NC_ID	NAME	MUTATION_TRIGGER	CONTRACT_EXPECTED_CODE	NEEDS_NUMERICS
+NC01	SOURCE_SHA_MISMATCH	mutate producer/checker F_lambda source pin	FAIL_SOURCE_PIN	no
+NC02	FORMULA_ID_MISMATCH	ordinary or Duffy formula ID wrong	FAIL_FORMULA_ID	no
+NC03	DIAGNOSTIC_MONKEYPATCH_AS_BINDING	"submit quantity=""F"" diagnostic proof object"	FAIL_ROUTE_QUANTITY_CLASS	no
+NC04	TUBE_ENDPOINT_LITERAL_SUBSTITUTION	alter recorded r endpoint (±Δ) without altering candidate geometry	FAIL_TUBE_GEOMETRY_RECONSTRUCTION	no
+NC05	CELL_GAP	remove exact rational portion between adjacent λ cells	FAIL_LAMBDA_COVER	no
+NC06	CELL_OVERLAP	overlap adjacent λ cell interiors	FAIL_LAMBDA_COVER	no
+NC07	WRONG_CELL_COUNT	4 cells for width 1/8, or 2 for width 1/4	FAIL_LAMBDA_TILING	no
+NC08	WRONG_ANCHOR_ENDPOINT_RHI	right anchor used for NEG transport	FAIL_WRONG_ANCHOR_ENDPOINT	no
+NC09	WRONG_ANCHOR_ENDPOINT_RLO	left anchor used for POS transport	FAIL_WRONG_ANCHOR_ENDPOINT	no
+NC10	FLAMBDA_STRICT_POS	checker obtains lo>0 on any F_lambda cell	FAIL_SIGN	yes_or_receipt_mutation
+NC11	FLAMBDA_ZERO_CONTAINING	checker cannot prove hi<0 on a cell	FAIL_UNRESOLVED	yes_or_receipt_mutation
+NC12	NORMALIZATION_MUTATION	alter normalization policy / one_over_pi / bits	FAIL_NORMALIZATION_MISMATCH	no
+NC13	ANCHOR_DIAGNOSTIC_RECEIPT_AS_PROFILE_A	supply DIAGNOSTIC_NOT_BINDING anchor artifact as Profile A	FAIL_ANCHOR_EVIDENCE_CLASS	no
+NC14	ANCHOR_RECEIPT_SHA_MISMATCH	Profile A receipt altered	FAIL_ANCHOR_PIN	no
+NC15	ANCHOR_WRONG_SIGN	left R_HI anchor not strict NEG or right R_LO anchor not strict POS	FAIL_ANCHOR_SIGN	yes_or_receipt_mutation
+NC16	CELL_CAP_EXHAUSTION	F_lambda cell reaches declared call cap	FAIL_BUDGET	yes_tiny_cap
+NC17	ANCHOR_CAP_EXHAUSTION	Profile B anchor reaches declared cap	FAIL_BUDGET	yes_tiny_cap
+NC18	PARENT_TOTAL_CAP_EXCEEDED	aggregate evaluations exceed predeclared parent cap	FAIL_PARENT_BUDGET	no_receipt_mutation
+NC19	POST_HOC_CAP_MUTATION	cap differs between contract start and final receipt	FAIL_BUDGET_CONTRACT_MUTATION	no
+NC20	CHECKER_IMPORTS_PRODUCER_GLUE	checker dependency graph contains producer glue/verdict logic; shared kernel import allowed	FAIL_CHECKER_NOT_INDEPENDENT	no
+NC21	UNSUPPORTED_NOMINAL_PARENT_WIDTH	candidate nominal width not in {1/4,1/8,1/16}	FAIL_UNSUPPORTED_NOMINAL_WIDTH	no
+NC22	EVIDENCE_CLASS_SELF_PROMOTION	producer changes BINDING_CANDIDATE to BINDING	FAIL_EVIDENCE_CLASS	no
+NC23	CHECKER_DPS_BELOW_PRODUCER	checker_dps < producer_dps	FAIL_CHECKER_PRECISION	no
+NC24	PARENT_LEFT_ENDPOINT_MISMATCH	supplied λ_L differs from value reconstructed from candidate index + cell index	FAIL_PARENT_GEOMETRY_RECONSTRUCTION	no
+NC25	SOURCE_STATE_MISMATCH	pre/post HEAD mismatch or dirty tree	FAIL_SOURCE_STATE	no
+NC26	RESIDUAL_TILING_MUTATION	residual omitted / duplicated / non-final / width<=0 / width>=1/16 / final endpoint!=λ_R	FAIL_LAMBDA_TILING	no
+NC27	SHARED_FLAMBDA_KERNEL_PIN_MISMATCH	shared frozen F_lambda kernel SHA differs	FAIL_SOURCE_PIN	no
+NC28	TRANSPORT_LEMMA_PIN_OR_AUDIT_MISSING	lemma ID / audit pin absent, Judge verdict != PASS, or signature receipt_sha != actual	FAIL_TRANSPORT_LEMMA	no
+NC32	REQUIRED_SIGN_MISSING	native F_lambda called with required_sign=None	FAIL_REQUIRED_SIGN_MISSING	no
+NC04b	PREDICTOR_INPUT_PIN_MUTATION	alter q_left or q_right without altering the A0B pin record	FAIL_PREDICTOR_INPUT_PIN	no
+CUSTOM_ACCEPT	CUSTOM_PREDICATE_FORBIDDEN	native F_lambda called with a custom accept predicate	FAIL_CUSTOM_PREDICATE_FORBIDDEN	no
