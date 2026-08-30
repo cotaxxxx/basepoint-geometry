@@ -1,0 +1,32 @@
+CONTRACT_NC_ID	CONTRACT_EXPECTED_CODE	CONTRACT_SEMANTICS	CONTRACT_SOURCE	CATALOG_ID(s)	CATALOG_OBSERVED_CODE	COVERAGE	NOTE
+NC01	FAIL_SOURCE_PIN	source pin mutation	USER_FIXED_EXAMPLE			MISSING	No semantic equivalent in canonical v1 20-control catalog.
+NC02	UNRECOVERED_CONTRACT_ROW	historical audited-contract semantics not recovered	UNRECOVERED			MISSING	
+NC03	UNRECOVERED_CONTRACT_ROW	historical audited-contract semantics not recovered	UNRECOVERED			MISSING	
+NC04	UNRECOVERED_CONTRACT_ROW	historical audited-contract semantics not recovered	UNRECOVERED	C-V1-NC04	FAIL_TUBE_GEOMETRY_RECONSTRUCTION	PARTIAL	Catalog NC04 is known tube-endpoint geometry mutation; historical contract NC04 meaning not recovered.
+NC05	FAIL_TILE_GAP_OR_OVERLAP	derivative tiling gap	USER_FIXED_SEMANTICS+IMPLEMENTATION_CODE			MISSING	
+NC06	FAIL_TILE_GAP_OR_OVERLAP	derivative tiling overlap	USER_FIXED_SEMANTICS+IMPLEMENTATION_CODE			MISSING	
+NC07	UNRECOVERED_CONTRACT_ROW	historical audited-contract semantics not recovered	UNRECOVERED			MISSING	
+NC08	UNRECOVERED_CONTRACT_ROW	historical audited-contract semantics not recovered	UNRECOVERED			MISSING	
+NC09	UNRECOVERED_CONTRACT_ROW	historical audited-contract semantics not recovered	UNRECOVERED			MISSING	
+NC10	FAIL_SIGN	F_lambda strict POS result under NEG contract	USER_FIXED_SEMANTICS+DESIGN_DOC_CODE			MISSING	Distinct from wrong-sign-request FAIL_SIGN_CONTRACT.
+NC11	FAIL_UNRESOLVED	F_lambda enclosure contains zero	USER_FIXED_SEMANTICS+DESIGN_DOC_CODE			MISSING	
+NC12	FAIL_FLAMBDA_NORMALIZATION_BITS	normalization mutation	USER_FIXED_SEMANTICS+IMPLEMENTATION_CODE			MISSING	
+NC13	UNRECOVERED_EXPECTED_CODE	diagnostic anchor reused as Profile A binding evidence	USER_FIXED_SEMANTICS			MISSING	
+NC14	UNRECOVERED_CONTRACT_ROW	historical audited-contract semantics not recovered	UNRECOVERED			MISSING	
+NC15	UNRECOVERED_EXPECTED_CODE	anchor sign mutation / wrong strict anchor sign	USER_FIXED_SEMANTICS			MISSING	Implementation exposes FAIL_ANCHOR_SIGN_NEG / FAIL_ANCHOR_SIGN_POS / FAIL_ANCHOR_SIGN_CONTRACT.
+NC16	FAIL_FLAMBDA_BUDGET	F_lambda cell budget exceeded	USER_FIXED_SEMANTICS+IMPLEMENTATION_CODE			MISSING	
+NC17	FAIL_ANCHOR_BUDGET	anchor budget exceeded	USER_FIXED_SEMANTICS+IMPLEMENTATION_CODE			MISSING	
+NC18	FAIL_PARENT_TOTAL_BUDGET	producer parent total budget exceeded	USER_FIXED_SEMANTICS+IMPLEMENTATION_CODE			MISSING	
+NC19	UNRECOVERED_EXPECTED_CODE	post-hoc cap change / budget contract mutation	USER_FIXED_SEMANTICS			MISSING	
+NC20	UNRECOVERED_CONTRACT_ROW	historical audited-contract semantics not recovered	UNRECOVERED	C-V1-NC20	FAIL_PRODUCER_GLUE_DEPENDENCY	PARTIAL	Catalog NC20 is real producer-glue independence; historical contract NC20 meaning not recovered.
+NC21	FAIL_PARENT_WIDTH	unsupported nominal width	USER_FIXED_SEMANTICS+IMPLEMENTATION_CODE			MISSING	
+NC22	UNRECOVERED_CONTRACT_ROW	historical audited-contract semantics not recovered	UNRECOVERED			MISSING	
+NC23	FAIL_CHECKER_DPS_CONTRACT	checker precision downgrade below producer dps	USER_FIXED_SEMANTICS+IMPLEMENTATION_CODE			MISSING	
+NC24	UNRECOVERED_CONTRACT_ROW	historical audited-contract semantics not recovered	UNRECOVERED			MISSING	
+NC25	UNRECOVERED_CONTRACT_ROW	historical audited-contract semantics not recovered	UNRECOVERED			MISSING	
+NC26	FAIL_LAMBDA_GEOMETRY_RECONSTRUCTION	residual tiling mutation	USER_FIXED_SEMANTICS+CHECKER_IMPLEMENTATION_CODE	C-V1-NC19	FAIL_LAMBDA_GEOMETRY_RECONSTRUCTION	PARTIAL	Existing NC19 corrupts tile geometry; dedicated residual-cell mutation still required.
+NC27	FAIL_KERNEL_MANIFEST_PIN	shared F_lambda kernel pin mutation	USER_FIXED_SEMANTICS+IMPLEMENTATION_CODE			MISSING	
+NC28	UNRECOVERED_EXPECTED_CODE	transport lemma/Judge signature missing or invalid	USER_FIXED_SEMANTICS			MISSING	Exact historical NC28 code not recovered.
+NC32	FAIL_REQUIRED_SIGN_MISSING	required_sign omitted	USER_ADOPTED_CONTROL+IMPLEMENTATION_CODE	NATIVE-NC32	FAIL_REQUIRED_SIGN_MISSING	COVERED	
+NC04b	UNPINNED_PENDING_A0B	q_left/q_right A0B exact pin mutation	USER_ADOPTED_CONTROL			MISSING	Expected code fixed only after A0B exact pin record exists.
+CUSTOM_ACCEPT	FAIL_CUSTOM_PREDICATE_FORBIDDEN	custom accept predicate supplied to binding F_lambda route	USER_ADOPTED_CONTROL+IMPLEMENTATION_CODE	NATIVE-CUSTOM-ACCEPT	FAIL_CUSTOM_PREDICATE_FORBIDDEN	COVERED	

@@ -1,0 +1,267 @@
+{
+  "schema": "flambda-checker-canonical-nc-catalog-v1.1-draft",
+  "status": "DRAFT_STATIC_CROSSWALK_NOT_EXECUTED",
+  "binding_use_authorized": false,
+  "canonical_v1_execution_observed": "20/20 PASS",
+  "contract_row_population": "NC01..NC28 + NC32 + NC04b + CUSTOM_ACCEPT = 31 rows",
+  "historical_contract_number_to_semantics_table_recovered": false,
+  "unrecovered_contract_rows_must_not_be_guessed": true,
+  "existing_canonical_v1_controls": [
+    {
+      "id": "NC01",
+      "mutation": "PRODUCER_SCHEMA_INVALID",
+      "expected_failure_code": "FAIL_PRODUCER_SCHEMA"
+    },
+    {
+      "id": "NC02",
+      "mutation": "PRODUCER_EVIDENCE_CLASS_INVALID",
+      "expected_failure_code": "FAIL_PRODUCER_EVIDENCE_CLASS"
+    },
+    {
+      "id": "NC03",
+      "mutation": "PRODUCER_BINDING_USE_AUTHORIZED_TRUE",
+      "expected_failure_code": "FAIL_PRODUCER_BINDING_STATE"
+    },
+    {
+      "id": "NC04",
+      "mutation": "WIDEN_BOTH_PHYSICAL_TUBE_ENDPOINTS_BY_DIAGNOSTIC_DELTA",
+      "expected_failure_code": "FAIL_TUBE_GEOMETRY_RECONSTRUCTION"
+    },
+    {
+      "id": "NC05",
+      "mutation": "CHECKER_REQUIRED_FALSE",
+      "expected_failure_code": "FAIL_PRODUCER_CHECKER_REQUIRED"
+    },
+    {
+      "id": "NC06",
+      "mutation": "HUMAN_PROMOTION_REQUIRED_FALSE",
+      "expected_failure_code": "FAIL_PRODUCER_HUMAN_PROMOTION_REQUIRED"
+    },
+    {
+      "id": "NC07",
+      "mutation": "PRODUCER_VERDICT_INVALID",
+      "expected_failure_code": "FAIL_PRODUCER_VERDICT"
+    },
+    {
+      "id": "NC08",
+      "mutation": "CANDIDATE_INDEX_BOOL",
+      "expected_failure_code": "FAIL_CANDIDATE_INDEX"
+    },
+    {
+      "id": "NC09",
+      "mutation": "PREDICTOR_OBJECT_REMOVED",
+      "expected_failure_code": "FAIL_PREDICTOR_INPUT"
+    },
+    {
+      "id": "NC10",
+      "mutation": "PREDICTOR_Q_LEFT_ZERO",
+      "expected_failure_code": "FAIL_PREDICTOR_HULL_INTERIOR"
+    },
+    {
+      "id": "NC11",
+      "mutation": "NOMINAL_LAMBDA_WIDTH_CORRUPTED",
+      "expected_failure_code": "FAIL_TUBE_GEOMETRY_RECONSTRUCTION"
+    },
+    {
+      "id": "NC12",
+      "mutation": "RADIUS_CAP_CORRUPTED",
+      "expected_failure_code": "FAIL_TUBE_GEOMETRY_RECONSTRUCTION"
+    },
+    {
+      "id": "NC13",
+      "mutation": "ADAPTIVE_RADIUS_CORRUPTED",
+      "expected_failure_code": "FAIL_TUBE_GEOMETRY_RECONSTRUCTION"
+    },
+    {
+      "id": "NC14",
+      "mutation": "TUBE_INTERVAL_LO_CORRUPTED",
+      "expected_failure_code": "FAIL_TUBE_GEOMETRY_RECONSTRUCTION"
+    },
+    {
+      "id": "NC15",
+      "mutation": "R_LO_CORRUPTED",
+      "expected_failure_code": "FAIL_TUBE_GEOMETRY_RECONSTRUCTION"
+    },
+    {
+      "id": "NC16",
+      "mutation": "R_HI_CORRUPTED",
+      "expected_failure_code": "FAIL_TUBE_GEOMETRY_RECONSTRUCTION"
+    },
+    {
+      "id": "NC17",
+      "mutation": "CELL_INDEX_BOOL",
+      "expected_failure_code": "FAIL_CELL_INDEX"
+    },
+    {
+      "id": "NC18",
+      "mutation": "CANDIDATE_PARENT_HI_CORRUPTED",
+      "expected_failure_code": "FAIL_LAMBDA_GEOMETRY_RECONSTRUCTION"
+    },
+    {
+      "id": "NC19",
+      "mutation": "TILES_FIRST_HI_CORRUPTED",
+      "expected_failure_code": "FAIL_LAMBDA_GEOMETRY_RECONSTRUCTION"
+    },
+    {
+      "id": "NC20",
+      "mutation": "RUNTIME_PRODUCER_GLUE_MODULE_INJECTION",
+      "expected_failure_code": "FAIL_PRODUCER_GLUE_DEPENDENCY"
+    }
+  ],
+  "v1_1_additions": [
+    {
+      "id": "V11_SOURCE_PIN",
+      "contract_rows": [
+        "NC01"
+      ],
+      "mutation": "SOURCE_PIN_MISMATCH",
+      "expected_failure_code": "FAIL_SOURCE_PIN",
+      "status": "BLOCKED_CODE_NOT_PRESENT_IN_CURRENT_SURFACE"
+    },
+    {
+      "id": "V11_TILE_GAP",
+      "contract_rows": [
+        "NC05"
+      ],
+      "mutation": "INSERT_DERIVATIVE_TILE_GAP",
+      "expected_failure_code": "FAIL_TILE_GAP_OR_OVERLAP",
+      "status": "READY_TO_IMPLEMENT"
+    },
+    {
+      "id": "V11_TILE_OVERLAP",
+      "contract_rows": [
+        "NC06"
+      ],
+      "mutation": "INSERT_DERIVATIVE_TILE_OVERLAP",
+      "expected_failure_code": "FAIL_TILE_GAP_OR_OVERLAP",
+      "status": "READY_TO_IMPLEMENT"
+    },
+    {
+      "id": "V11_FLAMBDA_STRICT_POS",
+      "contract_rows": [
+        "NC10"
+      ],
+      "mutation": "STRICT_POS_FLAMBDA_UNDER_NEG_CONTRACT",
+      "expected_failure_code": "FAIL_SIGN",
+      "status": "NUMERIC_CONTROL_REQUIRED"
+    },
+    {
+      "id": "V11_FLAMBDA_ZERO_CONTAINING",
+      "contract_rows": [
+        "NC11"
+      ],
+      "mutation": "ZERO_CONTAINING_FLAMBDA_ENCLOSURE",
+      "expected_failure_code": "FAIL_UNRESOLVED",
+      "status": "NUMERIC_CONTROL_REQUIRED"
+    },
+    {
+      "id": "V11_NORMALIZATION",
+      "contract_rows": [
+        "NC12"
+      ],
+      "mutation": "MUTATE_FLAMBDA_NORMALIZATION_BITS",
+      "expected_failure_code": "FAIL_FLAMBDA_NORMALIZATION_BITS",
+      "status": "READY_TO_IMPLEMENT"
+    },
+    {
+      "id": "V11_FLAMBDA_CELL_BUDGET",
+      "contract_rows": [
+        "NC16"
+      ],
+      "mutation": "EXCEED_FLAMBDA_CELL_BUDGET",
+      "expected_failure_code": "FAIL_FLAMBDA_BUDGET",
+      "status": "NUMERIC_CONTROL_REQUIRED"
+    },
+    {
+      "id": "V11_ANCHOR_BUDGET",
+      "contract_rows": [
+        "NC17"
+      ],
+      "mutation": "EXCEED_ANCHOR_BUDGET",
+      "expected_failure_code": "FAIL_ANCHOR_BUDGET",
+      "status": "NUMERIC_CONTROL_REQUIRED"
+    },
+    {
+      "id": "V11_PARENT_BUDGET",
+      "contract_rows": [
+        "NC18"
+      ],
+      "mutation": "EXCEED_PARENT_TOTAL_BUDGET",
+      "expected_failure_code": "FAIL_PARENT_TOTAL_BUDGET",
+      "status": "READY_TO_IMPLEMENT_OR_NUMERIC"
+    },
+    {
+      "id": "V11_UNSUPPORTED_WIDTH",
+      "contract_rows": [
+        "NC21"
+      ],
+      "mutation": "UNSUPPORTED_NOMINAL_WIDTH",
+      "expected_failure_code": "FAIL_PARENT_WIDTH",
+      "status": "READY_TO_IMPLEMENT"
+    },
+    {
+      "id": "V11_CHECKER_DPS",
+      "contract_rows": [
+        "NC23"
+      ],
+      "mutation": "CHECKER_DPS_BELOW_PRODUCER_DPS",
+      "expected_failure_code": "FAIL_CHECKER_DPS_CONTRACT",
+      "status": "READY_TO_IMPLEMENT"
+    },
+    {
+      "id": "V11_RESIDUAL_TILING",
+      "contract_rows": [
+        "NC26"
+      ],
+      "mutation": "CORRUPT_FINAL_RESIDUAL_TILE",
+      "expected_failure_code": "FAIL_LAMBDA_GEOMETRY_RECONSTRUCTION",
+      "status": "READY_TO_IMPLEMENT"
+    },
+    {
+      "id": "V11_SHARED_KERNEL_PIN",
+      "contract_rows": [
+        "NC27"
+      ],
+      "mutation": "MUTATE_SHARED_KERNEL_MANIFEST_PIN",
+      "expected_failure_code": "FAIL_KERNEL_MANIFEST_PIN",
+      "status": "READY_TO_IMPLEMENT"
+    },
+    {
+      "id": "V11_REQUIRED_SIGN_MISSING",
+      "contract_rows": [
+        "NC32"
+      ],
+      "mutation": "OMIT_REQUIRED_SIGN",
+      "expected_failure_code": "FAIL_REQUIRED_SIGN_MISSING",
+      "status": "EXISTING_NATIVE_CONTROL"
+    },
+    {
+      "id": "V11_CUSTOM_ACCEPT",
+      "contract_rows": [
+        "CUSTOM_ACCEPT"
+      ],
+      "mutation": "SUPPLY_CUSTOM_ACCEPT_PREDICATE",
+      "expected_failure_code": "FAIL_CUSTOM_PREDICATE_FORBIDDEN",
+      "status": "EXISTING_NATIVE_CONTROL"
+    }
+  ],
+  "blocked_pending_contract_recovery_or_human_refreeze": [
+    "NC02",
+    "NC03",
+    "NC04",
+    "NC07",
+    "NC08",
+    "NC09",
+    "NC13",
+    "NC14",
+    "NC15",
+    "NC19",
+    "NC20",
+    "NC22",
+    "NC24",
+    "NC25",
+    "NC28",
+    "NC04b"
+  ],
+  "execution_authorized": false
+}
