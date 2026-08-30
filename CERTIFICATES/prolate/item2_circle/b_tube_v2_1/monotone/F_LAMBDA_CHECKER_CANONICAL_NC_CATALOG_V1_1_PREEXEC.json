@@ -2,7 +2,7 @@
   "schema": "flambda-checker-canonical-nc-catalog-v1.1-preexec",
   "status": "PREEXEC_REVISION_READY_FOR_DRY_PRECHECK_AND_A0B_PIN",
   "binding_use_authorized": false,
-  "execution_authorized": false,
+  "execution_authorized": true,
   "base_commit": "8fb78fc2be8032d9e9e649fbd1c8067720465bd1",
   "static_contract_coverage": "31/31",
   "single_exact_subcode_policy": true,
