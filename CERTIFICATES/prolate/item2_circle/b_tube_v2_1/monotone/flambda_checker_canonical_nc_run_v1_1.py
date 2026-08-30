@@ -42,7 +42,7 @@ CHECKER = (
 )
 
 CLASSIFICATION_SHA256 = (
-    "0b479b744406e66596e0f9c6fabc7dbd421a3b5671bc95cd59347b1ad4501a4d"
+    "5145f38249a3eb4ac4baf5ebe7e07fcf484845f4cc16b18b9280be308b667220"
 )
 PREEXEC_SHA256 = (
     "d8e8f4b6022d676d63b696a7d09bb046203b282ce571c14eddffaf4fc54eed55"
@@ -131,7 +131,7 @@ def read_classification() -> list[dict[str, str]]:
 
 
 def main() -> int:
-    baseline_head = "86635ea7e0a39ad55ebfde80e3f6dab8c0dcb2eb"
+    baseline_head = "977a76450c195913724d2e6d7e38223cce839874"
     source_head = git("rev-parse", "HEAD")
     source_status = git("status", "--porcelain")
 
@@ -169,9 +169,17 @@ def main() -> int:
         "CERTIFICATES/prolate/item2_circle/b_tube_v2_1/monotone/"
         "flambda_checker_canonical_nc_run_v1_1.py"
     )
+    expected_classification_path = (
+        "CERTIFICATES/prolate/item2_circle/b_tube_v2_1/monotone/"
+        "F_LAMBDA_CHECKER_CANONICAL_NC_V1_1_EXECUTION_CLASSIFICATION.tsv"
+    )
+    allowed_after_baseline = {
+        expected_runner_path,
+        expected_classification_path,
+    }
     need(
-        changed_since_baseline == {expected_runner_path},
-        "FAIL_POST_BASELINE_RUNNER_FILE_SET",
+        changed_since_baseline == allowed_after_baseline,
+        "FAIL_POST_BASELINE_CORRECTION_FILE_SET",
         repr(sorted(changed_since_baseline)),
     )
 
@@ -314,7 +322,7 @@ def main() -> int:
     print(f"BASELINE_HEAD={baseline_head}")
     print(f"SOURCE_HEAD={source_head}")
     print("BASELINE_ANCESTRY=PASS")
-    print("POST_BASELINE_RUNNER_FILE_SET=PASS")
+    print("POST_BASELINE_CORRECTION_FILE_SET=PASS")
     print("SOURCE_TREE=CLEAN")
     print(f"CLASSIFICATION_SHA256={CLASSIFICATION_SHA256}")
     print(f"PREEXEC_SHA256={PREEXEC_SHA256}")
