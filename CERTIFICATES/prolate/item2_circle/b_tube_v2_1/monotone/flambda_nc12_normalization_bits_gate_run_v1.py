@@ -79,12 +79,16 @@ def main() -> int:
     if git("status", "--porcelain"):
         stop("SOURCE_TREE_PRE dirty")
 
+    child_env = dict(__import__("os").environ)
+    child_env["PYTHONDONTWRITEBYTECODE"] = "1"
+
     proc = subprocess.run(
         [sys.executable, str(HARNESS)],
         cwd=REPO_ROOT,
         text=True,
         capture_output=True,
         check=False,
+        env=child_env,
     )
 
     if proc.returncode != 0:
