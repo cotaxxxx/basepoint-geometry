@@ -1,0 +1,16 @@
+{
+  "canonical_control_execution_claim": false,
+  "control_id": "NC07",
+  "end_to_end_claim": false,
+  "execution_head": "ffc6586e4a5a3c007d24c034dfa141b8f4df580d",
+  "expected_code": "FAIL_LAMBDA_TILING",
+  "gate_asset": "CERTIFICATES/prolate/item2_circle/b_tube_v2_1/monotone/flambda_nc07_cell_count_gate_v1.py",
+  "gate_asset_sha256": "55fe03e1c661db550958b8badbc2ccc4b1f5b093cde1c0ade28bc51263b5d4e1",
+  "method": "DIRECT_EXISTING_GATE_UNIT",
+  "numerical_evaluator_called": false,
+  "runner": "CERTIFICATES/prolate/item2_circle/b_tube_v2_1/monotone/flambda_nc07_cell_count_gate_run_v1.py",
+  "runner_sha256": "c2977e1b56175b1b7a51742be6603e7ac0b0143dc541e35ba4c958d8201f41ec",
+  "schema": "flambda-nc07-cell-count-gate-run-v1",
+  "stdout_sha256": "712d1436af6b73fe0b823a8b8947749c6028685358647d6c1c77909b7fe07a84",
+  "verdict": "NC07_EXACT_SUBCODE_PASS_NOT_PROMOTED"
+}
