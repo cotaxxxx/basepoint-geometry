@@ -1,0 +1,28 @@
+{
+  "all_required_stdout_lines_present": true,
+  "binding_use_authorized": false,
+  "contract": "F_LAMBDA_CONTRACT_V1.1",
+  "control_id": "NC16",
+  "end_to_end": false,
+  "execution_head": "df66c7d3906fbe898885978d926648844ada022b",
+  "expected_exact_code": "FAIL_FLAMBDA_BUDGET",
+  "gate_harness_sha256": "f082277e4732b3b8c4ef74b8ea8d3064277dd62137e8afc6fa3a78bc15d93587",
+  "harness_exit_code": 0,
+  "harness_stdout_sha256": "e8431cf2415fc1763d49a188e5ff8ccb8c1a7cce5dc1d6e063ecadc0b714d62a",
+  "head_unchanged_during_run": true,
+  "historical_checker_modified": false,
+  "method": "SYNTHETIC_ROUTE_REAL_CHECKER_FUNCTION",
+  "needs_numerics": false,
+  "numerical_evaluator_called": false,
+  "required_stdout_lines": [
+    "NC16_DIRECT_GATE=PASS",
+    "NUMERICAL_EVALUATOR_CALLED=FALSE",
+    "END_TO_END_CLAIM=FALSE",
+    "GATE_HARNESS=PASS_NOT_PROMOTED"
+  ],
+  "run_source_sha256": "f7b92ca7e5b1aab60bd703b14a85c877ac144208a354f989a82d880a7a71123f",
+  "schema": "flambda-nc16-flambda-budget-gate-run-v1",
+  "source_tree_post_clean": true,
+  "source_tree_pre_clean": true,
+  "verdict": "NC16_EXACT_SUBCODE_PASS_NOT_PROMOTED"
+}
