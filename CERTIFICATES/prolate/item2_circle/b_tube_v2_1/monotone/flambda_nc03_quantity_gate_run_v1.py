@@ -142,7 +142,7 @@ def main() -> int:
         encoding="utf-8",
     )
 
-    print("CONTROL_ID=NC12")
+    print("CONTROL_ID=NC03")
     print("METHOD=SYNTHETIC_ROUTE_REAL_CHECKER_FUNCTION")
     print("EXPECTED_EXACT_CODE=" + EXPECTED_CODE)
     print("NC03_DIRECT_GATE=PASS")
