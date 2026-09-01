@@ -1,0 +1,28 @@
+{
+  "all_required_stdout_lines_present": true,
+  "binding_use_authorized": false,
+  "contract": "F_LAMBDA_CONTRACT_V1.1",
+  "control_id": "NC03",
+  "end_to_end": false,
+  "execution_head": "0c48c02d4afb068ec04bd3ed9884bde6fe364eb2",
+  "expected_exact_code": "FAIL_FLAMBDA_QUANTITY",
+  "gate_harness_sha256": "26f0f243b4b83fada8ea5774bfd6aab5bbff92bb39e47770da0b161871247557",
+  "harness_exit_code": 0,
+  "harness_stdout_sha256": "27c4fed0fbc71156b82b661cf4f20da3a6f2a95999c20e0287905ccc879d4af6",
+  "head_unchanged_during_run": true,
+  "historical_checker_modified": false,
+  "method": "SYNTHETIC_ROUTE_REAL_CHECKER_FUNCTION",
+  "needs_numerics": false,
+  "numerical_evaluator_called": false,
+  "required_stdout_lines": [
+    "NC03_DIRECT_GATE=PASS",
+    "NUMERICAL_EVALUATOR_CALLED=FALSE",
+    "END_TO_END_CLAIM=FALSE",
+    "GATE_HARNESS=PASS_NOT_PROMOTED"
+  ],
+  "run_source_sha256": "38b1fc6e7d9465bd367a7629c754e9671279b049fbe0fac790ce15a370274f42",
+  "schema": "flambda-nc03-quantity-gate-run-v1",
+  "source_tree_post_clean": true,
+  "source_tree_pre_clean": true,
+  "verdict": "NC03_EXACT_SUBCODE_PASS_NOT_PROMOTED"
+}
