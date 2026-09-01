@@ -1,0 +1,28 @@
+{
+  "all_required_stdout_lines_present": true,
+  "binding_use_authorized": false,
+  "contract": "F_LAMBDA_CONTRACT_V1.1",
+  "control_id": "NC14",
+  "end_to_end": false,
+  "execution_head": "edd578f7577130b200d803dd2167a12d5467deed",
+  "expected_exact_code": "FAIL_TRANSPORT_RECEIPT_PIN",
+  "gate_harness_sha256": "0d7d49c8772e81efa0ffbe41247732f8f18c9f581b9145512da6cd1d4ead4a20",
+  "harness_exit_code": 0,
+  "harness_stdout_sha256": "1743862b4c08ed46d28c1df0b19d29d809297f6484c37907c249f2a1a2a11a57",
+  "head_unchanged_during_run": true,
+  "historical_checker_modified": false,
+  "method": "SYNTHETIC_ROUTE_REAL_CHECKER_FUNCTION",
+  "needs_numerics": false,
+  "numerical_evaluator_called": false,
+  "required_stdout_lines": [
+    "NC14_DIRECT_GATE=PASS",
+    "NUMERICAL_EVALUATOR_CALLED=FALSE",
+    "END_TO_END_CLAIM=FALSE",
+    "GATE_HARNESS=PASS_NOT_PROMOTED"
+  ],
+  "run_source_sha256": "763486cd827d8ebedddaa58dff82da62ce416521d82cb7ae8ad9e699c168af5f",
+  "schema": "flambda-nc14-transport-receipt-pin-gate-run-v1",
+  "source_tree_post_clean": true,
+  "source_tree_pre_clean": true,
+  "verdict": "NC14_EXACT_SUBCODE_PASS_NOT_PROMOTED"
+}
