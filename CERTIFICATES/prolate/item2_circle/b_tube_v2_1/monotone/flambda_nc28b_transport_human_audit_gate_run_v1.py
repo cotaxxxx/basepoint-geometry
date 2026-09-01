@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Dedicated deterministic NC28a transport-lemma-ID gate runner.
+"""Dedicated deterministic NC28b transport-human-audit gate runner.
 
 This is F_LAMBDA_CONTRACT_V1.1 preexecution infrastructure.
 
 Scope:
 - execute the V1.11 gate-unit harness;
-- require the real-checker NC28a direct gate to pass;
+- require the real-checker NC28b direct gate to pass;
 - require explicit non-numerical / non-end-to-end harness markers;
 - emit a deterministic run receipt.
 
@@ -33,11 +33,11 @@ REPO_ROOT = HERE.parents[4]
 
 HARNESS = HERE / "flambda_gate_unit_harness_v1_11.py"
 
-EXPECTED_CODE = "FAIL_TRANSPORT_LEMMA_ID"
-VERDICT = "NC28a_EXACT_SUBCODE_PASS_NOT_PROMOTED"
+EXPECTED_CODE = "FAIL_TRANSPORT_HUMAN_AUDIT"
+VERDICT = "NC28b_EXACT_SUBCODE_PASS_NOT_PROMOTED"
 
 REQUIRED_STDOUT_LINES = (
-    "NC28a_DIRECT_GATE=PASS",
+    "NC28b_DIRECT_GATE=PASS",
     "NUMERICAL_EVALUATOR_CALLED=FALSE",
     "END_TO_END_CLAIM=FALSE",
     "GATE_HARNESS=PASS_NOT_PROMOTED",
@@ -110,14 +110,14 @@ def main() -> int:
 
     head_post = git("rev-parse", "HEAD")
     if head_post != head_pre:
-        stop("HEAD changed during NC28a gate")
+        stop("HEAD changed during NC28b gate")
     if git("status", "--porcelain"):
         stop("SOURCE_TREE_POST dirty")
 
     receipt = {
-        "schema": "flambda-nc28a-transport-lemma-id-gate-run-v1",
+        "schema": "flambda-nc28b-transport-human-audit-gate-run-v1",
         "contract": "F_LAMBDA_CONTRACT_V1.1",
-        "control_id": "NC28a",
+        "control_id": "NC28b",
         "method": "SYNTHETIC_ROUTE_REAL_CHECKER_FUNCTION",
         "expected_exact_code": EXPECTED_CODE,
         "gate_harness_sha256": sha256_path(HARNESS),
@@ -145,10 +145,10 @@ def main() -> int:
         encoding="utf-8",
     )
 
-    print("CONTROL_ID=NC28a")
+    print("CONTROL_ID=NC28b")
     print("METHOD=SYNTHETIC_ROUTE_REAL_CHECKER_FUNCTION")
     print("EXPECTED_EXACT_CODE=" + EXPECTED_CODE)
-    print("NC28a_DIRECT_GATE=PASS")
+    print("NC28b_DIRECT_GATE=PASS")
     print("NUMERICAL_EVALUATOR_CALLED=FALSE")
     print("END_TO_END_CLAIM=FALSE")
     print("CANONICAL_CONTROL_EXECUTION_CLAIM=FALSE")
