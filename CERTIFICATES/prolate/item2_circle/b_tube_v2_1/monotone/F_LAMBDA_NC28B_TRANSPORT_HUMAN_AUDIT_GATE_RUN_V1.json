@@ -1,0 +1,29 @@
+{
+  "all_required_stdout_lines_present": true,
+  "binding_use_authorized": false,
+  "canonical_control_execution_claim": false,
+  "contract": "F_LAMBDA_CONTRACT_V1.1",
+  "control_id": "NC28b",
+  "end_to_end": false,
+  "execution_head": "b9294ae48ecae20291ba1b12530b7b7b7fc2ee7a",
+  "expected_exact_code": "FAIL_TRANSPORT_HUMAN_AUDIT",
+  "gate_harness_sha256": "4b090292d8f82c59033201c22012e92b0ce45d35b19c58b0f95b280b02f60ac0",
+  "harness_exit_code": 0,
+  "harness_stdout_sha256": "cc70f5222e3824061618b0b9525c0654d8817555463921deaece397f2c9b0ebc",
+  "head_unchanged_during_run": true,
+  "historical_checker_modified": false,
+  "method": "SYNTHETIC_ROUTE_REAL_CHECKER_FUNCTION",
+  "needs_numerics": false,
+  "numerical_evaluator_called": false,
+  "required_stdout_lines": [
+    "NC28b_DIRECT_GATE=PASS",
+    "NUMERICAL_EVALUATOR_CALLED=FALSE",
+    "END_TO_END_CLAIM=FALSE",
+    "GATE_HARNESS=PASS_NOT_PROMOTED"
+  ],
+  "run_source_sha256": "b6af14291818de18d1401484d1ac8d31166635e673fb9ce39592524b31b7c99f",
+  "schema": "flambda-nc28b-transport-human-audit-gate-run-v1",
+  "source_tree_post_clean": true,
+  "source_tree_pre_clean": true,
+  "verdict": "NC28b_EXACT_SUBCODE_PASS_NOT_PROMOTED"
+}
