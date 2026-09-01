@@ -1,0 +1,28 @@
+{
+  "all_required_stdout_lines_present": true,
+  "binding_use_authorized": false,
+  "contract": "F_LAMBDA_CONTRACT_V1.1",
+  "control_id": "NC02a",
+  "end_to_end": false,
+  "execution_head": "e1f874fe70133c3d4e819479c573889d6b479c2a",
+  "expected_exact_code": "FAIL_ORDINARY_FORMULA_RUNTIME_ID",
+  "gate_harness_sha256": "242e173b7c6453d220912893a5c4c4bf125c9a864883561b4630ad4a3a86dc8e",
+  "harness_exit_code": 0,
+  "harness_stdout_sha256": "953a683260ed0ead50dba1fe98b3afab6bf9e1027cda4787e3c43b5c2255b399",
+  "head_unchanged_during_run": true,
+  "historical_checker_modified": false,
+  "method": "SYNTHETIC_ROUTE_REAL_CHECKER_FUNCTION",
+  "needs_numerics": false,
+  "numerical_evaluator_called": false,
+  "required_stdout_lines": [
+    "NC02a_DIRECT_GATE=PASS",
+    "NUMERICAL_EVALUATOR_CALLED=FALSE",
+    "END_TO_END_CLAIM=FALSE",
+    "GATE_HARNESS=PASS_NOT_PROMOTED"
+  ],
+  "run_source_sha256": "084ac78d8625852d14b95838c0661bb9e32c305c3b8cf55342b65da2c871f7b8",
+  "schema": "flambda-nc02a-ordinary-formula-runtime-id-gate-run-v1",
+  "source_tree_post_clean": true,
+  "source_tree_pre_clean": true,
+  "verdict": "NC02a_EXACT_SUBCODE_PASS_NOT_PROMOTED"
+}
