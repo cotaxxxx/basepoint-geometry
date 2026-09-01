@@ -1,0 +1,28 @@
+{
+  "all_required_stdout_lines_present": true,
+  "binding_use_authorized": false,
+  "contract": "F_LAMBDA_CONTRACT_V1.1",
+  "control_id": "NC23",
+  "end_to_end": false,
+  "execution_head": "f65361f4f84c9c98e8a1f844fd772052ead20313",
+  "expected_exact_code": "FAIL_CHECKER_DPS_CONTRACT",
+  "gate_harness_sha256": "7c017ab91ab2f1747ba1d824124d61f0dfa7c28edcdc22aed949b01f6f28523f",
+  "harness_exit_code": 0,
+  "harness_stdout_sha256": "b4d58b23855cfd50ccaa1664f78ba6884d9ff662e9efdb31078f86b1fe7d6275",
+  "head_unchanged_during_run": true,
+  "historical_checker_modified": false,
+  "method": "SYNTHETIC_ROUTE_REAL_CHECKER_FUNCTION",
+  "needs_numerics": false,
+  "numerical_evaluator_called": false,
+  "required_stdout_lines": [
+    "NC23_DIRECT_GATE=PASS",
+    "NUMERICAL_EVALUATOR_CALLED=FALSE",
+    "END_TO_END_CLAIM=FALSE",
+    "GATE_HARNESS=PASS_NOT_PROMOTED"
+  ],
+  "run_source_sha256": "69c9649271935ca2c08d5149bb6102facf1b6aa59d397af5a07420dc7ca5c79e",
+  "schema": "flambda-nc23-checker-dps-contract-gate-run-v1",
+  "source_tree_post_clean": true,
+  "source_tree_pre_clean": true,
+  "verdict": "NC23_EXACT_SUBCODE_PASS_NOT_PROMOTED"
+}
