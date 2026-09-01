@@ -1,0 +1,28 @@
+{
+  "all_required_stdout_lines_present": true,
+  "binding_use_authorized": false,
+  "contract": "F_LAMBDA_CONTRACT_V1.1",
+  "control_id": "NC12",
+  "end_to_end": false,
+  "execution_head": "a2fa7c2a3694892d10008d757d104620d6d58e99",
+  "expected_exact_code": "FAIL_FLAMBDA_NORMALIZATION_BITS",
+  "gate_harness_sha256": "5813bc0c548757c4f8ed08f33206a144032c865a1d17a775164e9e876f7ab0c0",
+  "harness_exit_code": 0,
+  "harness_stdout_sha256": "b4091eb97eb4965950b730bb3a6a0db101651759016114c7120a852d77e4c09e",
+  "head_unchanged_during_run": true,
+  "historical_checker_modified": false,
+  "method": "SYNTHETIC_ROUTE_REAL_CHECKER_FUNCTION",
+  "needs_numerics": false,
+  "numerical_evaluator_called": false,
+  "required_stdout_lines": [
+    "NC12_DIRECT_GATE=PASS",
+    "NUMERICAL_EVALUATOR_CALLED=FALSE",
+    "END_TO_END_CLAIM=FALSE",
+    "GATE_HARNESS=PASS_NOT_PROMOTED"
+  ],
+  "run_source_sha256": "fb0ba67ea389433e04f419c018c78e609cca950c849883cd30511bd4d00b360f",
+  "schema": "flambda-nc12-normalization-bits-gate-run-v1",
+  "source_tree_post_clean": true,
+  "source_tree_pre_clean": true,
+  "verdict": "NC12_EXACT_SUBCODE_PASS_NOT_PROMOTED"
+}
