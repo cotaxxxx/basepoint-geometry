@@ -1,0 +1,28 @@
+{
+  "all_required_stdout_lines_present": true,
+  "binding_use_authorized": false,
+  "contract": "F_LAMBDA_CONTRACT_V1.1",
+  "control_id": "NC27",
+  "end_to_end": false,
+  "execution_head": "0300e6c7bf4b95409f25845f57cae9a4c0859bd6",
+  "expected_exact_code": "FAIL_KERNEL_MANIFEST_PIN",
+  "gate_harness_sha256": "257f8737478cd3f4a370b2febfbba0ba150cbc7fb79db9e56ebc711f69fd8556",
+  "harness_exit_code": 0,
+  "harness_stdout_sha256": "265046eb4f2e17e17dc407039f1288b8489d4ac63932b71f265fd3836171eed4",
+  "head_unchanged_during_run": true,
+  "historical_checker_modified": false,
+  "method": "SYNTHETIC_ROUTE_REAL_CHECKER_FUNCTION",
+  "needs_numerics": false,
+  "numerical_evaluator_called": false,
+  "required_stdout_lines": [
+    "NC27_DIRECT_GATE=PASS",
+    "NUMERICAL_EVALUATOR_CALLED=FALSE",
+    "END_TO_END_CLAIM=FALSE",
+    "GATE_HARNESS=PASS_NOT_PROMOTED"
+  ],
+  "run_source_sha256": "7898615ebb017016b85a88d95e092e74dd4ac7631ae68711fd53f29ac7384500",
+  "schema": "flambda-nc27-kernel-manifest-pin-gate-run-v1",
+  "source_tree_post_clean": true,
+  "source_tree_pre_clean": true,
+  "verdict": "NC27_EXACT_SUBCODE_PASS_NOT_PROMOTED"
+}
