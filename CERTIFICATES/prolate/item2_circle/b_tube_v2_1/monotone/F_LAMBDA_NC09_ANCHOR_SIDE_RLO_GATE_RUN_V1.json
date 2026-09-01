@@ -1,0 +1,28 @@
+{
+  "all_required_stdout_lines_present": true,
+  "binding_use_authorized": false,
+  "contract": "F_LAMBDA_CONTRACT_V1.1",
+  "control_id": "NC09",
+  "end_to_end": false,
+  "execution_head": "3b7d3d9b03821d5af61e1589bdfd5b0d1db942ac",
+  "expected_exact_code": "FAIL_ANCHOR_SIDE_DERIVATION",
+  "gate_harness_sha256": "619c40d7ff2fbf081b5f627afba7f2d8d7b6bfbf4aab523864741d5b767fa9a6",
+  "harness_exit_code": 0,
+  "harness_stdout_sha256": "973686ffc2946dc0041d53ad03b833e65f218428f88367ff9585d794abb96949",
+  "head_unchanged_during_run": true,
+  "historical_checker_modified": false,
+  "method": "SYNTHETIC_PREDICATE_REAL_CHECKER_NEED",
+  "needs_numerics": false,
+  "numerical_evaluator_called": false,
+  "required_stdout_lines": [
+    "NC09_DIRECT_GATE=PASS",
+    "NUMERICAL_EVALUATOR_CALLED=FALSE",
+    "END_TO_END_CLAIM=FALSE",
+    "GATE_HARNESS=PASS_NOT_PROMOTED"
+  ],
+  "run_source_sha256": "82778b430cccbd23967e3d0305862d5b9c9d311759af7f08b516e2ec1ced2b3f",
+  "schema": "flambda-nc09-anchor-side-rlo-gate-run-v1",
+  "source_tree_post_clean": true,
+  "source_tree_pre_clean": true,
+  "verdict": "NC09_EXACT_SUBCODE_PASS_NOT_PROMOTED"
+}
