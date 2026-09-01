@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Dedicated deterministic NC12 normalization-bits gate runner.
+"""Dedicated deterministic NC03 quantity gate runner.
 
 This is F_LAMBDA_CONTRACT_V1.1 preexecution infrastructure.
 
 Scope:
 - execute the V1.2 gate-unit harness;
-- require the real-checker NC12 direct gate to pass;
+- require the real-checker NC03 direct gate to pass;
 - require explicit non-numerical / non-end-to-end harness markers;
 - emit a deterministic run receipt.
 
@@ -108,7 +108,7 @@ def main() -> int:
 
     head_post = git("rev-parse", "HEAD")
     if head_post != head_pre:
-        stop("HEAD changed during NC12 gate")
+        stop("HEAD changed during NC03 gate")
     if git("status", "--porcelain"):
         stop("SOURCE_TREE_POST dirty")
 
