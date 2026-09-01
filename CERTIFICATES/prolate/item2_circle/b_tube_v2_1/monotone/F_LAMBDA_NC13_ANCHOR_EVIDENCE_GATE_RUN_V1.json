@@ -1,0 +1,28 @@
+{
+  "all_required_stdout_lines_present": true,
+  "binding_use_authorized": false,
+  "contract": "F_LAMBDA_CONTRACT_V1.1",
+  "control_id": "NC13",
+  "end_to_end": false,
+  "execution_head": "a99e9a7c42f627236e48ebe1fca2ba068c292a8d",
+  "expected_exact_code": "FAIL_ANCHOR_EVIDENCE",
+  "gate_harness_sha256": "09ec4f68c803476a5abecc960eb71522d555752d2c0a07d3adfe26c60c81ba70",
+  "harness_exit_code": 0,
+  "harness_stdout_sha256": "b9893577018c13b735930c5fc138217d2355de4dded8d3b8b7c3d2fab7d706f0",
+  "head_unchanged_during_run": true,
+  "historical_checker_modified": false,
+  "method": "SYNTHETIC_ROUTE_REAL_CHECKER_FUNCTION",
+  "needs_numerics": false,
+  "numerical_evaluator_called": false,
+  "required_stdout_lines": [
+    "NC13_DIRECT_GATE=PASS",
+    "NUMERICAL_EVALUATOR_CALLED=FALSE",
+    "END_TO_END_CLAIM=FALSE",
+    "GATE_HARNESS=PASS_NOT_PROMOTED"
+  ],
+  "run_source_sha256": "a4001adbc0237020ba02b7d079c99764a74ae68c051e140df9737c0bf9b0f150",
+  "schema": "flambda-nc13-anchor-evidence-gate-run-v1",
+  "source_tree_post_clean": true,
+  "source_tree_pre_clean": true,
+  "verdict": "NC13_EXACT_SUBCODE_PASS_NOT_PROMOTED"
+}
