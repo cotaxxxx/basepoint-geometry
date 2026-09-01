@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Dedicated deterministic NC03 quantity gate runner.
+"""Dedicated deterministic NC16 F_lambda budget gate runner.
 
 This is F_LAMBDA_CONTRACT_V1.1 preexecution infrastructure.
 
 Scope:
-- execute the V1.2 gate-unit harness;
-- require the real-checker NC03 direct gate to pass;
+- execute the V1.4 gate-unit harness;
+- require the real-checker NC16 direct gate to pass;
 - require explicit non-numerical / non-end-to-end harness markers;
 - emit a deterministic run receipt.
 
@@ -29,13 +29,13 @@ sys.dont_write_bytecode = True
 HERE = Path(__file__).resolve().parent
 REPO_ROOT = HERE.parents[4]
 
-HARNESS = HERE / "flambda_gate_unit_harness_v1_3.py"
+HARNESS = HERE / "flambda_gate_unit_harness_v1_4.py"
 
-EXPECTED_CODE = "FAIL_FLAMBDA_QUANTITY"
-VERDICT = "NC03_EXACT_SUBCODE_PASS_NOT_PROMOTED"
+EXPECTED_CODE = "FAIL_FLAMBDA_BUDGET"
+VERDICT = "NC16_EXACT_SUBCODE_PASS_NOT_PROMOTED"
 
 REQUIRED_STDOUT_LINES = (
-    "NC03_DIRECT_GATE=PASS",
+    "NC16_DIRECT_GATE=PASS",
     "NUMERICAL_EVALUATOR_CALLED=FALSE",
     "END_TO_END_CLAIM=FALSE",
     "GATE_HARNESS=PASS_NOT_PROMOTED",
@@ -108,14 +108,14 @@ def main() -> int:
 
     head_post = git("rev-parse", "HEAD")
     if head_post != head_pre:
-        stop("HEAD changed during NC03 gate")
+        stop("HEAD changed during NC16 gate")
     if git("status", "--porcelain"):
         stop("SOURCE_TREE_POST dirty")
 
     receipt = {
-        "schema": "flambda-nc03-quantity-gate-run-v1",
+        "schema": "flambda-nc16-flambda-budget-gate-run-v1",
         "contract": "F_LAMBDA_CONTRACT_V1.1",
-        "control_id": "NC03",
+        "control_id": "NC16",
         "method": "SYNTHETIC_ROUTE_REAL_CHECKER_FUNCTION",
         "expected_exact_code": EXPECTED_CODE,
         "gate_harness_sha256": sha256_path(HARNESS),
@@ -142,10 +142,10 @@ def main() -> int:
         encoding="utf-8",
     )
 
-    print("CONTROL_ID=NC03")
+    print("CONTROL_ID=NC16")
     print("METHOD=SYNTHETIC_ROUTE_REAL_CHECKER_FUNCTION")
     print("EXPECTED_EXACT_CODE=" + EXPECTED_CODE)
-    print("NC03_DIRECT_GATE=PASS")
+    print("NC16_DIRECT_GATE=PASS")
     print("NUMERICAL_EVALUATOR_CALLED=FALSE")
     print("END_TO_END_CLAIM=FALSE")
     print("SOURCE_TREE_PRE=CLEAN")
