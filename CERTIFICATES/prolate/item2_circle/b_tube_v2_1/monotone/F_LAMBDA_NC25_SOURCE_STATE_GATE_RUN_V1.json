@@ -1,0 +1,39 @@
+{
+  "binding_use_authorized": false,
+  "canonical_control_execution_claim": true,
+  "checker_source_sha256": "5be9dea3679f2dd9245c4df21aca7863c8743ac0395c7f8173950a7b37f5bb18",
+  "contract": "F_LAMBDA_CONTRACT_V1.1",
+  "control_id": "NC25",
+  "dynamic_failure_path_executed": true,
+  "end_to_end": false,
+  "execution_head": "c582b7485e75dd3bc93631da534d3ee403462788",
+  "head_unchanged_during_run": true,
+  "historical_checker_modified": false,
+  "historical_checker_precheck_called": true,
+  "method": "REAL_CHECKER_DRY_PRECHECK_TWO_SUBFAMILIES",
+  "needs_numerics": false,
+  "numerical_evaluator_called": false,
+  "run_source_sha256": "3bf9e79c44cd82faa05bc0c733a9e74bf613313a379e8d7ba099464e55fc27e1",
+  "schema": "flambda-nc25-source-state-gate-run-v1",
+  "source_tree_post_clean": true,
+  "source_tree_pre_clean": true,
+  "source_tree_restored_after_nc25a": true,
+  "subcases": {
+    "NC25a": {
+      "expected_exact_code": "FAIL_DIRTY_SOURCE_TREE",
+      "mutation": "WORKTREE:dirty_state",
+      "observed_detail": null,
+      "observed_exact_code": "FAIL_DIRTY_SOURCE_TREE",
+      "probe_removed_after_control": true,
+      "temporary_probe": ".nc25_dirty_state_probe.tmp"
+    },
+    "NC25b": {
+      "expected_exact_code": "FAIL_HEAD_MISMATCH",
+      "mutated_expected_head": "0000000000000000000000000000000000000000",
+      "mutation": "ARGUMENT:expected_head",
+      "observed_detail": null,
+      "observed_exact_code": "FAIL_HEAD_MISMATCH"
+    }
+  },
+  "verdict": "NC25_TWO_SUBFAMILY_PASS_NOT_PROMOTED"
+}
