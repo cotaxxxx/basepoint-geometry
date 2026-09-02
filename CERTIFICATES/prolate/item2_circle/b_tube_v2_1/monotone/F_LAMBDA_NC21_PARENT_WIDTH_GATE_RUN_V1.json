@@ -1,0 +1,30 @@
+{
+  "binding_use_authorized": false,
+  "canonical_control_execution_claim": false,
+  "contract": "F_LAMBDA_CONTRACT_V1.1",
+  "control_id": "NC21",
+  "dynamic_failure_path_executed": true,
+  "end_to_end": false,
+  "execution_head": "14a3cfb6d426d68a60facdc2a919e1e8b1f0c35f",
+  "expected_exact_code": "FAIL_PARENT_WIDTH",
+  "gate_harness_sha256": "4b090292d8f82c59033201c22012e92b0ce45d35b19c58b0f95b280b02f60ac0",
+  "harness_exit_code": 0,
+  "head_unchanged_during_run": true,
+  "historical_checker_modified": false,
+  "historical_checker_sha256": "5be9dea3679f2dd9245c4df21aca7863c8743ac0395c7f8173950a7b37f5bb18",
+  "method": "PRODUCER_SIDE_EXACT_GATE",
+  "needs_numerics": false,
+  "numerical_evaluator_called": false,
+  "producer_modified": false,
+  "producer_source_sha256": "f1b77313f29694765494d12e3edd043651162989758c9cecf8a00ef152f1776f",
+  "run_source_sha256": "d7c2b7ac6797f66e37e159f71651621ea3ff1a15ef228ce09ad1eec8b7d76e01",
+  "schema": "flambda-nc21-parent-width-gate-run-v1",
+  "source_tree_post_clean": true,
+  "source_tree_pre_clean": true,
+  "synthetic_parent": {
+    "hi": "1/2",
+    "lo": "1/2",
+    "property": "nonpositive_parent_width"
+  },
+  "verdict": "NC21_EXACT_SUBCODE_PASS_NOT_PROMOTED"
+}
