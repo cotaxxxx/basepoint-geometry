@@ -72,12 +72,16 @@ checker = load_checker()
 
 
 class NC15aInterval:
-    lo = Fraction(1)
-    hi = Fraction(2)
+    lo = checker.Dyadic.from_fraction(Fraction(1))
+    hi = checker.Dyadic.from_fraction(Fraction(2))
 
-    @staticmethod
-    def to_json():
-        return {"lo": "1", "hi": "2", "synthetic": "nc15a"}
+    @classmethod
+    def to_json(cls):
+        return {
+            "lo": cls.lo.to_json(),
+            "hi": cls.hi.to_json(),
+            "synthetic": "nc15a",
+        }
 
 
 class NC15aEvaluator:
