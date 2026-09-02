@@ -1,0 +1,32 @@
+{
+  "binding_use_authorized": false,
+  "boundary_modified": false,
+  "boundary_sha256": "8aa6647cc93026afee113cc2435fd7af858c93dc17fd1c79a5db2754f246218c",
+  "canonical_control_execution_claim": false,
+  "contract": "F_LAMBDA_CONTRACT_V1.1",
+  "control_id": "NC32",
+  "dynamic_failure_path_executed": true,
+  "end_to_end": false,
+  "execution_head": "800845c654bd4597ae6e8f5b61424070549201cc",
+  "expected_exact_code": "FAIL_REQUIRED_SIGN_MISSING",
+  "gate_harness_sha256": "4b090292d8f82c59033201c22012e92b0ce45d35b19c58b0f95b280b02f60ac0",
+  "harness_exit_code": 0,
+  "head_unchanged_during_run": true,
+  "historical_checker_modified": false,
+  "historical_checker_sha256": "5be9dea3679f2dd9245c4df21aca7863c8743ac0395c7f8173950a7b37f5bb18",
+  "method": "DIRECT_EXISTING_NATIVE_REPLAY_GATE",
+  "native_call": {
+    "accept": null,
+    "quantity": "F_lambda",
+    "required_sign": null
+  },
+  "native_replay_sha256": "ad4844aa4fc005453c0846f132689e5d6c77de4362ee5b27eae390ef9f581613",
+  "needs_numerics": false,
+  "numerical_arguments_dereferenced": false,
+  "numerical_evaluator_called": false,
+  "run_source_sha256": "3c4d22081b814792c8632c21fbb1c2dfff6a37b70052cf74d0db64084090e853",
+  "schema": "flambda-nc32-required-sign-missing-gate-run-v1",
+  "source_tree_post_clean": true,
+  "source_tree_pre_clean": true,
+  "verdict": "NC32_EXACT_SUBCODE_PASS_NOT_PROMOTED"
+}
