@@ -10,7 +10,7 @@ from fractions import Fraction
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-ROOT = HERE.parents[5]
+ROOT = HERE.parents[4]
 CHECKER = HERE.parent / "flambda_transport_checker_v1.py"
 HARNESS = HERE / "flambda_gate_unit_harness_v1_11.py"
 RECEIPT = HERE / "F_LAMBDA_NC15A_ANCHOR_SIGN_NEG_GATE_RUN_V1.json"
