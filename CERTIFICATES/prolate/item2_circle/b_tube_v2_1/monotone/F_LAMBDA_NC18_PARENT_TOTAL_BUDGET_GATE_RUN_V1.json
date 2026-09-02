@@ -1,0 +1,31 @@
+{
+  "all_required_stdout_lines_present": true,
+  "binding_use_authorized": false,
+  "canonical_control_execution_claim": false,
+  "contract": "F_LAMBDA_CONTRACT_V1.1",
+  "control_id": "NC18",
+  "dynamic_failure_path_executed": false,
+  "end_to_end": false,
+  "execution_head": "102c82cba963e98fd278fe349ee4f07363a17f2f",
+  "expected_exact_code": "FAIL_CHECKER_PARENT_TOTAL_BUDGET",
+  "gate_harness_sha256": "4b090292d8f82c59033201c22012e92b0ce45d35b19c58b0f95b280b02f60ac0",
+  "harness_exit_code": 0,
+  "harness_stdout_sha256": "cc70f5222e3824061618b0b9525c0654d8817555463921deaece397f2c9b0ebc",
+  "head_unchanged_during_run": true,
+  "historical_checker_modified": false,
+  "method": "STRUCTURAL_PREDICATE_AST_AUDIT",
+  "needs_numerics": false,
+  "numerical_evaluator_called": false,
+  "predicate": "total_anchor + total_flambda <= declared_parent_cap",
+  "required_stdout_lines": [
+    "NC18_STRUCTURAL_PREDICATE=PASS",
+    "NUMERICAL_EVALUATOR_CALLED=FALSE",
+    "END_TO_END_CLAIM=FALSE",
+    "GATE_HARNESS=PASS_NOT_PROMOTED"
+  ],
+  "run_source_sha256": "866124dabda132adfabdbc0c59e28df80b64050243dd15b3e3af5c233661f161",
+  "schema": "flambda-nc18-parent-total-budget-gate-run-v1",
+  "source_tree_post_clean": true,
+  "source_tree_pre_clean": true,
+  "verdict": "NC18_STRUCTURAL_PREDICATE_PASS_NOT_PROMOTED"
+}
