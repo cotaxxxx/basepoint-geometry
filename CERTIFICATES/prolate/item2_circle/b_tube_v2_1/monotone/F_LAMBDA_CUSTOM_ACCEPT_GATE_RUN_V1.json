@@ -1,0 +1,32 @@
+{
+  "binding_use_authorized": false,
+  "boundary_modified": false,
+  "boundary_sha256": "8aa6647cc93026afee113cc2435fd7af858c93dc17fd1c79a5db2754f246218c",
+  "canonical_control_execution_claim": false,
+  "contract": "F_LAMBDA_CONTRACT_V1.1",
+  "control_id": "CUSTOM_ACCEPT",
+  "dynamic_failure_path_executed": true,
+  "end_to_end": false,
+  "execution_head": "4ef4ae9b88064ac3a2a8342ac8a96a705d2b7819",
+  "expected_exact_code": "FAIL_CUSTOM_PREDICATE_FORBIDDEN",
+  "gate_harness_sha256": "4b090292d8f82c59033201c22012e92b0ce45d35b19c58b0f95b280b02f60ac0",
+  "harness_exit_code": 0,
+  "head_unchanged_during_run": true,
+  "historical_checker_modified": false,
+  "historical_checker_sha256": "5be9dea3679f2dd9245c4df21aca7863c8743ac0395c7f8173950a7b37f5bb18",
+  "method": "DIRECT_EXISTING_NATIVE_REPLAY_GATE",
+  "native_call": {
+    "accept": "custom_predicate",
+    "quantity": "F_lambda",
+    "required_sign": "NEG"
+  },
+  "native_replay_sha256": "ad4844aa4fc005453c0846f132689e5d6c77de4362ee5b27eae390ef9f581613",
+  "needs_numerics": false,
+  "numerical_arguments_dereferenced": false,
+  "numerical_evaluator_called": false,
+  "run_source_sha256": "aab5ae24e2cce9a67efe82abf9a90c84e2a31c1fe72db93f1f6b91c51ac3a448",
+  "schema": "flambda-custom-accept-gate-run-v1",
+  "source_tree_post_clean": true,
+  "source_tree_pre_clean": true,
+  "verdict": "CUSTOM_ACCEPT_EXACT_SUBCODE_PASS_NOT_PROMOTED"
+}
