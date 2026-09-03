@@ -1,0 +1,37 @@
+{
+  "binding_use_authorized": false,
+  "canonical_control_execution_claim": true,
+  "contract": "F_LAMBDA_CONTRACT_V1.1",
+  "control_id": "NC06",
+  "dynamic_failure_path_executed": true,
+  "end_to_end": false,
+  "execution_head": "bb67512db8a3c46c64ecde0632d04d19b4a6fa9f",
+  "expected_exact_code": "FAIL_LAMBDA_GEOMETRY_RECONSTRUCTION",
+  "head_unchanged_during_run": true,
+  "historical_checker_lambda_geometry_called": true,
+  "historical_checker_modified": false,
+  "historical_checker_sha256": "5be9dea3679f2dd9245c4df21aca7863c8743ac0395c7f8173950a7b37f5bb18",
+  "method": "REAL_CHECKER_LAMBDA_GEOMETRY_DRY_PRECHECK_EXACT_OVERLAP",
+  "mutation": "PRODUCER_GEOMETRY:lambda_overlap",
+  "needs_numerics": false,
+  "numerical_evaluator_called": false,
+  "observed_detail": null,
+  "observed_exact_code": "FAIL_LAMBDA_GEOMETRY_RECONSTRUCTION",
+  "overlap": {
+    "hi": "3/32",
+    "lo": "1/16",
+    "property": "exact_rational_overlap_between_adjacent_lambda_tile_interiors",
+    "width": "1/32"
+  },
+  "positive_parent": {
+    "base_tile": "1/16",
+    "hi": "1/8",
+    "lo": "0",
+    "tile_count": 2
+  },
+  "run_source_sha256": "5801f505b5f179b150eea779f216c2df856226ffc028bb100b8ae6b948667ec8",
+  "schema": "flambda-nc06-lambda-overlap-gate-run-v1",
+  "source_tree_post_clean": true,
+  "source_tree_pre_clean": true,
+  "verdict": "NC06_EXACT_OVERLAP_SUBCODE_PASS_NOT_PROMOTED"
+}
