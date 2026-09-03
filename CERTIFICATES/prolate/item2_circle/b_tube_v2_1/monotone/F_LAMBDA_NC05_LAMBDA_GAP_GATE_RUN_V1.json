@@ -1,0 +1,37 @@
+{
+  "binding_use_authorized": false,
+  "canonical_control_execution_claim": true,
+  "contract": "F_LAMBDA_CONTRACT_V1.1",
+  "control_id": "NC05",
+  "dynamic_failure_path_executed": true,
+  "end_to_end": false,
+  "execution_head": "674d85a7b94a6e3d387e42a6778c9159a06e2175",
+  "expected_exact_code": "FAIL_LAMBDA_GEOMETRY_RECONSTRUCTION",
+  "gap": {
+    "hi": "1/16",
+    "lo": "1/32",
+    "property": "exact_rational_portion_removed_between_adjacent_lambda_tiles",
+    "width": "1/32"
+  },
+  "head_unchanged_during_run": true,
+  "historical_checker_lambda_geometry_called": true,
+  "historical_checker_modified": false,
+  "historical_checker_sha256": "5be9dea3679f2dd9245c4df21aca7863c8743ac0395c7f8173950a7b37f5bb18",
+  "method": "REAL_CHECKER_LAMBDA_GEOMETRY_DRY_PRECHECK_EXACT_GAP",
+  "mutation": "PRODUCER_GEOMETRY:lambda_gap",
+  "needs_numerics": false,
+  "numerical_evaluator_called": false,
+  "observed_detail": null,
+  "observed_exact_code": "FAIL_LAMBDA_GEOMETRY_RECONSTRUCTION",
+  "positive_parent": {
+    "base_tile": "1/16",
+    "hi": "1/8",
+    "lo": "0",
+    "tile_count": 2
+  },
+  "run_source_sha256": "b4a7844369e9633e99da15a6c569d5013d8c8eb21a955ba9303b6111a9499d75",
+  "schema": "flambda-nc05-lambda-gap-gate-run-v1",
+  "source_tree_post_clean": true,
+  "source_tree_pre_clean": true,
+  "verdict": "NC05_EXACT_GAP_SUBCODE_PASS_NOT_PROMOTED"
+}
