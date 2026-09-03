@@ -1,0 +1,80 @@
+{
+  "all_six_canonical_subcases_executed": true,
+  "binding_use_authorized": false,
+  "canonical_control_execution_claim": true,
+  "contract": "F_LAMBDA_CONTRACT_V1.1",
+  "control_id": "NC26",
+  "dynamic_failure_path_executed": true,
+  "end_to_end": false,
+  "execution_head": "821dff8e6fb08b8b44c60d21c6c730501332711e",
+  "expected_exact_code": "FAIL_LAMBDA_GEOMETRY_RECONSTRUCTION",
+  "head_unchanged_during_run": true,
+  "historical_checker_lambda_geometry_called": true,
+  "historical_checker_modified": false,
+  "historical_checker_sha256": "5be9dea3679f2dd9245c4df21aca7863c8743ac0395c7f8173950a7b37f5bb18",
+  "method": "REAL_CHECKER_LAMBDA_GEOMETRY_DRY_PRECHECK_RESIDUAL_SUBCASES",
+  "needs_numerics": false,
+  "numerical_evaluator_called": false,
+  "positive_parent": {
+    "hi": "5/32",
+    "lo": "0"
+  },
+  "positive_tiles": [
+    [
+      "0",
+      "1/16"
+    ],
+    [
+      "1/16",
+      "1/8"
+    ],
+    [
+      "1/8",
+      "5/32"
+    ]
+  ],
+  "residual_width": "1/32",
+  "run_source_sha256": "d55b2732d8e5d381e71bd21e701de831d23a6358e37c5a5e8deef70211d767da",
+  "schema": "flambda-nc26-residual-tiling-gate-run-v1",
+  "source_tree_post_clean": true,
+  "source_tree_pre_clean": true,
+  "subcases": {
+    "NC26a": {
+      "expected_exact_code": "FAIL_LAMBDA_GEOMETRY_RECONSTRUCTION",
+      "mutation": "PRODUCER_GEOMETRY:residual_omitted",
+      "observed_detail": null,
+      "observed_exact_code": "FAIL_LAMBDA_GEOMETRY_RECONSTRUCTION"
+    },
+    "NC26b": {
+      "expected_exact_code": "FAIL_LAMBDA_GEOMETRY_RECONSTRUCTION",
+      "mutation": "PRODUCER_GEOMETRY:residual_duplicated",
+      "observed_detail": null,
+      "observed_exact_code": "FAIL_LAMBDA_GEOMETRY_RECONSTRUCTION"
+    },
+    "NC26c": {
+      "expected_exact_code": "FAIL_LAMBDA_GEOMETRY_RECONSTRUCTION",
+      "mutation": "PRODUCER_GEOMETRY:residual_non_final",
+      "observed_detail": null,
+      "observed_exact_code": "FAIL_LAMBDA_GEOMETRY_RECONSTRUCTION"
+    },
+    "NC26d": {
+      "expected_exact_code": "FAIL_LAMBDA_GEOMETRY_RECONSTRUCTION",
+      "mutation": "PRODUCER_GEOMETRY:residual_width_nonpositive",
+      "observed_detail": null,
+      "observed_exact_code": "FAIL_LAMBDA_GEOMETRY_RECONSTRUCTION"
+    },
+    "NC26e": {
+      "expected_exact_code": "FAIL_LAMBDA_GEOMETRY_RECONSTRUCTION",
+      "mutation": "PRODUCER_GEOMETRY:residual_width_too_wide",
+      "observed_detail": null,
+      "observed_exact_code": "FAIL_LAMBDA_GEOMETRY_RECONSTRUCTION"
+    },
+    "NC26f": {
+      "expected_exact_code": "FAIL_LAMBDA_GEOMETRY_RECONSTRUCTION",
+      "mutation": "PRODUCER_GEOMETRY:residual_final_endpoint_mismatch",
+      "observed_detail": null,
+      "observed_exact_code": "FAIL_LAMBDA_GEOMETRY_RECONSTRUCTION"
+    }
+  },
+  "verdict": "NC26_RESIDUAL_TILING_SUBCODES_PASS_NOT_PROMOTED"
+}
