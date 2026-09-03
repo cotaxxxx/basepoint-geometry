@@ -147,3 +147,14 @@ python b_tube_checker.py /tmp/btube-selftest
 11. Imported kernel file bytes, C-G artifact identity, reference-kernel equality,
     and the F/G lemma are pinned independently.
 12. Every negative control rejected; no workflow or GitHub-write implementation.
+
+## Final negative-control disposition
+
+The final F-lambda checker negative-control disposition is **30 COVERED + 1
+PROVEN_REDUNDANT**, with no unresolved control. NC18 remains `MISSING` in the
+frozen `monotone/F_LAMBDA_CHECKER_CONTRACT_NC_CROSSWALK_V1_14.tsv`; its final
+disposition is `PROVEN_REDUNDANT` by structural inequality. See
+`monotone/F_LAMBDA_CHECKER_NC_CLOSURE_V1_1.json`. This disposition does not
+promote NC18 to `COVERED` and does not claim execution of its structurally
+unreachable canonical failure branch.
+
