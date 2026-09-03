@@ -1,0 +1,62 @@
+{
+  "basis_head": "409d2036ece523cda9b1f66ed1aa08edff4a7b00",
+  "binding_use_authorized": false,
+  "canonical_control_execution_claim_for_nc18": false,
+  "closure_claim": "All 31 contract controls are dispositioned: 30 are dynamically COVERED and NC18 is PROVEN_REDUNDANT by structural inequality. This closure does not promote NC18 to COVERED and does not claim canonical execution of its unreachable failure branch.",
+  "closure_state": {
+    "covered": 30,
+    "notation": "30 COVERED + 1 PROVEN_REDUNDANT",
+    "partial": 0,
+    "proven_redundant": 1,
+    "unresolved": 0
+  },
+  "contract": "F_LAMBDA_CONTRACT_V1.1",
+  "crosswalk": {
+    "path": "CERTIFICATES/prolate/item2_circle/b_tube_v2_1/monotone/F_LAMBDA_CHECKER_CONTRACT_NC_CROSSWALK_V1_14.tsv",
+    "raw_state": {
+      "covered": 30,
+      "missing": 1,
+      "partial": 0,
+      "predeclared": 0
+    },
+    "sha256": "fba5cfc906740a236c82840755bcea62b00a8a057b28af066b5c441eca92e893"
+  },
+  "crosswalk_nc18_remains_missing": true,
+  "end_to_end_claim_for_nc18": false,
+  "historical_checker": {
+    "modified": false,
+    "path": "CERTIFICATES/prolate/item2_circle/b_tube_v2_1/flambda_transport_checker_v1.py",
+    "sha256": "5be9dea3679f2dd9245c4df21aca7863c8743ac0395c7f8173950a7b37f5bb18"
+  },
+  "historical_crosswalk_modified": false,
+  "no26_map_modified": false,
+  "proven_redundant_controls": [
+    {
+      "binding_use_authorized": false,
+      "canonical_control_execution_claim": false,
+      "contract_expected_code": "FAIL_PARENT_BUDGET",
+      "control_id": "NC18",
+      "disposition": "PROVEN_REDUNDANT",
+      "dynamic_failure_path_executed_in_canonical_path": false,
+      "implementation_code": "FAIL_CHECKER_PARENT_TOTAL_BUDGET",
+      "proof": {
+        "anchor_bound": "total_anchor <= 2 * CHECKER_ANCHOR_CALL_CAP",
+        "conclusion": "total_anchor + total_flambda <= declared_parent_cap; therefore the strict failure condition required for FAIL_CHECKER_PARENT_TOTAL_BUDGET cannot occur after the preceding individual-cap gates.",
+        "declared_parent_cap": "2 * CHECKER_ANCHOR_CALL_CAP + 2 * tile_count * CHECKER_FLAMBDA_CELL_CALL_CAP",
+        "flambda_bound": "total_flambda <= 2 * tile_count * CHECKER_FLAMBDA_CELL_CALL_CAP"
+      },
+      "reason": "Specific aggregate-budget failure is structurally unreachable after prior individual-cap gates.",
+      "runner": {
+        "path": "CERTIFICATES/prolate/item2_circle/b_tube_v2_1/monotone/flambda_nc18_parent_total_budget_gate_run_v1.py",
+        "sha256": "866124dabda132adfabdbc0c59e28df80b64050243dd15b3e3af5c233661f161"
+      },
+      "structural_receipt": {
+        "method": "STRUCTURAL_PREDICATE_AST_AUDIT",
+        "path": "CERTIFICATES/prolate/item2_circle/b_tube_v2_1/monotone/F_LAMBDA_NC18_PARENT_TOTAL_BUDGET_GATE_RUN_V1.json",
+        "sha256": "1060026b604defde0db6f35d0653d29c1c34e01e3d90539469e92cc8120d1c7d",
+        "verdict": "NC18_STRUCTURAL_PREDICATE_PASS_NOT_PROMOTED"
+      }
+    }
+  ],
+  "schema": "flambda-checker-nc-closure-v1.1"
+}
