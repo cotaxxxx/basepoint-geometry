@@ -1,0 +1,80 @@
+{
+  "all_terminal_lo_positive": true,
+  "binding_use_authorized": false,
+  "cell0_hu_production_receipt_sha256": "5f3feb5ec12aa09d40eb906d6023efa51676327b0b6af3f51d3c5439a765d39b",
+  "cell0_hu_promotion_receipt_sha256": "ea688d25c1d6000c6708249cc99036284721e10daa9e0bb27c80af9c3e3147ad",
+  "component": "START_JOIN_SLIVER_HU_CERTIFICATE",
+  "component1_geometry_receipt_sha256": "f60c22cbc1d4a45e5593a64e64194f7e3dbc97df69e1547aca092d2d93b7911f",
+  "composition_requires": "CELL0_HU_PRODUCTION_PROMOTION_V1_WITH_SAME_COMPONENT1_SHA",
+  "contract": "MONOTONE_TUBE_V1_1",
+  "dps": 60,
+  "evaluated_boxes": [
+    {
+      "box_id": "S0_BASE/r0",
+      "complete_closed_cover": true,
+      "evaluation_count": 429,
+      "hi": "4809421623082545528819086455878178114077347270732562289491/1569275433846670190958947355801916604025588861116008628224",
+      "lo": "27663923672644196145956428678367815272955302217950543175/6277101735386680763835789423207666416102355444464034512896",
+      "proof_id": "1c046ec0133bb048652886bc27464b48b9afa0f575ab31618cee629b2ca4a027",
+      "r_hi": "8191/8192",
+      "r_lo": "32763/32768",
+      "reason": null,
+      "stage_id": "S0_BASE",
+      "status": "PASS_POS"
+    }
+  ],
+  "evidence_class": "BINDING_COMPONENT_CANDIDATE",
+  "execution_head": "9c92a2865ddbf725619ac64e43a080a7e2f2b845",
+  "fallback_policy": {
+    "axis": "R_ONLY",
+    "enabled_only_if_primary_unresolved": true,
+    "exact_bisection": true,
+    "lambda_refinement": "FORBIDDEN",
+    "max_depth": 6,
+    "refine_only_unresolved": true,
+    "stage_sequence": [
+      "S0_BASE",
+      "S1_R1",
+      "S2_R2",
+      "S3_R3",
+      "S4_R4",
+      "S5_R5",
+      "S6_R6"
+    ]
+  },
+  "first_passing_stage": "S0_BASE",
+  "geometry": {
+    "hull": {
+      "r_hi": "8191/8192",
+      "r_lo": "37140511944960794174557707/38685626227668133590597632"
+    },
+    "lambda_start": "3307749/1600000",
+    "sliver": {
+      "r_hi": "8191/8192",
+      "r_lo": "32763/32768"
+    },
+    "tube": {
+      "r_hi": "32763/32768",
+      "r_lo": "37140511944960794174557707/38685626227668133590597632"
+    },
+    "tube_intersection_sliver": {
+      "r": "32763/32768"
+    },
+    "tube_union_sliver_equals_hull": true
+  },
+  "head_unchanged_during_run": true,
+  "per_box_cap": 24000,
+  "primary_call_count": 1,
+  "quantity": "H_U",
+  "required_sign": "POS",
+  "runner_sha256": "23d5b4e6e4d788c4e8788f8f91d3b4a63fbc89f684ba20c66a14c81f60075ce4",
+  "schema": "monotone-tube-v1.1-cell0-start-join-sliver-hu-v1",
+  "sliver_lo": "27663923672644196145956428678367815272955302217950543175/6277101735386680763835789423207666416102355444464034512896",
+  "sliver_union_equals_parent": true,
+  "source_tree_post_clean": true,
+  "source_tree_pre_clean": true,
+  "terminal_box_count": 1,
+  "total_evaluation_count": 429,
+  "union_monotonicity_claim": "DEFERRED_TO_ASSEMBLY_COMPOSITION",
+  "verdict": "START_JOIN_SLIVER_HU_PASS"
+}
