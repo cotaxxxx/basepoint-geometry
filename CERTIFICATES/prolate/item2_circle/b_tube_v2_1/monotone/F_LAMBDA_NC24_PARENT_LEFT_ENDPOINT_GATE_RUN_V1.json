@@ -1,0 +1,39 @@
+{
+  "base_tile_unchanged": true,
+  "binding_use_authorized": false,
+  "canonical_control_execution_claim": true,
+  "cell_index_unchanged": true,
+  "contract": "F_LAMBDA_CONTRACT_V1.1",
+  "control_id": "NC24",
+  "dynamic_failure_path_executed": true,
+  "end_to_end": false,
+  "execution_head": "2e473c8f8d25d4cbc8261d6fc7bb4037b18d1b13",
+  "expected_exact_code": "FAIL_LAMBDA_GEOMETRY_RECONSTRUCTION",
+  "head_unchanged_during_run": true,
+  "historical_checker_lambda_geometry_called": true,
+  "historical_checker_modified": false,
+  "historical_checker_sha256": "5be9dea3679f2dd9245c4df21aca7863c8743ac0395c7f8173950a7b37f5bb18",
+  "left_endpoint_displacement": "1/32",
+  "method": "REAL_CHECKER_LAMBDA_GEOMETRY_DRY_PRECHECK_PARENT_LEFT_ENDPOINT",
+  "mutated_parent": {
+    "hi": "1/8",
+    "lo": "1/32"
+  },
+  "mutation": "PRODUCER_GEOMETRY:parent_left_endpoint",
+  "needs_numerics": false,
+  "numerical_evaluator_called": false,
+  "observed_detail": null,
+  "observed_exact_code": "FAIL_LAMBDA_GEOMETRY_RECONSTRUCTION",
+  "parent_hi_unchanged": true,
+  "positive_parent": {
+    "hi": "1/8",
+    "lo": "0"
+  },
+  "reconstructed_lambda_left": "0",
+  "run_source_sha256": "cd37615f397f95891a597f811e9b78c1e46ddf7d8c3ddc22eca8754aee4e03fb",
+  "schema": "flambda-nc24-parent-left-endpoint-gate-run-v1",
+  "source_tree_post_clean": true,
+  "source_tree_pre_clean": true,
+  "tiles_unchanged": true,
+  "verdict": "NC24_PARENT_LEFT_ENDPOINT_SUBCODE_PASS_NOT_PROMOTED"
+}
