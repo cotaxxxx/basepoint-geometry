@@ -87,7 +87,7 @@ config = {
     "lambda_end": {"p": "1", "q": "8"},
 }
 
-nominal_width = checker.Dyadic(1, -3)
+nominal_width = checker.Dyadic(1, 3)
 
 positive = {
     "cell_index": 0,
