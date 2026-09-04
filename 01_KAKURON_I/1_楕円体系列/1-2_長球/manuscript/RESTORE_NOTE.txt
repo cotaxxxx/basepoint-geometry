@@ -1,0 +1,1 @@
+Canonical manuscript source is being restored to the last complete blob after a notation-only edit attempt; no mathematical content should be inferred from the intermediate commit.
