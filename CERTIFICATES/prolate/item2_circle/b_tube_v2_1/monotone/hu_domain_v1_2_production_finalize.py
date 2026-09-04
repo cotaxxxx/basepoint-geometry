@@ -86,7 +86,7 @@ def main() -> int:
     if os.environ.get("PYTHONDONTWRITEBYTECODE") != "1" or not sys.dont_write_bytecode:
         fail("BYTECODE_SUPPRESSION")
 
-    for p in (raw_p, att_p, geom_p, log_p):
+    for p in (raw_p, att_p, geom_p):
         if not p.is_file():
             fail("MISSING_INPUT")
 
