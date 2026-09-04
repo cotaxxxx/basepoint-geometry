@@ -1,0 +1,35 @@
+{
+  "component1_geometry_receipt_sha256": "de517b3cccb4abf774261df81098234f37150acd46c450b74336c84c63f5a29e",
+  "consumption": "MONOTONE_TUBE_V1_1_ASSEMBLY_ONLY_WITH_SAME_COMPONENT1_SHA",
+  "cross_component_identity_requirement": {
+    "assembly_must_fail_closed_on_sha_mismatch": true,
+    "component1_geometry_receipt_sha256": "de517b3cccb4abf774261df81098234f37150acd46c450b74336c84c63f5a29e",
+    "required_for": [
+      "H_U_PRODUCTION",
+      "F_LAMBDA",
+      "JOIN",
+      "MONOTONE_ASSEMBLY"
+    ]
+  },
+  "independent_check": "CHAT_VERIFIED_CELL1_CANONICAL_PRODUCTION_RECEIPT_PRODUCTION_CHECKER_AND_COMPONENT1_RECEIPT",
+  "judge_receipt": "CELL1_HU_PRODUCTION_PROMOTION_V1",
+  "judge_verdict": "PASS",
+  "narrow_interface": {
+    "all_terminal_lo_positive": true,
+    "certified_cover_margin_exact": "59730387018799908965970073372512325212117184371808291/1569275433846670190958947355801916604025588861116008628224",
+    "union_equals_parent": true
+  },
+  "not_a_tube_theorem_promotion": true,
+  "production_checker_sha256": "9d8ad733677826411635fd266cc5ad052aca8f9aaa6e9c3f65c16a4ff808dbaa",
+  "production_receipt_sha256": "fd470475e575235f8a0010386243c8787fd2da8b94e9218e86b48b1cb5da17d2",
+  "promotion_effect": {
+    "authorization_source": "THIS_PROMOTION_RECEIPT",
+    "authorized_component": "CELL1_HU_COMPONENT_ONLY",
+    "binding_use_authorized": true,
+    "source_production_receipt_mutated": false
+  },
+  "release_sha": "6d705c6fbf37ae77d35232a40842692a3e92713e",
+  "scope": "CELL1_HU_COMPONENT_ONLY",
+  "signed_at": "2026-09-05",
+  "signer_role": "HUMAN_JUDGE"
+}
