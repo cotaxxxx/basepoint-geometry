@@ -1,0 +1,37 @@
+{
+  "cell0_hu_promotion_receipt_sha256": "ea688d25c1d6000c6708249cc99036284721e10daa9e0bb27c80af9c3e3147ad",
+  "component1_geometry_receipt_sha256": "f60c22cbc1d4a45e5593a64e64194f7e3dbc97df69e1547aca092d2d93b7911f",
+  "consumption": "MONOTONE_TUBE_V1_1_ASSEMBLY_ONLY_WITH_SAME_COMPONENT1_SHA",
+  "contract": "MONOTONE_TUBE_V1_1",
+  "cross_component_identity_requirement": {
+    "assembly_must_fail_closed_on_sha_mismatch": true,
+    "component1_geometry_receipt_sha256": "f60c22cbc1d4a45e5593a64e64194f7e3dbc97df69e1547aca092d2d93b7911f",
+    "required_for": [
+      "H_U_PRODUCTION",
+      "F_LAMBDA",
+      "JOIN",
+      "MONOTONE_ASSEMBLY"
+    ]
+  },
+  "f_joint_c1_judge_signature_sha256": "4d9976395d6438d5d0a99b22b312f3b171d50ae65363e46c5b9e491488de120e",
+  "f_joint_c1_lemma_sha256": "e04f63e5b6b7f050bf227dfc3066ec08dbb34a53c664b98a78a661682ea099e3",
+  "judge_receipt": "CELL0_START_JOIN_UNION_HU_V2_PROMOTION_V1",
+  "judge_verdict": "PASS",
+  "not_a_tube_theorem_promotion": true,
+  "promotion_effect": {
+    "authorization_source": "THIS_PROMOTION_RECEIPT",
+    "authorized_component": "CELL0_START_JOIN_UNION_HU_COMPONENT_ONLY",
+    "binding_use_authorized": true,
+    "source_receipt_mutated": false
+  },
+  "schema": "monotone-tube-v1.1-cell0-start-join-union-hu-v2-promotion-v1",
+  "scope": "CELL0_START_JOIN_UNION_HU_COMPONENT_ONLY",
+  "signed_at": "2026-09-04",
+  "signer_role": "HUMAN_JUDGE",
+  "source_all_terminal_lo_positive": true,
+  "source_component": "START_JOIN_UNION_MONOTONICITY_CERTIFICATE",
+  "source_receipt_sha256": "32e47f3dcb2dd184f6481d7383c397d63fa9477a772f92e47162f39ed4591fae",
+  "source_start_join_union_monotonicity": "PASS",
+  "source_union_equals_parent": true,
+  "source_verdict": "START_JOIN_UNION_MONOTONICITY_PASS"
+}
