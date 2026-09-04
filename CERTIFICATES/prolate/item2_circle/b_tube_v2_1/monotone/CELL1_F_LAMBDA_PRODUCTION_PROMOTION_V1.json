@@ -1,0 +1,41 @@
+{
+  "authorized_component": "CELL1_F_LAMBDA_COMPONENT_ONLY",
+  "checker_receipt_sha256": "cba07c15f32e62f90b3abdadc701cd9c39f35d0bc5680209c1b0d11fbc178f9d",
+  "checker_verdict": "PASS_BINDING_CANDIDATE_CHECK",
+  "component1_geometry_receipt_sha256": "de517b3cccb4abf774261df81098234f37150acd46c450b74336c84c63f5a29e",
+  "consumption": "MONOTONE_TUBE_V1_1_ASSEMBLY_ONLY_WITH_SAME_COMPONENT1_SHA",
+  "contract": "MONOTONE_TUBE_V1_1",
+  "cross_component_identity_requirement": {
+    "assembly_must_fail_closed_on_sha_mismatch": true,
+    "component1_geometry_receipt_sha256": "de517b3cccb4abf774261df81098234f37150acd46c450b74336c84c63f5a29e",
+    "required_for": [
+      "H_U_PRODUCTION",
+      "F_LAMBDA",
+      "JOIN",
+      "MONOTONE_ASSEMBLY"
+    ]
+  },
+  "judge_receipt": "CELL1_F_LAMBDA_PRODUCTION_PROMOTION_V1",
+  "judge_verdict": "PASS",
+  "not_a_tube_theorem_promotion": true,
+  "producer_receipt_sha256": "18d7510e84f3220d39871bfe8b5c45736288171f7a0a4be61e26cfca25b50f60",
+  "producer_verdict": "PASS_BINDING_CANDIDATE",
+  "promotion_effect": {
+    "authorization_source": "THIS_PROMOTION_RECEIPT",
+    "authorized_component": "CELL1_F_LAMBDA_COMPONENT_ONLY",
+    "binding_use_authorized": true,
+    "source_checker_receipt_mutated": false,
+    "source_producer_receipt_mutated": false
+  },
+  "schema": "monotone-tube-v1.1-cell1-f-lambda-production-promotion-v1",
+  "scope": "CELL1_F_LAMBDA_COMPONENT_ONLY",
+  "signed_at": "2026-09-05",
+  "signer_role": "HUMAN_JUDGE",
+  "transport_gate": {
+    "human_audit": "PASS_CURRENT_STRICT_INTERIOR_SCOPE",
+    "judge_scope": "CURRENT_STRICT_INTERIOR_ENDPOINT_SCOPE",
+    "judge_signature_sha256": "146a66eebacc1c53f3be5465e1ae4f41a749ea716f35ef368a5fffcadd4f3333",
+    "judge_verdict": "PASS",
+    "receipt_sha256": "8c2ca7cac6598d91821c140e3588534389df5bff0b7685883c041501eb2f1cd3"
+  }
+}
