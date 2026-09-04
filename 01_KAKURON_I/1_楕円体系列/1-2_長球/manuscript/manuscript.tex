@@ -7,7 +7,7 @@
 %             （または lualatex を2回）
 %
 %  図: figures/fig1_local_bifurcation.pdf
-%      figures/fig2_shrinking_circle.pdf
+%      figures/fig2_shrinking_circle.png
 %      matplotlib の PDF 出力をそのまま置く。PNG しかない場合は
 %      拡張子を .png に変更してよいが、PDF を推奨。
 % =====================================================================
@@ -61,7 +61,6 @@
 \noindent\textbf{キーワード：}基点分岐、停留円、Morse–Bott、扁長回転楕円体、区間演算、計算機援用証明
 
 \section{序論}
-
 本稿では、基点を幾何学的変数として扱う。対象に付随する汎関数を固定したうえで基点を動かし、そこに
 現れる停留点構造を取り出す。そして対象を変形させたとき、その構造がどう組み変わるかを調べる。
 
@@ -83,7 +82,6 @@
 手段。この順序を本文全体で維持する。
 
 \section{基点分岐の最小定義}
-
 基点空間を \(P\)、対象の変形パラメータ空間を \(\Lambda\) とし、各 \(\lambda\in\Lambda\) に対して
 基点汎関数 \(E_\lambda:P\to\mathbb{R}\) が与えられているとする。本稿が必要とする一般枠組みは、
 三つ組 \((P,\Lambda,E)\) のみである。
@@ -112,7 +110,6 @@
 具体的な汎関数におけるこの局所自明性の破れである。
 
 \section{錐体積重み付き動径–法線角}
-
 滑らかで原点を内部に含む凸体 \(K\subset\mathbb{R}^3\) と基点 \(p\in\operatorname{int}K\) を考える。
 境界点 \(x\in\partial K\) における外向き単位法線を \(\nu_K(x)\) とし、
 \[
@@ -131,9 +128,7 @@ d\mu_{K,p}(x)=\frac{(x-p)\cdot\nu_K(x)}{3\operatorname{Vol}(K)}\,dA(x)
 \[
 E_K(p)=\int_{\partial K}\alpha_{K,p}(x)^2\,d\mu_{K,p}(x)
 \]
-である。錐体積重みは凸幾何に自然な尺度であり、境界の面積だけでなく基点から見た支持距離を含む。
-したがって \(E_K\) は単なる表面平均ではなく、対象の形状と基点の位置の相互作用を記録する。回転対称体
-では \(E_K\) は群作用に不変であり、軸外の停留点は必ず群軌道として現れる。
+である。
 
 \begin{prop}[相似不変性]
 \label{prop:similarity}
@@ -151,7 +146,6 @@ E_{T(K)}(T(p))=E_K(p)
 \(s^{-2}\) 倍されるが、\(s^{-2}>0\) であるため、符号、Morse index、nullity は保存される。
 
 \section{扁長回転楕円体と局所還元}
-
 \[
 K_a=\left\{(x,y,z)\in\mathbb{R}^3:\ x^2+y^2+\frac{z^2}{a^2}\le 1\right\},\qquad a\ge 1 .
 \]
@@ -174,7 +168,6 @@ E_a(r)=E_a(0)+\frac{Q(a)}{2}r^2+\frac{H_4(a)}{24}r^4+O(r^6)
 局所分岐を支配し、軸方向 \(O(2)\) 対称性により、\(r>0\) の解一つは円 \(S^1\) 全体の停留点を与える。
 
 \section{臨界軸比の区間認証}
-
 \begin{prop}[認証済み局所係数]
 \label{prop:certified}
 区間 \((4.72438,\,4.72439)\) 内に \(Q(a_c)=0\) を満たす唯一の \(a_c\) が存在し、
@@ -225,7 +218,6 @@ r(a)^2=s(a)=-\frac{6Q(a)}{H_4(a_c)}+O\!\left((a-a_c)^2\right)
 \end{figure}
 
 \section{局所停留円とラベル構造}
-
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=\linewidth]{figures/fig2_shrinking_circle.png}
@@ -251,126 +243,56 @@ r(a)^2=s(a)=-\frac{6Q(a)}{H_4(a_c)}+O\!\left((a-a_c)^2\right)
 列挙したとは主張しない。完全な三次元ラベル表の認証は主定理の前提ではなく、続編の課題である。
 
 \section{主定理：基点分岐の存在}
-
 \begin{thm}[扁長回転楕円体における局所基点分岐]
 \label{thm:main}
 錐体積重み付き動径–法線角汎関数 \(E_a\) に対し、\((a_c,0)\in\mathcal{S}\) は基点分岐点であり、
 \(a_c\in(4.72438,4.72439)\) は基点分岐値である。すなわち、\(a_c\) を内点に含む任意に小さい両側近傍
 \(I\) と中心 \(0\) の任意に小さい近傍 \(U\) に制限した射影
-\(\pi:\mathcal{S}\cap(I\times U)\to I\) は、ラベル保存局所自明ではない。具体的には、\(a_c\) の一側に
-一次元の停留円成分が存在して中心へ収縮するのに対し、他側の対応する局所近傍にはその成分が存在しない。
-さらに \(a_c\) では中心 Hessian の nullity が増加する。
+\(\pi:\mathcal{S}\cap(I\times U)\to I\) は、ラベル保存局所自明ではない。具体的には、解析的陰関数定理で得られる
+赤道面内の局所停留枝について、\(a_c\) の一側に一次元の停留円成分が存在して中心へ収縮するのに対し、
+他側の対応する局所近傍にはその成分が存在しない。さらに \(a_c\) では中心 Hessian の nullity が増加する。
 \end{thm}
 
-\leadin{証明の骨格。}
-\begin{enumerate}
-\item \(D_{\infty h}\) 対称性、とくに赤道鏡映 \(\sigma_h\) により、赤道面上の三次元停留問題を
-      一変数 \(r\) の方程式へ還元する。
-\item 区間演算により \(Q\) の単純零点 \(a_c\)、\(Q'(a_c)<0\)、\(H_4(a_c)<0\) を認証する。
-\item 実解析性と偶対称性から \(\partial_rE_a=r\,G(a,r^2)\) と因数分解し、解析的陰関数定理により
-      一側に一意な非零半径 \(r(a)\) を得て、軸方向 \(O(2)\) 軌道 \(C_a\cong S^1\) を構成する。
-\item 反対側には対応する非零解が存在せず、\(a_c\) では中心 Hessian の赤道方向 nullity が増加する
-      ため、局所ラベルを保存する自明化は存在しない。
-\end{enumerate}
-
-この結論は停留円の位置が動いたことからではなく、停留集合のラベル構造が変わったことから従う。これが
-本稿の主張の中心である。
-
 \section{計算機援用認証の役割}
-
 本稿の主定理に必要な計算機援用部分は、\(Q\) の零点区間、\(Q'\) の符号および \(H_4\) の符号を認証する
 局所係数計算である。探索段階で候補区間を得た後、閉区間上の外向き丸めにより各符号を固定し、解析的な
-局所分岐議論へ接続する。区間 Krawczyk 法による停留成分の全域追跡と接続認証は、この存在定理の論理には
-用いない。
-
-\subsection{主定理に用いる認証}
-
-証明に算入する判定は、有限の閉区間、固定された数式と入力、外向き丸め、および明示された符号条件から
-なる。区間が零を含む、評価が非有限になる、依存環境または対象 bytes が一致しない場合には成功とせず、
-より細かい区間へ戻すか認証失敗として終了する。この fail-closed 原則により、数値近似と数学的包含を
-区別する。
-
-\subsection{全域検証機構の位置づけ}
-
-区間 Krawczyk 法による全域検証機構（リポジトリ \cite{Repo} では B-TUBE と呼ぶ）は、軸比全域にわたる
-停留成分の追跡、経路の接続、および完全な三次元ラベル表を認証するためのものである。その成果は続編に
-属する。本稿では必要に応じて診断結果を背景情報として参照しても、主定理の前提または証明を構成する
-認証成果物には組み込まない。
+局所分岐議論へ接続する。
 
 \section{既存中心理論との関係}
-
-Moszyńska、Herburt–Moszyńska–Peradzyński、Sakata、O'Hara らの中心理論は、凸体や領域に付随する
-汎関数の極値・停留点を代表点として捉えてきた。本稿はその系譜を否定するものではなく、一意性が破れた
-局面を別の観点から読む。連続対称性と軸離脱が共存すると、停留点は点ではなく群軌道として現れる。
-
-新規性を一般的な \(D_{\infty h}\) または \(O(2)\) 分岐理論そのものに置くべきではない。対称分岐の
-抽象理論は既に豊富である。本稿の寄与は、具体的な凸幾何汎関数において正の次元停留軌道を区間認証し、
-その局所ラベル構造の変化を基点分岐として定式化・実証する点にある。
-
 中心の理論は点を見てきた。本研究は軌道を認証する。
 
 \section{射程と続編との境界}
-
 本稿の責任範囲は存在である。すなわち、\((a_c,0)\) の芽に少なくとも一つの基点分岐があり、その任意に
 小さい近傍でラベル構造が変わることを示す。軸比の全域を被覆し、すべての停留成分とすべての分岐値を
 完全列挙することは要求しない。
 
-続編では、パラメータ全域を有限個の認証区間へ分割し、B-TUBE により全停留成分とその接続を失敗閉鎖的に
-検証する。
-\[
-\text{本稿＝存在、\quad 続編＝完全性}
-\]
-という境界を維持する。B-TUBE を投稿条件から外すことで、本稿の主定理は必要十分な局所係数認証と局所
-分岐解析だけで閉じる。
-
 \section{展望}
-
 三軸楕円体へ対称性を破ると、扁長回転楕円体の停留円は四つの孤立停留点へ分裂し、完全な点群は
 \[
 D_{\infty h}\longrightarrow D_{2h}
 \]
-へ移ると予想される。成分次元、法方向指数、nullity、等方型の変化を同時に追うことで、対称性の破れと
-基点分岐の関係をより精密に記述できるだろう。
-
-著者は、対象に付随する汎関数を固定し、基点を幾何学的変数として停留構造とその変化を研究するこの枠組み
-を basepoint geometry（基点幾何）と呼ぶ。ただし本稿が確立するのは、その一般理論ではなく、具体例に
-おける基点分岐の存在である。関連する例・反例・既存理論との接続について連絡を歓迎する。
+へ移ると予想される。
 
 \section{結論}
-
 扁長回転楕円体に付随する錐体積重み付き動径–法線角について、中心近傍の停留構造を解析し、臨界軸比の
-一側に停留円が存在して中心へ収縮することを認証した。この一次元成分の出現・消失と、臨界値における
-中心 Hessian の nullity 増加は、局所停留集合のラベル保存自明性を破る。ゆえに \((a_c,0)\) は基点分岐点
-である。
-
-中心を一つの点として選ぶ問題から、基点を動かしたときに現れる停留集合全体を追う問題へ視点を移すと、
-点の理論では隠れていた軌道が現れる。本稿はその軌道を素材とし、構造の組み変わりを定理として取り出す。
+一側に停留円が存在して中心へ収縮することを認証した。
 
 \section*{Acknowledgments}
-
 著者は、Jonathan Borwein と David Bailey が示した実験数学の理念から受けた影響に深い敬意を表する
 \cite{BorweinBailey}。
 
 \appendix
 
-\section{認証記録の最終稿チェックリスト}
-
+\section{計算機援用証明の再現情報}
 \begin{itemize}
 \item 正典数式の記号監査：\path{CERTIFICATES/prolate/local_bifurcation/prolate_B2_symbolic_audit.py}
       および \path{prolate_H4_symbolic_audit.py}。各 SHA-256 は同ディレクトリの
       \path{SHA256SUMS.txt} に固定する。
 \item 区間演算、丸め、入力区間および実行設定：
       \path{CERTIFICATES/prolate/local_bifurcation/prolate_cap_arb_certificate.py}。
-      参照環境と実行法は同ディレクトリの \path{README.md} に記録する。
 \item 包含証明出力：
       \path{CERTIFICATES/prolate/local_bifurcation/prolate_cap_arb_certificate.json}
-      （\texttt{status=CERTIFIED}、6条件すべて true）。6条件は \(Q(4.7)>0\)、\(Q(4.75)<0\)、
-      \(Q'(a)<0\) on \([4.7,4.75]\)、\(H_4(a)<0\) on \([4.7,4.75]\)、\(Q(4.72438)>0\)、
-      \(Q(4.72439)<0\) である。
-\item 有限分割、非有限値および零包含に対する fail-closed 規約は
-      \path{prolate_cap_arb_certificate.py} に実装し、条件不成立時は非零終了とする。
-\item 局所分岐補題と認証出力の論理的接続は本稿 §5–§7 に記述する。stage1 のスクリプトと報告は
-      探索的高精度照合であり、証明には算入しない。
+      （\texttt{status=CERTIFIED}、6条件すべて true）。
 \item 座標規約。認証スクリプトで用いる球面角 \(\theta\) は、本文 §4 の回転軸である \(z\) 軸を基準と
       する極角である。したがって \(\ell=\sin^2\theta+a^2\cos^2\theta\) における \(\cos\theta\) は
       伸長軸方向に対応し、\(u=\sin\theta\cos\phi\) は赤道面内の横断方向成分に対応する。
@@ -378,66 +300,165 @@ D_{\infty h}\longrightarrow D_{2h}
       \texttt{9d23185e571deea67fe7c3a33573b62cf61593e7}
 \end{itemize}
 
+\section{局所係数 \(Q\) および \(H_4\) の正典表示}
+\label{app:canonical-kernels}
+本付録では、本文で用いた局所係数 \(Q(a)\) と \(H_4(a)\) を、認証コードと同一の一変数核として明示する。
+扁長回転楕円体 \(K_a\) に対し、赤道方向の基点を
+\[
+p_r=(r,0,0)
+\]
+と置く。球面角は本文と同じく \(z\) 軸を極軸とし、
+\[
+s=\sin\theta,\qquad c=\cos\theta,\qquad
+u=s\cos\phi,
+\]
+\[
+\ell=s^2+a^2c^2,\qquad
+W=\sqrt{a^2s^2+c^2},\qquad
+C=\frac{a}{W\sqrt{\ell}}
+\]
+とする。さらに
+\[
+h(x)=\arccos(x)^2
+\]
+と置くと、正規化後の角度部分に現れる余弦は
+\[
+\gamma(r)=C(1-ru)
+\left(1-\frac{2ru}{\ell}+\frac{r^2}{\ell}\right)^{-1/2},
+\]
+重みを含む \(r\)-依存核は
+\[
+F(r)=(1-ru)h(\gamma(r))
+\]
+である。
+
+\subsection{端点正則化と積分記号下の微分}
+\begin{prop}[端点を含む微分の正当化]
+\label{prop:diff-under-integral}
+\(a\) を \([4.7,4.75]\) の閉部分区間に制限する。このとき上記核は \(r=0\) の近傍で \(r\) に関して
+4階まで微分可能であり、その各導関数は \(\theta\in[0,\pi/2]\) 上で連続な可積分関数として延長される。
+したがって \(r\) に関する2階および4階微分を積分記号の下へ移すことができる。
+\end{prop}
+
+\begin{proof}
+認証実装では \(\beta=\arctan t\), \(t=(a-a^{-1})sc\), \(z=\beta^2\) と置き、
+\[
+S={}_0F_1\!\left(;\frac32;-\frac z4\right),\quad
+T={}_0F_1\!\left(;\frac52;-\frac z4\right),\quad
+U={}_0F_1\!\left(;\frac72;-\frac z4\right),\quad
+V={}_0F_1\!\left(;\frac92;-\frac z4\right)
+\]
+を用いる。\(h_j=h^{(j)}(C)\) は cancellation-free な形
+\begin{align*}
+h_1&=-\frac{2}{S},\\
+h_2&=\frac{2}{3}\frac{T}{S^3},\\
+h_3&=\frac{2}{15}\frac{U}{S^4}-\frac{2}{3}\frac{T^2}{S^5},\\
+h_4&=\frac{2}{105}\frac{V}{S^5}-\frac{4}{9}\frac{UT}{S^6}
+      +\frac{10}{9}\frac{T^3}{S^7}
+\end{align*}
+で評価される。これらは \(\beta=0\) でも正則であり、端点カットオフや別個の Taylor chart を必要としない。
+また \(a\in[4.7,4.75]\) では \(\ell>0\) と \(W>0\) が一様に成り立つ。したがって必要な導関数は
+コンパクト集合上で連続かつ一様有界であり、通常の優収束による積分記号下微分が適用できる。
+\end{proof}
+
+\subsection{二次係数 \(Q\)}
+\(h_1=h'(C)\), \(h_2=h''(C)\) と書く。\(F\) を \(r\) で2回微分し \(r=0\) とすると、点ごとに
+\[
+F''(0)=\frac{C}{\ell^2}\left[
+C h_2(\ell-1)^2u^2
++h_1\bigl((2\ell^2-4\ell+3)u^2-\ell\bigr)
+\right].
+\]
+ここで
+\[
+\int_0^{2\pi}1\,d\phi=2\pi,\qquad
+\int_0^{2\pi}u^2\,d\phi=\pi s^2
+\]
+を用いると、正典の一変数核
+\[
+B_2(\theta,a)=\frac{C}{\ell^2}\left[
+C h_2(\ell-1)^2s^2
++h_1\bigl((2\ell^2-4\ell+3)s^2-2\ell\bigr)
+\right]
+\]
+を得る。したがって
+\[
+\boxed{Q(a)=\frac12\int_0^{\pi/2}s\,B_2(\theta,a)\,d\theta .}
+\]
+
+\subsection{四次係数 \(H_4\)}
+\(h_j=h^{(j)}(C)\)（\(j=1,\dots,4\)）とする。4階微分は
+\[
+F^{(4)}(0)=A_4u^4+A_2u^2+A_0
+\]
+と厳密に分解され、奇数次の \(u\) 項は恒等的に消える。各係数は
+\begin{align*}
+A_4={}&\frac{C}{\ell^4}\Bigl[
+C^3h_4(\ell-1)^4
++C^2h_3(4\ell^4-24\ell^3+54\ell^2-52\ell+18)\\
+&\qquad +Ch_2(-24\ell^3+108\ell^2-168\ell+87)
++h_1(36\ell^2-120\ell+105)\Bigr],\\
+A_2={}&-\frac{6C}{\ell^3}\Bigl[
+C^2h_3(\ell-1)^2+Ch_2(4\ell^2-12\ell+9)
++h_1(2\ell^2-12\ell+15)\Bigr],\\
+A_0={}&\frac{3C}{\ell^2}(Ch_2+3h_1).
+\end{align*}
+さらに
+\[
+\int_0^{2\pi}u^4\,d\phi=\frac{3\pi}{4}s^4,\qquad
+\int_0^{2\pi}u^2\,d\phi=\pi s^2
+\]
+より、正典の一変数核は
+\[
+B_4(\theta,a)=\frac34A_4s^4+A_2s^2+2A_0
+\]
+となる。したがって
+\[
+\boxed{H_4(a)=\frac12\int_0^{\pi/2}s\,B_4(\theta,a)\,d\theta .}
+\]
+
+\subsection{認証包絡値}
+表1は、\path{prolate_cap_arb_certificate.json} に保存された Arb/Acb ball の実部包含を、読みやすさのため
+外向きに丸めて再掲したものである。計算精度は50桁、積分 tolerance は \(10^{-20}\)、パラメータ区間
+\([4.7,4.75]\) は5分割である。
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{局所係数の認証包絡。表示値は JSON の厳密 ball 包含を外向きに丸めたもの。}
+\begin{tabular}{lll}
+\hline
+対象 & \(a\) または区間 & 認証包含 \\
+\hline
+\(Q\) & \(4.72438\) & \([3.22198042890824\times10^{-7},\,3.22198042890832\times10^{-7}]\) \\
+\(Q\) & \(4.72439\) & \([-6.24183175809915\times10^{-7},\,-6.24183175809908\times10^{-7}]\) \\
+\hline
+\(Q'\) & \([4.70,4.71]\) & \([-0.10545,-0.08573]\) \\
+\(Q'\) & \([4.71,4.72]\) & \([-0.10492,-0.08527]\) \\
+\(Q'\) & \([4.72,4.73]\) & \([-0.10438,-0.08480]\) \\
+\(Q'\) & \([4.73,4.74]\) & \([-0.10386,-0.08434]\) \\
+\(Q'\) & \([4.74,4.75]\) & \([-0.10333,-0.08388]\) \\
+\hline
+\(H_4\) & \([4.70,4.71]\) & \([-1.49670,-1.39252]\) \\
+\(H_4\) & \([4.71,4.72]\) & \([-1.49333,-1.38959]\) \\
+\(H_4\) & \([4.72,4.73]\) & \([-1.48998,-1.38666]\) \\
+\(H_4\) & \([4.73,4.74]\) & \([-1.48664,-1.38375]\) \\
+\(H_4\) & \([4.74,4.75]\) & \([-1.48331,-1.38085]\) \\
+\hline
+\end{tabular}
+\end{table}
+
 \begin{thebibliography}{99}
-
-\bibitem{BoroczkyHenk}
-K.~J. Böröczky and M.~Henk,
-``Cone-volume measure of general centered convex bodies,''
-\textit{Advances in Mathematics} \textbf{286} (2016), 703–721.
-DOI: 10.1016/j.aim.2015.09.021.
-
-\bibitem{BLYZ}
-K.~J. Böröczky, E.~Lutwak, D.~Yang, and G.~Zhang,
-``The logarithmic Minkowski problem,''
-\textit{Journal of the American Mathematical Society} \textbf{26} (2013), 831–852.
-DOI: 10.1090/S0894-0347-2012-00741-3.
-
-\bibitem{BullardGarboczi}
-J.~W. Bullard and E.~J. Garboczi,
-``Defining shape measures for 3D star-shaped particles: Sphericity, roundness, and dimensions,''
-\textit{Powder Technology} \textbf{249} (2013), 241–252.
-DOI: 10.1016/j.powtec.2013.08.015.
+\small
+\bibitem{BorweinBailey}
+J.~M. Borwein and D.~H. Bailey,
+\textit{Mathematics by Experiment: Plausible Reasoning in the 21st Century},
+A~K Peters, Natick, MA, 2004.
 
 \bibitem{GSS}
 M.~Golubitsky, I.~Stewart, and D.~G. Schaeffer,
 \textit{Singularities and Groups in Bifurcation Theory}, Vol.~II,
 Applied Mathematical Sciences 69, Springer, New York, 1988.
-DOI: 10.1007/978-1-4612-4574-2.
-
-\bibitem{HMP}
-I.~Herburt, M.~Moszyńska, and Z.~Peradzyński,
-``Remarks on radial centres of convex bodies,''
-\textit{Mathematical Physics, Analysis and Geometry} \textbf{8} (2005), 157–172.
-DOI: 10.1007/s11040-005-2968-4.
-
-\bibitem{HLYZ}
-Y.~Huang, E.~Lutwak, D.~Yang, and G.~Zhang,
-``Geometric measures in the dual Brunn–Minkowski theory and their associated Minkowski problems,''
-\textit{Acta Mathematica} \textbf{216} (2016), 325–388.
-DOI: 10.1007/s11511-016-0140-6.
-
-\bibitem{Moszynska}
-M.~Moszyńska,
-``Looking for selectors of star bodies,''
-\textit{Geometriae Dedicata} \textbf{83} (2000), 131–147.
-DOI: 10.1023/A:1005208712952.
-
-\bibitem{OHara}
-J.~O'Hara,
-``Renormalization of potentials and generalized centers,''
-\textit{Advances in Applied Mathematics} \textbf{48} (2012), 365–392.
-DOI: 10.1016/j.aam.2011.09.003.
-
-\bibitem{Sakata}
-S.~Sakata,
-``Stationary radial centers and symmetry of convex polytopes,''
-\textit{Colloquium Mathematicum} \textbf{159} (2020), 91–106.
-DOI: 10.4064/cm7712-11-2018.
-
-\bibitem{BorweinBailey}
-J.~M. Borwein and D.~H. Bailey,
-\textit{Mathematics by Experiment: Plausible Reasoning in the 21st Century},
-A~K Peters, Natick, MA, 2004.
 
 \bibitem{Repo}
 K.~Furuta,
@@ -447,7 +468,6 @@ archival commit, 2026.\\
 \texttt{9d23185e571deea67fe7c3a33573b62cf61593e7}.
 Repository URL: \url{https://github.com/cotaxxxx/basepoint-geometry}.
 Version DOI (Zenodo): \textbf{[PENDING — Zenodo version DOI 取得後に記入]}.
-
 \end{thebibliography}
 
 \end{document}
