@@ -1,0 +1,187 @@
+{
+  "all_terminal_lo_positive": true,
+  "binding_use_authorized": false,
+  "cell0_hu_production_receipt_sha256": "5f3feb5ec12aa09d40eb906d6023efa51676327b0b6af3f51d3c5439a765d39b",
+  "cell0_hu_promotion_receipt_sha256": "ea688d25c1d6000c6708249cc99036284721e10daa9e0bb27c80af9c3e3147ad",
+  "component": "START_JOIN_UNION_MONOTONICITY_CERTIFICATE",
+  "component1_geometry_receipt_sha256": "f60c22cbc1d4a45e5593a64e64194f7e3dbc97df69e1547aca092d2d93b7911f",
+  "composition_requires": "CELL0_HU_PRODUCTION_PROMOTION_V1_WITH_SAME_COMPONENT1_SHA",
+  "contract": "MONOTONE_TUBE_V1_1",
+  "dps": 60,
+  "evaluated_boxes": [
+    {
+      "box_id": "S0_BASE/r0",
+      "complete_closed_cover": false,
+      "evaluation_count": 24000,
+      "hi": null,
+      "lo": null,
+      "proof_id": null,
+      "r_hi": "8191/8192",
+      "r_lo": "37140511944960794174557707/38685626227668133590597632",
+      "reason": "ANGULAR_EVALUATION_BUDGET",
+      "stage_id": "S0_BASE",
+      "status": "ABORT_BUDGET"
+    },
+    {
+      "box_id": "S0_BASE/r0/s1_r1_0",
+      "complete_closed_cover": true,
+      "evaluation_count": 535,
+      "hi": "8089609999548755384613595006624044146680946812555449695235/3138550867693340381917894711603833208051177722232017256448",
+      "lo": "26263289418597293088755804645101621260199036209857921617/6277101735386680763835789423207666416102355444464034512896",
+      "proof_id": "6d2625b298798750ce4cf88fb1574a609dc1ddd63724b1add95bf80ce16c3a56",
+      "r_hi": "75821415806146058119941643/77371252455336267181195264",
+      "r_lo": "37140511944960794174557707/38685626227668133590597632",
+      "reason": null,
+      "stage_id": "S1_R1",
+      "status": "PASS_POS"
+    },
+    {
+      "box_id": "S0_BASE/r0/s1_r1_1",
+      "complete_closed_cover": false,
+      "evaluation_count": 24000,
+      "hi": null,
+      "lo": null,
+      "proof_id": null,
+      "r_hi": "8191/8192",
+      "r_lo": "75821415806146058119941643/77371252455336267181195264",
+      "reason": "ANGULAR_EVALUATION_BUDGET",
+      "stage_id": "S1_R1",
+      "status": "ABORT_BUDGET"
+    },
+    {
+      "box_id": "S0_BASE/r0/s1_r1_1/s2_r2_0",
+      "complete_closed_cover": true,
+      "evaluation_count": 531,
+      "hi": "8719053362955408586951565593941956279224720850192593219435/3138550867693340381917894711603833208051177722232017256448",
+      "lo": "26395645505375069979790430508879877705884682347000702135/3138550867693340381917894711603833208051177722232017256448",
+      "proof_id": "550017ee37393634c6f596e23eb2142fcb5e62f14607d42ab330a84f0bba61d9",
+      "r_hi": "153183223528516586010709515/154742504910672534362390528",
+      "r_lo": "75821415806146058119941643/77371252455336267181195264",
+      "reason": null,
+      "stage_id": "S2_R2",
+      "status": "PASS_POS"
+    },
+    {
+      "box_id": "S0_BASE/r0/s1_r1_1/s2_r2_1",
+      "complete_closed_cover": false,
+      "evaluation_count": 24000,
+      "hi": null,
+      "lo": null,
+      "proof_id": null,
+      "r_hi": "8191/8192",
+      "r_lo": "153183223528516586010709515/154742504910672534362390528",
+      "reason": "ANGULAR_EVALUATION_BUDGET",
+      "stage_id": "S2_R2",
+      "status": "ABORT_BUDGET"
+    },
+    {
+      "box_id": "S0_BASE/r0/s1_r1_1/s2_r2_1/s3_r3_0",
+      "complete_closed_cover": true,
+      "evaluation_count": 675,
+      "hi": "18153376595909206640619972813943878754825959725514759552343/6277101735386680763835789423207666416102355444464034512896",
+      "lo": "12427009649131444933282297397885653434864254188556361809/3138550867693340381917894711603833208051177722232017256448",
+      "proof_id": "5f0443110552b4339890f4ab54ad9a59218ad463673175764121fe0516470caf",
+      "r_hi": "307906838973257641792245259/309485009821345068724781056",
+      "r_lo": "153183223528516586010709515/154742504910672534362390528",
+      "reason": null,
+      "stage_id": "S3_R3",
+      "status": "PASS_POS"
+    },
+    {
+      "box_id": "S0_BASE/r0/s1_r1_1/s2_r2_1/s3_r3_1",
+      "complete_closed_cover": false,
+      "evaluation_count": 24000,
+      "hi": null,
+      "lo": null,
+      "proof_id": null,
+      "r_hi": "8191/8192",
+      "r_lo": "307906838973257641792245259/309485009821345068724781056",
+      "reason": "ANGULAR_EVALUATION_BUDGET",
+      "stage_id": "S3_R3",
+      "status": "ABORT_BUDGET"
+    },
+    {
+      "box_id": "S0_BASE/r0/s1_r1_1/s2_r2_1/s3_r3_1/s4_r4_0",
+      "complete_closed_cover": true,
+      "evaluation_count": 615,
+      "hi": "2328024211782066772636904414553216676680500964452752198113/784637716923335095479473677900958302012794430558004314112",
+      "lo": "1368749312487826570379038305914911658745455846982054479/784637716923335095479473677900958302012794430558004314112",
+      "proof_id": "b4f748d176ddd84b7f2d02cc2feb85cef53b786c2bceaf3fe8f7746f3d9b95e4",
+      "r_hi": "617354069862739753355316747/618970019642690137449562112",
+      "r_lo": "307906838973257641792245259/309485009821345068724781056",
+      "reason": null,
+      "stage_id": "S4_R4",
+      "status": "PASS_POS"
+    },
+    {
+      "box_id": "S0_BASE/r0/s1_r1_1/s2_r2_1/s3_r3_1/s4_r4_1",
+      "complete_closed_cover": true,
+      "evaluation_count": 617,
+      "hi": "18997291690588353618966084186330591439930542077229740441307/6277101735386680763835789423207666416102355444464034512896",
+      "lo": "3240932093164932315711009983212794942626456939870012863/3138550867693340381917894711603833208051177722232017256448",
+      "proof_id": "0140eed8f87170654e5e996ff88b168a2c1f211994efab3e7255049335f69296",
+      "r_hi": "8191/8192",
+      "r_lo": "617354069862739753355316747/618970019642690137449562112",
+      "reason": null,
+      "stage_id": "S4_R4",
+      "status": "PASS_POS"
+    }
+  ],
+  "evidence_class": "BINDING_COMPONENT_CANDIDATE",
+  "execution_head": "9d7d316b355985be0184ff82a6972aabebb33899",
+  "f_joint_c1_judge_signature_sha256": "4d9976395d6438d5d0a99b22b312f3b171d50ae65363e46c5b9e491488de120e",
+  "f_joint_c1_lemma_sha256": "e04f63e5b6b7f050bf227dfc3066ec08dbb34a53c664b98a78a661682ea099e3",
+  "fallback_policy": {
+    "axis": "R_ONLY",
+    "enabled_only_if_primary_unresolved": true,
+    "exact_bisection": true,
+    "lambda_refinement": "FORBIDDEN",
+    "max_depth": 6,
+    "refine_only_unresolved": true,
+    "stage_sequence": [
+      "S0_BASE",
+      "S1_R1",
+      "S2_R2",
+      "S3_R3",
+      "S4_R4",
+      "S5_R5",
+      "S6_R6"
+    ]
+  },
+  "first_passing_stage": "S4_R4",
+  "geometry": {
+    "a0": {
+      "r_hi": "8191/8192",
+      "r_lo": "2047/2048"
+    },
+    "cell0": {
+      "r_hi": "32763/32768",
+      "r_lo": "37140511944960794174557707/38685626227668133590597632"
+    },
+    "cell0_a0_overlap": {
+      "r_hi": "32763/32768",
+      "r_lo": "2047/2048"
+    },
+    "hull": {
+      "r_hi": "8191/8192",
+      "r_lo": "37140511944960794174557707/38685626227668133590597632"
+    },
+    "lambda_start": "3307749/1600000",
+    "lambda_width": "0/1"
+  },
+  "head_unchanged_during_run": true,
+  "per_box_cap": 24000,
+  "primary_call_count": 1,
+  "quantity": "H_U",
+  "required_sign": "POS",
+  "runner_sha256": "e539e84a2c114b54d8ecb0f17a6f1d036e1e3beeb3be6cd9251c1ef2c577b6d8",
+  "schema": "monotone-tube-v1.1-cell0-start-join-union-hu-v2",
+  "source_tree_post_clean": true,
+  "source_tree_pre_clean": true,
+  "start_join_union_monotonicity": "PASS",
+  "terminal_box_count": 5,
+  "total_evaluation_count": 98973,
+  "union_equals_parent": true,
+  "union_lo": "3240932093164932315711009983212794942626456939870012863/3138550867693340381917894711603833208051177722232017256448",
+  "verdict": "START_JOIN_UNION_MONOTONICITY_PASS"
+}
