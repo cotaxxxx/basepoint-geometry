@@ -42,7 +42,9 @@
 - 1-1　球体 — `01_KAKURON_I/1_楕円体系列/1-1_球体/`
 - 1-2　長球 — `01_KAKURON_I/1_楕円体系列/1-2_長球/`
   - 正典原稿：`01_KAKURON_I/1_楕円体系列/1-2_長球/manuscript/manuscript.tex`
-  - 旧 DOCX/PDF は履歴資料として凍結し、今後の本文更新対象としない。
+  - 完成稿：`01_KAKURON_I/1_楕円体系列/1-2_長球/manuscript/manuscript.pdf`（LuaLaTeX 版、9ページ）
+  - 図版：`manuscript/figures/fig1_local_bifurcation.pdf`、`manuscript/figures/fig2_shrinking_circle.png`
+  - 旧 DOCX/PDF は履歴資料として `manuscript/archive/` に隔離し、今後の本文更新対象としない。
   - 管理名「長球」は既存ディレクトリ名として維持し、原稿正式表記は「扁長回転楕円体」とする。
 - 1-3　三軸楕円体 — `01_KAKURON_I/1_楕円体系列/1-3_三軸楕円体/`
 

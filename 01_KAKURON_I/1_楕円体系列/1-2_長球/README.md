@@ -7,9 +7,11 @@
 
 - 著者：古田 勝士（Katsushi Furuta）
 - 投稿予定先：Experimental Mathematics
-- 状態：日本語改稿版を登録済み。英訳・archival DOI・投稿版整備が残る
-- [日本語改稿版 PDF](manuscript/Paper1_Japanese_Revised_20260823.pdf)
-- [日本語改稿版 DOCX](manuscript/Paper1_Japanese_Revised_20260823.docx)
+- 状態：日本語正典稿（LaTeX ソースと完成 PDF）を登録済み。英訳・archival DOI・投稿版整備が残る
+- [完成稿 PDF](manuscript/manuscript.pdf)
+- [正典 LaTeX ソース](manuscript/manuscript.tex)
+- 図版：`manuscript/figures/fig1_local_bifurcation.pdf`、`manuscript/figures/fig2_shrinking_circle.png`
+- 旧 DOCX/PDF（2026-08-23 改稿版）は `manuscript/archive/` に履歴資料として隔離する
 
 ## 認証済み内容
 

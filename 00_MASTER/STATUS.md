@@ -107,7 +107,7 @@ Arb/Acb の fail-closed 区間認証により、
 
 が存在し、`Q'(a_c)<0`, `H4(a_c)<0`。停留円の中心への局所収縮と中心 Hessian の nullity 増加を与える Paper 1 の存在定理は、後述の B-TUBE に論理的に依存しない。
 
-日本語改稿版 PDF / DOCX は `01_KAKURON_I/1_楕円体系列/1-2_長球/manuscript/` に登録済み。
+日本語正典稿は `01_KAKURON_I/1_楕円体系列/1-2_長球/manuscript/` に登録済み。原稿は `manuscript.tex`、完成稿は `manuscript.pdf`、図版は `figures/` に置く。旧 DOCX/PDF（2026-08-23 改稿版）は同ディレクトリの `archive/` に隔離する。
 
 ### 項目0　赤道正値性 — CERTIFIED
 
@@ -227,7 +227,7 @@ for every `lambda>=1`, `0<w<1` の完全認証を目標とする。項目6全体
 - 論文体系、原ファイル名、状態、配置先：`00_MASTER/LIBRARY_PAPER_ARCHIVE.md` に収録済み
 - 双対位相欠損研究 v1.4 の体系配置・証明状態・原成果物 SHA-256：GitHub 収録済み。PDF・TeX・Markdown 本体は元成果物を無改変で後続取込
 - 球体の TeX・PDF・source ZIP：GitHub 収録済み
-- 長球 Paper 1 日本語改稿版 PDF / DOCX：2026-08-23 登録済み
+- 長球 Paper 1 日本語正典稿：`manuscript.tex` / `manuscript.pdf` / `figures/` を登録済み。旧 DOCX/PDF（2026-08-23 改稿版）は `manuscript/archive/` に隔離
 - 長球 Paper 1 `local_bifurcation/`：rigorous interval certificate、symbolic audits、SHA-256 reference bytes を収録
 - 長球 item 0d の証明書、監査記録、SHA-256 manifest：GitHub 収録
 - 長球 item 0c の完成状態と配置インターフェース：GitHub 収録。原ZIPは元成果物から無改変で追加入庫する
