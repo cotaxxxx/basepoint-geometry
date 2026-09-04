@@ -1,0 +1,1 @@
+Do not use intermediate notation-edit commits as canonical manuscript snapshots.
