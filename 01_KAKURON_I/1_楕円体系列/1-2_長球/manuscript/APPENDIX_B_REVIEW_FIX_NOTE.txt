@@ -1,0 +1,1 @@
+Appendix B review-fix source is maintained in the local build artifact pending full canonical merge. The transverse angular component notation is u = sin(theta) cos(phi), consistently with Appendix A and the symbolic-audit scripts. Do not use nu for this quantity; nu_K is reserved for the outward unit normal.
