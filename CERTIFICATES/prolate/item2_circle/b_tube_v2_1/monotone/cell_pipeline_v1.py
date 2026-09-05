@@ -42,12 +42,17 @@ def env() -> dict[str, str]:
     return out
 
 
-def run(cmd: list[str], cwd: Path, log: Path | None = None) -> None:
+def run(
+    cmd: list[str], cwd: Path, log: Path | None = None,
+    extra_env: dict[str, str] | None = None,
+) -> None:
+    child_env = env()
+    child_env.update(extra_env or {})
     if log is None:
-        subprocess.run(cmd, cwd=cwd, env=env(), check=True)
+        subprocess.run(cmd, cwd=cwd, env=child_env, check=True)
         return
     with log.open("w") as stream:
-        subprocess.run(cmd, cwd=cwd, env=env(), stdout=stream, stderr=subprocess.STDOUT, check=True)
+        subprocess.run(cmd, cwd=cwd, env=child_env, stdout=stream, stderr=subprocess.STDOUT, check=True)
 
 
 def clean_repo(repo: Path) -> str:
@@ -59,7 +64,10 @@ def clean_repo(repo: Path) -> str:
         fail("SOURCE_TREE_DIRTY")
     return git(repo, "rev-parse", "HEAD")
 
-def detached_run(repo: Path, head: str, cmd: list[str], log: Path) -> None:
+def detached_run(
+    repo: Path, head: str, cmd: list[str], log: Path,
+    extra_env: dict[str, str] | None = None,
+) -> None:
     parent = Path(tempfile.mkdtemp(prefix="cell-pipeline-wt.", dir="/tmp"))
     parent.rmdir()
     try:
@@ -67,7 +75,7 @@ def detached_run(repo: Path, head: str, cmd: list[str], log: Path) -> None:
             ["git", "-C", str(repo), "worktree", "add", "--detach", str(parent), head],
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True,
         )
-        run(cmd, parent, log)
+        run(cmd, parent, log, extra_env)
     finally:
         subprocess.run(
             ["git", "-C", str(repo), "worktree", "remove", "--force", str(parent)],
@@ -95,8 +103,7 @@ def flambda_stage(repo: Path, out: Path, cell: int, previous: Path) -> None:
     detached_run(repo, PRODUCER_HEAD, [
         sys.executable, str(FLAMBDA_PRODUCER), "--candidate-index", "0",
         "--cell-index", str(cell), "--output", str(p["fp"]),
-        "--expected-head", PRODUCER_HEAD,
-    ], out / f"CELL{cell}_F_LAMBDA_PRODUCER.log")
+    ], out / f"CELL{cell}_F_LAMBDA_PRODUCER.log", {"EXPECTED_HEAD": PRODUCER_HEAD})
     detached_run(repo, CHECKER_HEAD, [
         sys.executable, str(FLAMBDA_CHECKER), "--producer-receipt", str(p["fp"]),
         "--output", str(p["fc"]), "--expected-head", CHECKER_HEAD,
