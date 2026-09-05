@@ -12,4 +12,4 @@ Before upload: compile manuscript.tex in a standard TeX environment, inspect all
 
 ## Compilation status
 
-LuaLaTeX/latexmk compilation completed successfully on September 5, 2026. The manuscript is 8 pages on US Letter, all pages were rendered and visually inspected, and the final log contains no Warning, Overfull, Underfull, Undefined, or Error lines. Figure 1 was normalized with Ghostscript to remove a LuaTeX PDF-inclusion compatibility failure without changing the plotted content.
+LuaLaTeX/latexmk compilation completed successfully on September 5, 2026. The manuscript is 10 pages on US Letter, all pages were rendered and visually inspected, and the final log contains no Warning, Overfull, Underfull, Undefined, or Error lines. Figure 1 was normalized with Ghostscript to remove a LuaTeX PDF-inclusion compatibility failure without changing the plotted content.

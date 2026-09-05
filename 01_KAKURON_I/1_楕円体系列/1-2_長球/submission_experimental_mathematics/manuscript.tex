@@ -11,7 +11,7 @@
 \begin{document}
 \maketitle
 \begin{abstract}
-We study a cone-volume-weighted radial--normal angle functional with the base point as the variable and prove that its stationary set changes topology along the one-parameter family of prolate spheroids. Rotational symmetry forces the center to remain stationary, while on one side of a critical axis ratio there is a stationary circle in the equatorial plane that shrinks into the center at the critical parameter. A local analytic reduction expresses the bifurcation through an equatorial quadratic coefficient $Q(a)$, a quartic coefficient $H_4(a)$, and an axial quadratic coefficient $Q_z(a)$. Rigorous Arb/Acb ball arithmetic certifies a unique simple zero
+We study a cone-volume-weighted radial--normal angle functional with the base point as the variable and prove that its stationary set changes its local component structure along the one-parameter family of prolate spheroids. Rotational symmetry forces the center to remain stationary, while on one side of a critical axis ratio there is a stationary circle in the equatorial plane that shrinks into the center at the critical parameter. A local analytic reduction expresses the bifurcation through an equatorial quadratic coefficient $Q(a)$, a quartic coefficient $H_4(a)$, and an axial quadratic coefficient $Q_z(a)$. Rigorous Arb/Acb ball arithmetic certifies a unique simple zero
 \[
 4.72438340452113340672<a_c<4.72438340452113340673,
 \]
@@ -37,6 +37,7 @@ We label each local stationary component by its dimension, normal Morse index, n
 
 \begin{definition}[Local basepoint bifurcation]
 A point $(\lambda_0,p_0)\in\mathcal S$ is a local basepoint bifurcation point if, for every sufficiently small two-sided neighborhood $I\ni\lambda_0$ and neighborhood $U\ni p_0$, the restricted projection $\pi:\mathcal S\cap(I\times U)\to I$ admits no local trivialization preserving these labels.
+Here a label-preserving local trivialization means a homeomorphism $\Phi:\mathcal S\cap(I\times U)\to I\times F$ with $\operatorname{pr}_I\circ\Phi=\pi$ such that corresponding connected components in the fibers carry the same component-dimension, normal-index, nullity, and isotropy labels.
 \end{definition}
 
 This definition concerns the germ of the stationary set and therefore does not require a global classification away from $(\lambda_0,p_0)$.
@@ -75,7 +76,42 @@ so
 \partial_rE_a(r)=rG(a,r^2),\qquad
 G(a,s)=Q(a)+\frac{H_4(a)}6s+O(s^2).
 \]
-The functions are real analytic near the parameter range considered here.
+\begin{lemma}[Real analyticity near the center]\label{lem:analyticity}
+For $a$ in a neighborhood of $[4.7,4.75]$ and $p$ sufficiently close to the center, $E_a(p)$ is real analytic in $(a,p)$.
+\end{lemma}
+Indeed $h(x)=\arccos^2x$ has a removable analytic endpoint at $x=1$,
+\[
+h(x)=2(1-x)+\frac13(1-x)^2+O((1-x)^3),
+\]
+while convexity and compactness of the parameter neighborhood keep the radial--normal cosine uniformly separated from $-1$. The geometric factors in the boundary parametrization are analytic, and on the compact angular domain their derivatives admit uniform bounds. Hence the local power series may be integrated term by term, giving analytic dependence on $(a,p)$. In particular the even radial expansion above, the factorization $\partial_rE_a=rG(a,r^2)$, and the Hadamard factorization used below are justified by this lemma.
+
+\subsection{Canonical coefficient kernels}
+For reproducibility, the interval certificates enclose the following one-dimensional kernels directly. Put $s=\sin\theta$, $c_\theta=\cos\theta$,
+\[
+\ell=s^2+a^2c_\theta^2,\qquad w=(a^2s^2+c_\theta^2)^{1/2},\qquad C=\frac{a}{w\sqrt\ell},
+\]
+and write $h_j=h^{(j)}(C)$ for $h(x)=\arccos^2x$. The transverse quadratic kernel is
+\[
+B_2=\frac{C}{\ell^2}\!\left\{Ch_2(\ell-1)^2s^2+h_1\big[(2\ell^2-4\ell+3)s^2-2\ell\big]\right\},
+\qquad Q(a)=\frac12\int_0^{\pi/2}sB_2\,d\theta.
+\]
+For the fourth derivative, define
+\begin{align*}
+A_4=\frac{C}{\ell^4}\{&C^3h_4(\ell-1)^4\\
+&+C^2h_3(4\ell^4-24\ell^3+54\ell^2-52\ell+18)\\
+&+Ch_2(-24\ell^3+108\ell^2-168\ell+87)\\
+&+h_1(36\ell^2-120\ell+105)\},\\
+A_2=-\frac{6C}{\ell^3}\{&C^2h_3(\ell-1)^2+Ch_2(4\ell^2-12\ell+9)\\
+&+h_1(2\ell^2-12\ell+15)\},\\
+A_0=\frac{3C}{\ell^2}(Ch_2+3h_1),\qquad
+B_4=\frac34A_4s^4+A_2s^2+2A_0,
+\end{align*}
+so that $H_4(a)=\frac12\int_0^{\pi/2}sB_4\,d\theta$. For the axial certificate put $v=ac_\theta$, $w_z=c_\theta/a$, and $d=v/\ell-w_z$. The audited raw second derivative is
+\[
+F_z''(0)=C^2h_2d^2+Ch_1\!\left(-\frac1\ell+\frac{3v^2}{\ell^2}-\frac{4w_zv}{\ell}+2w_z^2\right),
+\qquad Q_z(a)=\int_0^{\pi/2}sF_z''(0)\,d\theta.
+\]
+These are exactly the kernels used by the SHA-pinned symbolic audits and Arb/Acb certificates described in Section~\ref{sec:repro}.
 
 \section{Experimental discovery and certification design}
 Exploratory high-precision computations were used only to locate the candidate sign change and to identify the coefficients that should control the local branch. They are not proof objects. The proof stage fixes closed parameter intervals, analytic formulas, outward-rounded Arb/Acb arithmetic, and fail-closed sign conditions.
@@ -119,12 +155,12 @@ Hence $s(a)>0$ for $a<a_c$ sufficiently close to $a_c$, whereas $s(a)<0$ on the 
 \[
 r(a)^2=s(a)=-\frac{6Q(a)}{H_4(a_c)}+O((a-a_c)^2).
 \]
-The coefficient $c=6Q'(a_c)/H_4(a_c)$ is rigorously enclosed by $[0.3415,0.4517]$; the value $0.39474123$ is only a non-certified reference-point estimate.
+The coefficient $c=6Q'(a_c)/H_4(a_c)$ is rigorously enclosed by $[0.3414,0.4517]$; the value $0.39474123$ is only a non-certified reference-point estimate.
 
 \begin{figure}[ht]
 \centering
 \includegraphics[width=.82\linewidth]{fig1_local_bifurcation.pdf}
-\caption{Certified local bifurcation picture. The dashed curve represents the leading law $r_*(a)^2=c(a_c-a)$. The coefficient satisfies the certified enclosure $c\in[0.3415,0.4517]$; $0.39474123$ is a non-certified reference-point estimate. The figure is schematic, not a global numerical continuation.}
+\caption{Certified local bifurcation picture. The dashed curve represents the leading law $r_*(a)^2=c(a_c-a)$. The coefficient satisfies the certified enclosure $c\in[0.3414,0.4517]$; $0.39474123$ is a non-certified reference-point estimate. The figure is schematic, not a global numerical continuation.}
 \label{fig:bifurcation}
 \end{figure}
 
@@ -149,7 +185,7 @@ The claim is intentionally local: no assertion is made here that every stationar
 \begin{theorem}[Certified stationary-orbit bifurcation]\label{thm:main}
 For the cone-volume-weighted radial--normal angle functional on $K_a$, $(a_c,0)$ is a local basepoint bifurcation point. In a sufficiently small neighborhood of the center,
 \[
-\operatorname{Crit}(E_a)=\{0\}\sqcup C_a\quad(a<a_c),
+\operatorname{Crit}(E_a)=\{0\}\sqcup C_a\quad(a<a_c\ \text{sufficiently close}),
 \]
 where $C_a\cong S^1$ and $r(a)\to0$ as $a\uparrow a_c$; at $a=a_c$ the equatorial part of the center Hessian has nullity two; and for $a>a_c$ sufficiently close to $a_c$ the only local stationary component is the center. Therefore the local stationary-set projection is not label-preserving locally trivial across $a_c$.
 \end{theorem}
@@ -176,7 +212,7 @@ h_4=\frac{2V}{105S^5}-\frac{4UT}{9S^6}+\frac{10T^3}{9S^7}.
 \]
 At $\beta=0$ these formulas are interpreted by analytic continuation through the entire ${}_0F_1$ representations, with $S(0)=1$. On the target interval $S=\sin\beta/\beta$ has a positive lower bound, so the denominators remain uniformly separated from zero. This regularization is what permits rigorous resolution of endpoint sign margins of order $5\times10^{-22}$. The four identities above are themselves checked by an independent symbolic audit, with all four differences simplifying exactly to zero.
 
-\section{Reproducibility and proof objects}
+\section{Reproducibility and proof objects}\label{sec:repro}
 The proof archive contains twelve SHA-256-pinned objects under \path{CERTIFICATES/prolate/local_bifurcation/}. They comprise the cap-chain certificate and reports, the symbolic audits for the equatorial kernels, the 20-decimal $a_c$ certificate and JSON report, the raw-kernel $Q_z$ symbolic audit, the $Q_z$ Arb certificate and JSON report, and the ${}_0F_1$ derivative-chain symbolic audit. Running \texttt{sha256sum -c SHA256SUMS.txt} gives 12/12 OK at the canonical commit
 \[
 \texttt{abf704b8701f3da8eb41d8\allowbreak a99408570a413b2214}.
