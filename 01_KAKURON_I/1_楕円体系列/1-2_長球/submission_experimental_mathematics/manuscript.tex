@@ -26,12 +26,14 @@ For a prolate spheroid of polar-to-equatorial axis ratio $a$, numerical explorat
 
 The result is local. We prove the existence and local uniqueness of the stationary circle near the center and the change in the local stationary-set labels. We do not claim a global enumeration of every stationary component for every axis ratio.
 
+The logical order is deliberately narrow: the main theorem is the existence of a local basepoint bifurcation; the stationary circle is the geometric carrier of that theorem; and interval certification of the local coefficients is the device that converts the observed pattern into a proof.
+
 \section{Basepoint bifurcation}
 Let $P$ be a basepoint space, $\Lambda$ a parameter space, and $E_\lambda:P\to\mathbb R$ a family of functionals. Set
 \[
 \mathcal S=\{(\lambda,p):d_pE_\lambda=0\},\qquad \pi:\mathcal S\to\Lambda.
 \]
-We label each local stationary component by its dimension, normal Morse index, nullity, and isotropy type.
+We label each local stationary component by its dimension, normal Morse index, nullity, and isotropy type. For a positive-dimensional component we use the normal Morse index rather than the ordinary Morse index because the stationary circle is a Morse--Bott critical manifold; its tangential zero mode is forced by symmetry.
 
 \begin{definition}[Local basepoint bifurcation]
 A point $(\lambda_0,p_0)\in\mathcal S$ is a local basepoint bifurcation point if, for every sufficiently small two-sided neighborhood $I\ni\lambda_0$ and neighborhood $U\ni p_0$, the restricted projection $\pi:\mathcal S\cap(I\times U)\to I$ admits no local trivialization preserving these labels.
@@ -62,7 +64,7 @@ Consider
 \[
 K_a=\{(x,y,z):x^2+y^2+z^2/a^2\le1\},\qquad a\ge1.
 \]
-The symmetry group contains rotations about the $z$ axis and reflection in the equatorial plane. The center is stationary for every $a$. On $z=0$, reflection symmetry forces $\partial_zE_a=0$, and the remaining equation depends only on $r=(x^2+y^2)^{1/2}$.
+The full isometry group is $D_{\infty h}$. In particular it contains the $O(2)$ action about the $z$ axis and the equatorial reflection $\sigma_h:(x,y,z)\mapsto(x,y,-z)$. The center is fixed by the full group and is therefore stationary for every $a$. On $z=0$, reflection symmetry forces $\partial_zE_a=0$, and the remaining equation depends only on $r=(x^2+y^2)^{1/2}$. Thus a nonzero radial solution on the equatorial plane is already a three-dimensional stationary point, and the axial $O(2)$ symmetry turns one such point into an entire stationary circle.
 
 Near the center,
 \[
@@ -89,27 +91,35 @@ On $[4.7,4.75]$ there is a unique $a_c$ satisfying $Q(a_c)=0$, and
 Moreover $Q'(a_c)<0$ and $H_4(a_c)<0$.
 \end{proposition}
 The endpoint enclosures are
-\[
-Q(4.72438340452113340672)\in[4.45950117779900917098986772,4.45950117779900917098986968]\times10^{-22},
-\]
-\[
-Q(4.72438340452113340673)\in[-5.00431892402172225190109006,-5.00431892402172225190108810]\times10^{-22}.
-\]
+\begin{align*}
+Q(4.72438340452113340672)&\in
+[4.45950117779900917098986772,\\
+&\qquad 4.45950117779900917098986968]\times10^{-22},\\
+Q(4.72438340452113340673)&\in
+[-5.00431892402172225190109006,\\
+&\qquad -5.00431892402172225190108810]\times10^{-22}.
+\end{align*}
 On the five subintervals $[4.70,4.71],\ldots,[4.74,4.75]$, the certified enclosures for $Q'$ are respectively
-\[
-[-0.10545,-0.08573],\ [-0.10492,-0.08527],\ [-0.10438,-0.08480],\ [-0.10386,-0.08434],\ [-0.10333,-0.08388],
-\]
+\begin{align*}
+&[-0.10545,-0.08573],\quad [-0.10492,-0.08527],\quad [-0.10438,-0.08480],\\
+&[-0.10386,-0.08434],\quad [-0.10333,-0.08388],
+\end{align*}
 and those for $H_4$ are
-\[
-[-1.49670,-1.39252],\ [-1.49333,-1.38959],\ [-1.48998,-1.38666],\ [-1.48664,-1.38375],\ [-1.48331,-1.38085].
-\]
+\begin{align*}
+&[-1.49670,-1.39252],\quad [-1.49333,-1.38959],\quad [-1.48998,-1.38666],\\
+&[-1.48664,-1.38375],\quad [-1.48331,-1.38085].
+\end{align*}
 Thus the zero is simple and unique on the stated interval.
 
-The analytic implicit-function theorem applied to $G(a,s)=0$ gives a unique local branch $s(a)$ with $s(a_c)=0$ and
+The analytic implicit-function theorem \cite{GSS} applied to $G(a,s)=0$ gives a unique local branch $s(a)$ with $s(a_c)=0$ and
 \[
 s'(a_c)=-\frac{6Q'(a_c)}{H_4(a_c)}<0.
 \]
-Hence $s(a)>0$ for $a<a_c$ sufficiently close to $a_c$, and the stationary radius $r(a)=\sqrt{s(a)}$ satisfies $r(a)\to0$ as $a\uparrow a_c$. The coefficient $c=6Q'(a_c)/H_4(a_c)$ is rigorously enclosed by $[0.3415,0.4516]$; the value $0.39474123$ is only a non-certified reference-point estimate.
+Hence $s(a)>0$ for $a<a_c$ sufficiently close to $a_c$, whereas $s(a)<0$ on the opposite side, and the stationary radius $r(a)=\sqrt{s(a)}$ satisfies $r(a)\to0$ as $a\uparrow a_c$. More precisely,
+\[
+r(a)^2=s(a)=-\frac{6Q(a)}{H_4(a_c)}+O((a-a_c)^2).
+\]
+The coefficient $c=6Q'(a_c)/H_4(a_c)$ is rigorously enclosed by $[0.3415,0.4516]$; the value $0.39474123$ is only a non-certified reference-point estimate.
 
 \begin{figure}[ht]
 \centering
@@ -131,6 +141,10 @@ with rigorous lower bound $0.0885587746621582$. Since $H(a_c,0,0,0)=Q_z(a_c)>0$,
 
 Consequently the nonzero equatorial solution produces a stationary circle $C_a\cong S^1$. The radial normal eigenvalue is negative. The axial eigenvalue remains positive on $C_a$ for $a<a_c$ sufficiently close to $a_c$, by $Q_z(a_c)>0$, $r(a)\to0$, and continuity of the Hessian. The tangential zero eigenvalue is forced by rotational symmetry. Hence $C_a$ is locally Morse--Bott.
 
+Across the critical value the germ of the stationary set therefore changes from ``isolated center plus a one-dimensional circle'' to ``isolated center only.'' This change in component dimension already obstructs label-preserving local triviality. Independently, at $a=a_c$ the equatorial Hessian eigenvalue vanishes, so the nullity of the center increases by two.
+
+The claim is intentionally local: no assertion is made here that every stationary component is enumerated over the full axis-ratio range. A complete three-dimensional label table belongs to a separate global certification problem.
+
 \section{Main theorem}
 \begin{theorem}[Certified stationary-orbit bifurcation]\label{thm:main}
 For the cone-volume-weighted radial--normal angle functional on $K_a$, $(a_c,0)$ is a local basepoint bifurcation point. In a sufficiently small neighborhood of the center,
@@ -139,6 +153,9 @@ For the cone-volume-weighted radial--normal angle functional on $K_a$, $(a_c,0)$
 \]
 where $C_a\cong S^1$ and $r(a)\to0$ as $a\uparrow a_c$; at $a=a_c$ the equatorial part of the center Hessian has nullity two; and for $a>a_c$ sufficiently close to $a_c$ the only local stationary component is the center. Therefore the local stationary-set projection is not label-preserving locally trivial across $a_c$.
 \end{theorem}
+
+\paragraph{Proof structure.}
+The argument consists of four steps. First, $D_{\infty h}$ symmetry, and especially the equatorial reflection, reduces the local three-dimensional stationary problem to a radial equation. Second, interval arithmetic certifies the unique simple zero of $Q$, the sign $Q'(a_c)<0$, and $H_4(a_c)<0$. Third, analyticity and even symmetry factor the radial derivative as $\partial_rE_a=rG(a,r^2)$, and the implicit-function theorem yields the unique nonzero local branch and its collapse to the center. Fourth, the independent axial certificate and Hessian continuity close the full stationary condition and identify the Morse--Bott labels. The change of these labels across $a_c$ rules out a label-preserving local trivialization.
 
 \section{Endpoint regularization}
 The direct $\arccos^2$ representation is poorly conditioned for numerical differentiation near an endpoint. Set
@@ -160,34 +177,70 @@ h_4=\frac{2V}{105S^5}-\frac{4UT}{9S^6}+\frac{10T^3}{9S^7}.
 At $\beta=0$ these formulas are interpreted by analytic continuation through the entire ${}_0F_1$ representations, with $S(0)=1$. On the target interval $S=\sin\beta/\beta$ has a positive lower bound, so the denominators remain uniformly separated from zero. This regularization is what permits rigorous resolution of endpoint sign margins of order $5\times10^{-22}$. The four identities above are themselves checked by an independent symbolic audit, with all four differences simplifying exactly to zero.
 
 \section{Reproducibility and proof objects}
-The proof archive contains twelve SHA-256-pinned objects under \texttt{CERTIFICATES/prolate/local\_bifurcation/}. They comprise the cap-chain certificate and reports, the symbolic audits for the equatorial kernels, the 20-decimal $a_c$ certificate and JSON report, the raw-kernel $Q_z$ symbolic audit, the $Q_z$ Arb certificate and JSON report, and the ${}_0F_1$ derivative-chain symbolic audit. Running \texttt{sha256sum -c SHA256SUMS.txt} gives 12/12 OK at the canonical commit
+The proof archive contains twelve SHA-256-pinned objects under \path{CERTIFICATES/prolate/local_bifurcation/}. They comprise the cap-chain certificate and reports, the symbolic audits for the equatorial kernels, the 20-decimal $a_c$ certificate and JSON report, the raw-kernel $Q_z$ symbolic audit, the $Q_z$ Arb certificate and JSON report, and the ${}_0F_1$ derivative-chain symbolic audit. Running \texttt{sha256sum -c SHA256SUMS.txt} gives 12/12 OK at the canonical commit
 \[
-\texttt{abf704b8701f3da8eb41d8a99408570a413b2214}.
+\texttt{abf704b8701f3da8eb41d8\allowbreak a99408570a413b2214}.
 \]
 The $a_c$ run uses Python 3.13.14, 100 decimal digits, and tolerance $10^{-40}$. The $Q_z$ run uses Python 3.13.14, 70 decimal digits, tolerance $10^{-28}$, and five parameter subdivisions. Recorded common components include python-flint 0.9.0, FLINT 3.6.0, SymPy 1.14.0, and mpmath 1.3.0.
 
 The $Q_z$ certificate gates the manuscript claim itself: \texttt{status=CERTIFIED} requires both positivity on all five parameter intervals and \texttt{worst\_lower >= 0.0885587746621582}. The symbolic $Q_z$ audit differentiates the raw weighted kernel twice while keeping $h$ abstract; it does not depend on a pre-substituted finite Taylor jet.
+
+\subsection{Fail-closed certification}
+A numerical evaluation is not counted as a proof object merely because it returns a plausible decimal value. The certification stage fixes closed parameter intervals, formulas, precision settings, and outward rounding. If an interval contains zero where a strict sign is required, if an evaluation becomes non-finite, or if a recorded input or proof object fails its integrity check, the run does not emit a certified result. It must either refine the interval or terminate without certification. This is the operational distinction between exploratory numerics and mathematical enclosure used throughout the paper.
+
+\subsection{Global continuation is not a premise}
+The repository also contains machinery for global interval continuation and component tracking. That machinery is useful for a future completeness theorem, but it is not a premise of Theorem~\ref{thm:main}. The theorem here closes with local coefficient certification, analytic bifurcation analysis, and the axial positivity certificate alone.
 
 \section{Scope and relation to center theory}
 The result concerns a local germ, not a global classification. Interval continuation machinery for global component tracking is therefore not a premise of Theorem~\ref{thm:main}. The novelty is also not a new abstract $O(2)$ bifurcation theorem. Rather, it is the rigorous realization of a positive-dimensional stationary orbit and its collapse in a concrete convex-geometric functional, with the experimental and certified stages exposed separately.
 
 Classical work on selectors, radial centers, and generalized centers emphasizes distinguished points \cite{HMP,Moszynska,OHara,Sakata}. Here the loss of uniqueness is itself informative: symmetry turns an off-axis stationary point into an orbit, and the orbit becomes the geometric carrier of the bifurcation.
 
+The scope can be summarized as follows: this paper proves existence of a certified local bifurcation; a separate continuation problem would prove completeness over a larger parameter domain. Keeping these two claims separate prevents a global computation from becoming an unnecessary premise of the local theorem.
+
+\section{Outlook}
+Breaking rotational symmetry by passing from a prolate spheroid to a nearby triaxial ellipsoid should split the stationary circle into finitely many isolated stationary points. At the symmetry level one expects the transition $D_{\infty h}\to D_{2h}$. Tracking component dimension, normal Morse index, nullity, and isotropy type simultaneously provides a natural way to compare such symmetry-breaking unfoldings with the orbit collapse proved here.
+
 \section{Conclusion}
 A computational experiment on prolate spheroids led to a candidate stationary-circle bifurcation. Symbolic reduction and rigorous interval arithmetic convert that observation into a theorem: a unique critical axis ratio is certified to twenty decimal places, a stationary circle exists on one side and contracts to the center, and axial positivity closes the three-dimensional stationary condition. The public certificate chain makes the numerical part independently repeatable and distinguishes exploratory evidence from proof objects.
 
+\section*{Acknowledgments}
+The author acknowledges the influence of the experimental-mathematics viewpoint developed by Jonathan Borwein and David Bailey \cite{BorweinBailey}.
+
+\appendix
+\section{Certificate checklist}
+The final proof state used by the manuscript satisfies the following reproducibility checks.
+\begin{itemize}
+\item All twelve proof objects are pinned by \path{SHA256SUMS.txt}, and \texttt{sha256sum -c} reports 12/12 OK.
+\item The equatorial symbolic audits are
+\begin{quote}\small
+\path{prolate_B2_symbolic_audit.py}\\
+\path{prolate_H4_symbolic_audit.py}.
+\end{quote}
+\item The derivative-chain audit \path{prolate_h_chain_symbolic_audit.py} verifies that the symbolic differences between the regularized formulas and the first four derivatives of $h(x)=\arccos^2x$ simplify identically to zero.
+\item The raw axial audit \path{prolate_Qz_symbolic_audit.py} differentiates the weighted kernel twice while retaining the abstract function $h$.
+\item The axial interval certificate \path{prolate_Qz_arb_certificate.py} and its JSON report gate the manuscript lower bound $0.0885587746621582$.
+\item The critical-axis-ratio certificate records the sign conditions for $Q$, $Q'$, and $H_4$, the endpoint root bracket, precision settings, and fail-closed behavior.
+\item Exploratory stage-1 computations are diagnostic only and are not counted as proof objects.
+\end{itemize}
+
 \section*{Data and code availability}
-All computer-assisted proof objects used in this article are publicly archived in the Basepoint Geometry repository \cite{Repo}. The canonical proof state is commit \texttt{abf704b8701f3da8eb41d8a99408570a413b2214}; its local-bifurcation manifest contains twelve SHA-256-pinned objects and verifies 12/12. The separate \texttt{bg-prolate-spheroid} repository is diagnostic only and is not evidence for the theorem.
+All computer-assisted proof objects used in this article are publicly archived in the Basepoint Geometry repository \cite{Repo}. The canonical proof state is commit
+\begin{center}
+\texttt{abf704b8701f3da8eb41d8a99408570a413b2214}.
+\end{center}
+Its local-bifurcation manifest contains twelve SHA-256-pinned objects and verifies 12/12. The separate \texttt{bg-prolate-spheroid} repository is diagnostic only and is not evidence for the theorem.
 
 \begin{thebibliography}{99}
 \bibitem{BoroczkyHenk} K. J. B\"or\"oczky and M. Henk, Cone-volume measure of general centered convex bodies, \emph{Adv. Math.} 286 (2016), 703--721.
 \bibitem{BLYZ} K. J. B\"or\"oczky, E. Lutwak, D. Yang, and G. Zhang, The logarithmic Minkowski problem, \emph{J. Amer. Math. Soc.} 26 (2013), 831--852.
 \bibitem{HLYZ} Y. Huang, E. Lutwak, D. Yang, and G. Zhang, Geometric measures in the dual Brunn--Minkowski theory and their associated Minkowski problems, \emph{Acta Math.} 216 (2016), 325--388.
+\bibitem{GSS} M. Golubitsky, I. Stewart, and D. G. Schaeffer, \emph{Singularities and Groups in Bifurcation Theory}, Vol. II, Springer, 1988.
 \bibitem{HMP} I. Herburt, M. Moszy\'nska, and Z. Peradzy\'nski, Remarks on radial centres of convex bodies, \emph{Math. Phys. Anal. Geom.} 8 (2005), 157--172.
 \bibitem{Moszynska} M. Moszy\'nska, Looking for selectors of star bodies, \emph{Geom. Dedicata} 83 (2000), 131--147.
 \bibitem{OHara} J. O'Hara, Renormalization of potentials and generalized centers, \emph{Adv. Appl. Math.} 48 (2012), 365--392.
 \bibitem{Sakata} S. Sakata, Stationary radial centers and symmetry of convex polytopes, \emph{Colloq. Math.} 159 (2020), 91--106.
 \bibitem{BorweinBailey} J. M. Borwein and D. H. Bailey, \emph{Mathematics by Experiment: Plausible Reasoning in the 21st Century}, A K Peters, 2004.
-\bibitem{Repo} K. Furuta, Basepoint Geometry: computational certificates for the prolate-spheroid basepoint bifurcation, software and proof archive, GitHub, canonical commit \texttt{abf704b8701f3da8eb41d8a99408570a413b2214}, 2026. \url{https://github.com/cotaxxxx/basepoint-geometry}.
+\bibitem{Repo} K. Furuta, Basepoint Geometry: computational certificates for the prolate-spheroid basepoint bifurcation, software and proof archive, GitHub, canonical commit \texttt{abf704b8701f3da8eb41d8\allowbreak a99408570a413b2214}, 2026. \url{https://github.com/cotaxxxx/basepoint-geometry}.
 \end{thebibliography}
 \end{document}

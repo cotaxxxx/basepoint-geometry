@@ -13,6 +13,6 @@
 - [x] Canonical proof commit: abf704b8701f3da8eb41d8a99408570a413b2214.
 - [x] Data and code availability section included.
 - [x] Cover letter drafted.
-- [ ] Compile English TeX in a TeX environment and visually inspect every page.
+- [x] Compile English TeX with LuaLaTeX and visually inspect all 8 pages; no LaTeX warnings remain.
 - [ ] Confirm final Taylor & Francis portal metadata and any current file-format requirements at upload time.
 - [ ] Prepare supplementary certificate archive if requested by the portal/editor.
