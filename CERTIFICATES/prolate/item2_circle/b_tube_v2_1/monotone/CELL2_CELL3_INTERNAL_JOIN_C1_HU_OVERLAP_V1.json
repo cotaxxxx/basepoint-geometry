@@ -1,0 +1,70 @@
+{
+  "binding_use_authorized": false,
+  "cells": {
+    "left": "CELL2",
+    "right": "CELL3"
+  },
+  "component": "INTERNAL_JOIN_C1_HU_OVERLAP_CERTIFICATE",
+  "contract": "MONOTONE_TUBE_V1_1",
+  "evidence_class": "BINDING_COMPONENT_CANDIDATE",
+  "execution_head": "1a3e69da6a55b8147481f6df1fdf8a5208cf3200",
+  "geometry": {
+    "adjacent_lambda_identity": true,
+    "adjacent_q_identity": true,
+    "intersection": {
+      "r_hi": "17856203991343390860939510841/19807040628566084398385987584",
+      "r_lo": "16618263952058010586040386617/19807040628566084398385987584"
+    },
+    "intersection_width": "1/16",
+    "lambda_join": "4507749/1600000",
+    "left_section": {
+      "r_hi": "17856203991343390860939510841/19807040628566084398385987584",
+      "r_lo": "16618263952058010586040386617/19807040628566084398385987584"
+    },
+    "positive_width_overlap": true,
+    "q_join": "17237233971700700723489948729/19807040628566084398385987584",
+    "right_section": {
+      "r_hi": "17856203991343390860939510841/19807040628566084398385987584",
+      "r_lo": "16618263952058010586040386617/19807040628566084398385987584"
+    },
+    "union_hull": {
+      "r_hi": "17856203991343390860939510841/19807040628566084398385987584",
+      "r_lo": "16618263952058010586040386617/19807040628566084398385987584"
+    }
+  },
+  "head_unchanged_during_run": true,
+  "legacy_adaptive_join_contract_claimed": false,
+  "legacy_point_krawczyk_reexecuted": false,
+  "logical_composition": {
+    "c1_available_on_both_tube_rectangles": true,
+    "conditional_branch_identity_bridge": true,
+    "conditional_statement": "If the promoted left-cell branch reaches the shared boundary inside its endpoint section, strict F_r sign and the positive-width overlap identify the same unique local branch as the right-cell seed.",
+    "f_r_nonzero_on_both_sections": true,
+    "internal_join_ready_for_monotone_assembly": true,
+    "left_section_hu_positive": true,
+    "overlap_nonempty_open_interval": true,
+    "right_section_hu_positive": true
+  },
+  "nonclaims": [
+    "This receipt does not promote the legacy adaptive calibration JOIN.",
+    "This receipt does not authorize the complete tube theorem.",
+    "Binding use requires a separate judge promotion of this exact receipt SHA256."
+  ],
+  "pins": {
+    "checker_sha256": "b780df402758499d008c4341d00377f80ed29b91c895edc2abed604044f3d061",
+    "f_joint_c1_judge_sha256": "4d9976395d6438d5d0a99b22b312f3b171d50ae65363e46c5b9e491488de120e",
+    "f_joint_c1_lemma_sha256": "e04f63e5b6b7f050bf227dfc3066ec08dbb34a53c664b98a78a661682ea099e3",
+    "left_f_lambda_promotion_sha256": "80b1591940385376da887e086d5dcf0a75734027da73d0dd154632a5467d754a",
+    "left_geometry_sha256": "472c3cf8c61526741693428c5e7524decc1c5e4b4ed3e5606ede70330876d3c3",
+    "left_hu_promotion_sha256": "28c99bdcb06ccb9c325a0886c5a7213ebbd6995691cd0155e1e4a2200d1cbbf5",
+    "producer_sha256": "93e98b434364468098718af1cc5c8782be6af8d858cd75d0d5f79d5ed99271c6",
+    "right_f_lambda_promotion_sha256": "a573e89f51b6ea141b57686e0c98f9f03e95071121d586b3335eec49d8cb08a4",
+    "right_geometry_sha256": "8445e2dc0f8ec49ee061c1fbd2554fc1233a5371c55b5f7c21edd1901c8c7397",
+    "right_hu_promotion_sha256": "bbc75c5116a076e08e63c027e64b166ab3fd6aee0ec03bfc3e0a318bceabe9c3"
+  },
+  "proof_mode": "C1_HU_OVERLAP_COMPOSITION",
+  "schema": "monotone-tube-v1.1-internal-join-c1-hu-overlap-v1",
+  "source_tree_post_clean": true,
+  "source_tree_pre_clean": true,
+  "verdict": "CELL2_CELL3_INTERNAL_JOIN_C1_HU_OVERLAP_PASS_READY_FOR_JUDGE_PROMOTION"
+}
