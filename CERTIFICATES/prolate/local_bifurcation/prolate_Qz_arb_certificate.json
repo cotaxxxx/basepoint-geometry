@@ -2,7 +2,7 @@
   "status": "CERTIFIED",
   "certificate_id": "PROLATE-LOCAL-QZ-2026-09-NEWCHAIN-v1",
   "certification_chain": "2026-09 new certification chain",
-  "executed_at_utc": "2026-09-05T09:02:38.138266+00:00",
+  "executed_at_utc": "2026-09-05T10:04:43.343356+00:00",
   "environment": {
     "python": "3.13.14",
     "python_flint": "0.9.0",
@@ -15,10 +15,10 @@
   "integration_tolerance": "1e-28",
   "parameter_subdivisions": 5,
   "proof_interval": "[4.7, 4.75]",
-  "manuscript_required_lower_bound": "0.0885587658854469",
+  "manuscript_required_lower_bound": "0.0885587746621582",
   "conditions": {
     "Qz(a) > 0 on every partition interval": true,
-    "worst lower bound >= 0.0885587658854469": true
+    "worst lower bound >= 0.0885587746621582": true
   },
   "worst_interval": "[237/50, 19/4]",
   "worst_lower": "[0.08855877466215827082855433493812626043843446470751506185173699405224899 +/- 3.78e-72]",

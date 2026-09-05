@@ -57,12 +57,12 @@ conditions as true.
 Paper 1's public local evidence was completed on 2026-09-05 by adding five SHA-pinned objects:
 
 - `prolate_ac_arb_certificate.py` / `.json`: 20-digit endpoint sign certificate for `a_c`.
-- `prolate_Qz_symbolic_audit.py`: exact symbolic audit of the axial second-order jet.
+- `prolate_Qz_symbolic_audit.py`: exact no-jet symbolic audit of the raw weighted axial kernel using an abstract `h`.
 - `prolate_Qz_arb_certificate.py` / `.json`: rigorous axial coefficient certificate on `[4.70,4.75]`.
 
 The JSON files record `status=CERTIFIED`, execution timestamp, environment, precision, integration tolerance, parameter subdivisions, and a `certificate_id` identifying the `2026-09` new certification chain. The ac run uses 100 decimal digits and tolerance `1e-40`; the Qz run uses 70 decimal digits, tolerance `1e-28`, and five parameter subdivisions.
 
-The Qz certificate has positive lower endpoints on all five subintervals; its worst rigorous lower endpoint is greater than `0.0885587746621582`. The complete eleven-object manifest is `SHA256SUMS.txt`.
+The Qz certificate has positive lower endpoints on all five subintervals; its worst rigorous lower endpoint is greater than `0.0885587746621582`. Its `CERTIFIED` status now requires both five-interval positivity and the manuscript lower-bound gate `worst_lower >= 0.0885587746621582`.
 
 Evidence-completion commit: `68bc9828c3476e9db2d73d338e731c48c0931f54`.
 
@@ -77,3 +77,5 @@ zero; otherwise the script exits nonzero.
 Reference execution uses Python 3.13.14 and SymPy 1.14.0.  This audit closes
 the previously unaudited link from the analytic kernel `h(x)=arccos(x)^2`
 to the regularized `0F1` derivative formulas used by the interval code.
+
+The complete R3 manifest contains twelve SHA-pinned proof objects in `SHA256SUMS.txt`.

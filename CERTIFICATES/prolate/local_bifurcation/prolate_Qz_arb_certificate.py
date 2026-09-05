@@ -9,7 +9,7 @@ from flint import acb, arb, ctx, fmpq
 from prolate_cap_arb_certificate import h_derivatives_from_t, local_scalar, rigorous_integral, interval_record, certify_positive, rational_partition
 
 CERTIFICATE_ID = "PROLATE-LOCAL-QZ-2026-09-NEWCHAIN-v1"
-MANUSCRIPT_LOWER = arb("0.0885587658854469")
+MANUSCRIPT_LOWER = arb("0.0885587746621582")
 
 def env_record():
     return {
@@ -59,10 +59,10 @@ def run_certificate(dps: int, tolerance_text: str, subdivisions: int, depth_limi
         })
     conditions = {
         "Qz(a) > 0 on every partition interval": all_positive,
-        "worst lower bound >= 0.0885587658854469": threshold_pass,
+        "worst lower bound >= 0.0885587746621582": threshold_pass,
     }
     return {
-        "status": "CERTIFIED" if all_positive else "FAILED_OR_INCONCLUSIVE",
+        "status": "CERTIFIED" if (all_positive and threshold_pass) else "FAILED_OR_INCONCLUSIVE",
         "certificate_id": CERTIFICATE_ID,
         "certification_chain": "2026-09 new certification chain",
         "executed_at_utc": datetime.now(timezone.utc).isoformat(),
@@ -72,7 +72,7 @@ def run_certificate(dps: int, tolerance_text: str, subdivisions: int, depth_limi
         "integration_tolerance": tolerance_text,
         "parameter_subdivisions": subdivisions,
         "proof_interval": "[4.7, 4.75]",
-        "manuscript_required_lower_bound": "0.0885587658854469",
+        "manuscript_required_lower_bound": "0.0885587746621582",
         "conditions": conditions,
         "worst_interval": worst_interval,
         "worst_lower": str(worst_lower),
