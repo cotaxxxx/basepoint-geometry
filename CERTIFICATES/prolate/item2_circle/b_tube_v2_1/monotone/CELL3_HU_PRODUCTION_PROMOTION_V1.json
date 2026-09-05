@@ -1,0 +1,37 @@
+{
+  "component1_geometry_receipt_sha256": "8445e2dc0f8ec49ee061c1fbd2554fc1233a5371c55b5f7c21edd1901c8c7397",
+  "consumption": "MONOTONE_TUBE_V1_1_ASSEMBLY_ONLY_WITH_SAME_COMPONENT1_SHA",
+  "cross_component_identity_requirement": {
+    "assembly_must_fail_closed_on_sha_mismatch": true,
+    "component1_geometry_receipt_sha256": "472c3cf8c61526741693428c5e7524decc1c5e4b4ed3e5606ede70330876d3c3",
+    "required_for": [
+      "H_U_PRODUCTION",
+      "F_LAMBDA",
+      "JOIN",
+      "MONOTONE_ASSEMBLY"
+    ]
+  },
+  "independent_check": "CHAT_VERIFIED_CELL3_CANONICAL_PRODUCTION_RECEIPT_PRODUCTION_CHECKER_AND_COMPONENT1_RECEIPT",
+  "judge_receipt": "CELL3_HU_PRODUCTION_PROMOTION_V1",
+  "judge_verdict": "PASS",
+  "narrow_interface": {
+    "ALL_TERMINAL_LO_POSITIVE": true,
+    "CERTIFIED_COVER_MARGIN_EXACT": "2625436202769786711798727432387466578419869528429053/3138550867693340381917894711603833208051177722232017256448",
+    "CERTIFIED_COVER_MARGIN_POSITIVE": true,
+    "COVER_MARGIN_IS_TRUE_MINIMUM": false,
+    "UNION_EQUALS_PARENT": true
+  },
+  "not_a_tube_theorem_promotion": true,
+  "production_checker_sha256": "9d8ad733677826411635fd266cc5ad052aca8f9aaa6e9c3f65c16a4ff808dbaa",
+  "production_receipt_sha256": "8964a75e26805e4669004017e2c8a924b9dd0425ef337e9a21bf0a528b94d626",
+  "promotion_effect": {
+    "authorization_source": "THIS_PROMOTION_RECEIPT",
+    "authorized_component": "CELL3_HU_COMPONENT_ONLY",
+    "binding_use_authorized": true,
+    "source_production_receipt_mutated": false
+  },
+  "release_sha": "6d705c6fbf37ae77d35232a40842692a3e92713e",
+  "scope": "CELL3_HU_COMPONENT_ONLY",
+  "signed_at": "2026-09-05",
+  "signer_role": "HUMAN_JUDGE"
+}
