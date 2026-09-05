@@ -1,0 +1,97 @@
+{
+  "status": "CERTIFIED",
+  "certificate_id": "PROLATE-LOCAL-QZ-2026-09-NEWCHAIN-v1",
+  "certification_chain": "2026-09 new certification chain",
+  "executed_at_utc": "2026-09-05T09:02:38.138266+00:00",
+  "environment": {
+    "python": "3.13.14",
+    "python_flint": "0.9.0",
+    "FLINT": "3.6.0",
+    "SymPy": "1.14.0",
+    "mpmath": "1.3.0"
+  },
+  "arithmetic": "python-flint Arb/Acb ball arithmetic",
+  "decimal_precision": 70,
+  "integration_tolerance": "1e-28",
+  "parameter_subdivisions": 5,
+  "proof_interval": "[4.7, 4.75]",
+  "manuscript_required_lower_bound": "0.0885587658854469",
+  "conditions": {
+    "Qz(a) > 0 on every partition interval": true,
+    "worst lower bound >= 0.0885587658854469": true
+  },
+  "worst_interval": "[237/50, 19/4]",
+  "worst_lower": "[0.08855877466215827082855433493812626043843446470751506185173699405224899 +/- 3.78e-72]",
+  "Qz_partition": [
+    {
+      "a_interval": "[47/10, 471/100]",
+      "real": {
+        "ball": "[0.1 +/- 9.75e-3]",
+        "lower": "[0.09025284180544673002046722377036474869709900114093228955625641430322312 +/- 1.17e-72]",
+        "upper": "[0.09993735442996381318849700892661474869709900114093228955625641430322312 +/- 1.17e-72]"
+      },
+      "imaginary": {
+        "ball": "[+/- 6.11e-5]",
+        "contains_zero": true
+      },
+      "certified_positive": true,
+      "meets_manuscript_lower_bound": true
+    },
+    {
+      "a_interval": "[471/100, 118/25]",
+      "real": {
+        "ball": "[0.09 +/- 9.47e-3]",
+        "lower": "[0.08982522117526372846366127791901603980304580256257659891318625937819666 +/- 1.90e-72]",
+        "upper": "[0.09946553311397423919440468612214103980304580256257659891318625937819666 +/- 1.90e-72]"
+      },
+      "imaginary": {
+        "ball": "[+/- 6.10e-5]",
+        "contains_zero": true
+      },
+      "certified_positive": true,
+      "meets_manuscript_lower_bound": true
+    },
+    {
+      "a_interval": "[118/25, 473/100]",
+      "real": {
+        "ball": "[0.09 +/- 9.00e-3]",
+        "lower": "[0.08940036226557789057315403875007240788627922551475484975781671415929651 +/- 1.43e-72]",
+        "upper": "[0.09899675933264882921994740422858803288627922551475484975781671415929651 +/- 1.43e-72]"
+      },
+      "imaginary": {
+        "ball": "[+/- 6.08e-5]",
+        "contains_zero": true
+      },
+      "certified_positive": true,
+      "meets_manuscript_lower_bound": true
+    },
+    {
+      "a_interval": "[473/100, 237/50]",
+      "real": {
+        "ball": "[0.09 +/- 8.54e-3]",
+        "lower": "[0.08897820937941676388095152898545067399507750690236184621786994797954893 +/- 6.50e-73]",
+        "upper": "[0.09853104125737106809924376531357567399507750690236184621786994797954893 +/- 6.50e-73]"
+      },
+      "imaginary": {
+        "ball": "[+/- 6.07e-5]",
+        "contains_zero": true
+      },
+      "certified_positive": true,
+      "meets_manuscript_lower_bound": true
+    },
+    {
+      "a_interval": "[237/50, 19/4]",
+      "real": {
+        "ball": "[0.09 +/- 8.07e-3]",
+        "lower": "[0.08855877466215827082855433493812626043843446470751506185173699405224899 +/- 3.78e-72]",
+        "upper": "[0.09806831967092659836275309592445438543843446470751506185173699405224899 +/- 3.78e-72]"
+      },
+      "imaginary": {
+        "ball": "[+/- 6.06e-5]",
+        "contains_zero": true
+      },
+      "certified_positive": true,
+      "meets_manuscript_lower_bound": true
+    }
+  ]
+}
