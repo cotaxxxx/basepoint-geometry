@@ -51,3 +51,17 @@ recorded in Appendix A.5 of the 2026-08-18 manuscript snapshot.  The executable
 certificate report records `status = CERTIFIED` and all six required
 conditions as true.
 
+
+## 2026-09 evidence-completion chain
+
+Paper 1's public local evidence was completed on 2026-09-05 by adding five SHA-pinned objects:
+
+- `prolate_ac_arb_certificate.py` / `.json`: 20-digit endpoint sign certificate for `a_c`.
+- `prolate_Qz_symbolic_audit.py`: exact symbolic audit of the axial second-order jet.
+- `prolate_Qz_arb_certificate.py` / `.json`: rigorous axial coefficient certificate on `[4.70,4.75]`.
+
+The JSON files record `status=CERTIFIED`, execution timestamp, environment, precision, integration tolerance, parameter subdivisions, and a `certificate_id` identifying the `2026-09` new certification chain. The ac run uses 100 decimal digits and tolerance `1e-40`; the Qz run uses 70 decimal digits, tolerance `1e-28`, and five parameter subdivisions.
+
+The Qz certificate has positive lower endpoints on all five subintervals; its worst rigorous lower endpoint is greater than `0.0885587746621582`. The complete eleven-object manifest is `SHA256SUMS.txt`.
+
+Evidence-completion commit: `68bc9828c3476e9db2d73d338e731c48c0931f54`.
