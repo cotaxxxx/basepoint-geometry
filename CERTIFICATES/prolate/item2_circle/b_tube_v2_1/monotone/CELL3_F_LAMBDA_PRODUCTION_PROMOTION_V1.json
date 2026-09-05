@@ -7,7 +7,7 @@
   "contract": "MONOTONE_TUBE_V1_1",
   "cross_component_identity_requirement": {
     "assembly_must_fail_closed_on_sha_mismatch": true,
-    "component1_geometry_receipt_sha256": "472c3cf8c61526741693428c5e7524decc1c5e4b4ed3e5606ede70330876d3c3",
+    "component1_geometry_receipt_sha256": "8445e2dc0f8ec49ee061c1fbd2554fc1233a5371c55b5f7c21edd1901c8c7397",
     "required_for": [
       "H_U_PRODUCTION",
       "F_LAMBDA",
