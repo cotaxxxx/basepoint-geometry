@@ -1,0 +1,42 @@
+{
+  "binding_scope": {
+    "authorized_cells": [
+      "CELL2",
+      "CELL3"
+    ],
+    "authorized_join": "CELL2->CELL3",
+    "component_only": true
+  },
+  "consumption": "MONOTONE_TUBE_V1_1_ASSEMBLY_ONLY_WITH_SOURCE_PINS_UNCHANGED",
+  "contract": "MONOTONE_TUBE_V1_1",
+  "independent_check": {
+    "checker_sha256": "b780df402758499d008c4341d00377f80ed29b91c895edc2abed604044f3d061",
+    "checker_verdict": "PASS",
+    "negative_controls": {
+      "geometry_mutation": "EXPECTED_REJECT",
+      "pin_mutation": "EXPECTED_REJECT",
+      "self_authorization_mutation": "EXPECTED_REJECT"
+    }
+  },
+  "judge_receipt": "CELL2_CELL3_INTERNAL_JOIN_C1_HU_OVERLAP_PROMOTION_V1",
+  "judge_verdict": "PASS",
+  "legacy_adaptive_join_contract_authorized": false,
+  "legacy_point_krawczyk_authorized": false,
+  "not_a_tube_theorem_promotion": true,
+  "promotion_effect": {
+    "authorization_source": "THIS_PROMOTION_RECEIPT",
+    "authorized_component": "CELL2_CELL3_INTERNAL_JOIN_C1_HU_OVERLAP_COMPONENT_ONLY",
+    "binding_use_authorized": true,
+    "source_receipt_mutated": false
+  },
+  "proof_mode": "C1_HU_OVERLAP_COMPOSITION",
+  "schema": "monotone-tube-v1.1-internal-join-c1-hu-overlap-promotion-v1",
+  "scope": "CELL2_CELL3_INTERNAL_JOIN_COMPONENT_ONLY",
+  "signed_at": "2026-09-05",
+  "signer_role": "HUMAN_JUDGE",
+  "source_execution_head": "1a3e69da6a55b8147481f6df1fdf8a5208cf3200",
+  "source_receipt_commit": "9bfdeeec7ae1614bebd3dfacc8e1aa6858ee1432",
+  "source_receipt_path": "CERTIFICATES/prolate/item2_circle/b_tube_v2_1/monotone/CELL2_CELL3_INTERNAL_JOIN_C1_HU_OVERLAP_V1.json",
+  "source_receipt_sha256": "842706043008383186a269dde3e7d660b9afad29bb4a1545d801820ecb47d10e",
+  "source_verdict": "CELL2_CELL3_INTERNAL_JOIN_C1_HU_OVERLAP_PASS_READY_FOR_JUDGE_PROMOTION"
+}
