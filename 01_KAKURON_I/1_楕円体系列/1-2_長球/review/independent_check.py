@@ -95,3 +95,36 @@ print("H4(a_c)    =", mp.nstr(Q4_of(ac), 12))
 print("H4(4.70)   =", mp.nstr(Q4_of(mpf('4.70')), 12))
 print("H4(4.75)   =", mp.nstr(Q4_of(mpf('4.75')), 12))
 print("Qz(a_c)    =", mp.nstr(Qz_of(ac), 12))
+
+# ================= 改訂版(MajorReviewFix 20260905)の追加主張の検証 =================
+mp.dps = 70
+nodes2, wts2 = gauss_legendre(110, mpf(0), mp.pi/2)
+
+def Q_n(a, nd, wt_):
+    a = mpf(a); tot = mpf(0)
+    for th, w in zip(nd, wt_):
+        s = sin(th)
+        f0 = diff(lambda r: Feq(r, th, mpf(0), a), mpf(0), 2)
+        fp = diff(lambda r: Feq(r, th,  s, a), mpf(0), 2)
+        fm = diff(lambda r: Feq(r, th, -s, a), mpf(0), 2)
+        tot += w*s*(f0 + (fp + fm - 2*f0)/4)
+    return tot
+
+def H4_n(a, nd, wt_):
+    a = mpf(a); M = 16; tot = mpf(0)
+    phis = [2*mp.pi*k/M for k in range(M)]
+    for th, w in zip(nd, wt_):
+        s = sin(th); acc = mpf(0)
+        for ph in phis:
+            acc += diff(lambda r: Feq(r, th, s*cos(ph), a), mpf(0), 4)
+        tot += w*s*acc/M
+    return tot
+
+print()
+print("命題5.1 の20桁認証区間（改訂版）:")
+for a in ['4.72438340452113340672', '4.72438340452113340673']:
+    print("   Q(%s) = %s" % (a, mp.nstr(Q_n(a, nodes2, wts2), 24)))
+ac2 = mpf('4.724383404521133406725'); hh = mpf('1e-25')
+qp = (Q_n(ac2+hh, nodes2, wts2) - Q_n(ac2-hh, nodes2, wts2))/(2*hh)
+h4 = H4_n(ac2, nodes2, wts2)
+print("図1 の主項係数 c = 6Q'(a_c)/H4(a_c) =", mp.nstr(6*qp/h4, 18), " (論文: 0.39474123)")
