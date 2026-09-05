@@ -65,3 +65,15 @@ The JSON files record `status=CERTIFIED`, execution timestamp, environment, prec
 The Qz certificate has positive lower endpoints on all five subintervals; its worst rigorous lower endpoint is greater than `0.0885587746621582`. The complete eleven-object manifest is `SHA256SUMS.txt`.
 
 Evidence-completion commit: `68bc9828c3476e9db2d73d338e731c48c0931f54`.
+
+## R3 h-chain symbolic audit
+
+`prolate_h_chain_symbolic_audit.py` is the twelfth pinned proof object. It
+verifies symbolically that the four `0F1` formulas used by the Arb kernel are
+exactly `d^k/dx^k arccos(x)^2` for `k=1,...,4` after `x=cos(beta)` on
+`beta in (0,pi)`.  All four symbolic differences must simplify exactly to
+zero; otherwise the script exits nonzero.
+
+Reference execution uses Python 3.13.14 and SymPy 1.14.0.  This audit closes
+the previously unaudited link from the analytic kernel `h(x)=arccos(x)^2`
+to the regularized `0F1` derivative formulas used by the interval code.
