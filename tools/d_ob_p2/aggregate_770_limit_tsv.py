@@ -19,6 +19,8 @@ Reports:
   8. hypothesis test: class B (L > 0, margin <= 0) <=> lambda - z < 2 rho
      (point-box cut cap around the axis centre cannot vanish when the pole
      is closer than 2R ~ 2 rho).  Reported as a confusion table only.
+  9. same geometric predicate against the cut term itself:
+     B_cut.upper > 0 <=> lambda - z < 2 rho, listing every mismatch.
 
 Standard library only; reads the TSV, writes nothing.
 Usage: python3 aggregate_770_limit_tsv.py RESULT.tsv
@@ -127,7 +129,7 @@ def main():
         exc = int(float(row[cols["exc"]])) if "exc" in cols and row[cols["exc"]].strip() else None
         z = num(row[cols["z"]]) if "z" in cols else None
         recs.append(dict(ir=ir, it=it, il=il, stop=row[cols["stop"]].strip(), L=Lv, pm=pm, rho=rho, exc=exc,
-                         lam=lam, z=z))
+                         lam=lam, z=z, B=Bv))
 
     print("\n-- 2. stop_reason counts --")
     for k, n in sorted(collections.Counter(x["stop"] for x in recs).items()):
@@ -193,6 +195,27 @@ def main():
     print("class\tpole_within_2rho=True\tFalse")
     for c in ("A", "N", "B"):
         print(f"{c}\t{conf[(c, True)]}\t{conf[(c, False)]}")
+
+    print("\n-- 9. B_cut.upper > 0 <=> lambda - z < 2 rho --")
+    if "B" not in cols:
+        print("skipped (B_cut column not mapped)")
+        return 0
+    conf = collections.Counter()
+    mism = []
+    for x in recs:
+        if x["B"] is None:
+            continue
+        pred, obs = x["lam"] - x["z"] < 2 * x["rho"], x["B"] > 0
+        conf[(obs, pred)] += 1
+        if pred != obs:
+            mism.append(x)
+    print("B_cut>0\tpole_within_2rho=True\tFalse")
+    for o in (True, False):
+        print(f"{o}\t{conf[(o, True)]}\t{conf[(o, False)]}")
+    for x in mism:
+        gap = float((x["lam"] - x["z"]) / (2 * x["rho"]))
+        print(f"  mismatch (i_r,i_t,i_l)=({x['ir']},{x['it']},{x['il']}) class={sym(x) if x['stop'] != 'accepted' else 'A'} "
+              f"B_cut={float(x['B']):.4g} (lambda-z)/(2rho)={gap:.4f}")
     return 0
 
 
