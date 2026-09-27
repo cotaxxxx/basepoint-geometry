@@ -12,9 +12,13 @@ Reports:
   4. consistency: accepted <=> producer margin (L-B_cut).lower() > 0
   5. cross-tab against the fixed depth-12 decision of the same cell
      (D_OB_P2_770_INTERIM_AUDIT.md sha 4a1188..., section 5)
-  6. i_r strip per (i_t, i_lambda): A accepted, C max_cell_count,
+  6. i_r strip per (i_t, i_lambda): A accepted; for max_cell_count
+     N (L.lower <= 0) / B (L.lower > 0, lost to B_cut) / C (L unmapped);
      S selected_empty, X degenerate_crash; '*' marks depth-12 accepted
   7. per (i_t, i_lambda): accepted set is an i_r prefix?  rho separation?
+  8. hypothesis test: class B (L > 0, margin <= 0) <=> lambda - z < 2 rho
+     (point-box cut cap around the axis centre cannot vanish when the pole
+     is closer than 2R ~ 2 rho).  Reported as a confusion table only.
 
 Standard library only; reads the TSV, writes nothing.
 Usage: python3 aggregate_770_limit_tsv.py RESULT.tsv
@@ -86,6 +90,12 @@ def num(s):
         return None
 
 
+def sym(x):
+    if x["stop"] == "max_cell_count" and x["L"] is not None:
+        return "N" if x["L"] <= 0 else "B"
+    return SYMBOL.get(x["stop"], "?")
+
+
 def idx(value, lo, width):
     return int(math.floor((value - lo) / width))
 
@@ -115,7 +125,9 @@ def main():
         pm = num(row[cols["pm"]]) if "pm" in cols else (Lv - Bv if Lv is not None and Bv is not None else None)
         rho = num(row[cols["rho"]]) if "rho" in cols else r * (1 - t * t) / (1 + t * t)
         exc = int(float(row[cols["exc"]])) if "exc" in cols and row[cols["exc"]].strip() else None
-        recs.append(dict(ir=ir, it=it, il=il, stop=row[cols["stop"]].strip(), L=Lv, pm=pm, rho=rho, exc=exc))
+        z = num(row[cols["z"]]) if "z" in cols else None
+        recs.append(dict(ir=ir, it=it, il=il, stop=row[cols["stop"]].strip(), L=Lv, pm=pm, rho=rho, exc=exc,
+                         lam=lam, z=z))
 
     print("\n-- 2. stop_reason counts --")
     for k, n in sorted(collections.Counter(x["stop"] for x in recs).items()):
@@ -155,7 +167,7 @@ def main():
     ils = sorted({x["il"] for x in recs})
     for it in its:
         for il in ils:
-            s = "".join(SYMBOL.get(cell[(ir, it, il)]["stop"], "?") if (ir, it, il) in cell else "." for ir in range(16))
+            s = "".join(sym(cell[(ir, it, il)]) if (ir, it, il) in cell else "." for ir in range(16))
             m = "".join("*" if (ir, it, il) in DEPTH12_ACCEPTED else " " for ir in range(16))
             print(f"i_t={it:2d} i_l={il:2d}  {s}  [{m}]")
 
@@ -169,6 +181,18 @@ def main():
             sep = (not acc or not rej) or max(x["rho"] for x in acc) < min(x["rho"] for x in rej)
             thr = f"max_rho_acc={float(max(x['rho'] for x in acc)):.6f}" if acc else "max_rho_acc=-"
             print(f"i_t={it:2d} i_l={il:2d} accepted={len(acc):2d}/{len(xs)} ir_prefix={prefix} rho_separated={sep} {thr}")
+
+    print("\n-- 8. hypothesis test: class B <=> lambda - z < 2 rho --")
+    if "L" not in cols or "z" not in cols:
+        print("skipped (L or z column not mapped)")
+        return 0
+    conf = collections.Counter()
+    for x in recs:
+        cls = "A" if x["stop"] == "accepted" else sym(x)
+        conf[(cls, x["lam"] - x["z"] < 2 * x["rho"])] += 1
+    print("class\tpole_within_2rho=True\tFalse")
+    for c in ("A", "N", "B"):
+        print(f"{c}\t{conf[(c, True)]}\t{conf[(c, False)]}")
     return 0
 
 
