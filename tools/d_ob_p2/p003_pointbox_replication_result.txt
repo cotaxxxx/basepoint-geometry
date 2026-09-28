@@ -1,0 +1,12 @@
+# DIAGNOSTIC / NOT_EVIDENCE. t = 1/64. chat-side replication, pinned producer dff79bc4 + independent J.
+# lambda = 251/400 (midpoint of the (0,0,3) box lambda range [119/200, 33/50])
+r=0.010 cut=0 stop=accepted L=+0.430318 J=+6.204371 SumUp=+11.778094
+r=0.014 cut=0 stop=accepted L=+0.655627 J=+6.204008 SumUp=+11.544751
+r=0.018 cut=0 stop=accepted L=+0.697843 J=+6.203525 SumUp=+11.482631
+r=0.022 cut=0 stop=accepted L=+0.270225 J=+6.202921 SumUp=+11.860088
+r=0.030 cut=0 stop=max_or_empty L=-1.396502 J=+6.201351 SumUp=+13.347330
+r=0.060 cut=0 stop=max_or_empty L=-8.303649 J=+6.191154 SumUp=+19.171992
+r=0.100 cut=0 stop=max_or_empty L=-19.787206 J=+6.166954 SumUp=+28.095581
+# lambda = 173/400 (midpoint of the k=0 lambda range; reproduces the executing-side P003 table exactly)
+r=0.010 cut=0 stop=accepted L=+0.185657 J=+4.258222 SumUp=+8.144403
+r=0.018 cut=0 stop=max_or_empty L=-0.066159 J=+4.257672 SumUp=+8.337110
