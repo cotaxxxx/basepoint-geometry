@@ -55,6 +55,22 @@ def main():
     cert_sha = sha256(rd / "certificate.jsonl.gz")
     print(f"INFO certificate_sha256={cert_sha}")
 
+    # producer ledger header vs pins
+    with open(rd / "producer_ledger.jsonl", "rb") as f:
+        hdr = json.loads(f.readline())
+    ident = hdr.get("identity", {})
+    print(f"INFO producer header identity={json.dumps(ident, sort_keys=True)}")
+    check("P producer header head", ident.get("head") == HEAD)
+    check("P producer header producer_sha256", ident.get("producer_sha256") == PRODUCER_SHA)
+    check("P producer header spec_sha256 == SPEC V2", ident.get("spec_sha256") == SPEC_SHA)
+    check("P producer header correction_sha256 prefix", str(ident.get("correction_sha256", "")).startswith(CORRECTION_SHA_PREFIX))
+
+
+    if not (cd / "exit_code.txt").exists():
+        check("1 exit_code.txt present (replay finished)", False, "checker still running or not launched")
+        print(f"VERDICT NOT_FINISHED pass={sum(results)} fail={len(results) - sum(results)}")
+        return 1
+
     # 1 exit code
     ec = (cd / "exit_code.txt").read_text().strip() if (cd / "exit_code.txt").exists() else None
     check("1 exit_code.txt == EXIT=1", ec == "EXIT=1", repr(ec))
@@ -119,16 +135,6 @@ def main():
             except OSError:
                 pass
     check("5 no live checker process", not live, f"pids={live}" if live else "")
-
-    # producer ledger header vs pins
-    with open(rd / "producer_ledger.jsonl", "rb") as f:
-        hdr = json.loads(f.readline())
-    ident = hdr.get("identity", {})
-    print(f"INFO producer header identity={json.dumps(ident, sort_keys=True)}")
-    check("P producer header head", ident.get("head") == HEAD)
-    check("P producer header producer_sha256", ident.get("producer_sha256") == PRODUCER_SHA)
-    check("P producer header spec_sha256 == SPEC V2", ident.get("spec_sha256") == SPEC_SHA)
-    check("P producer header correction_sha256 prefix", str(ident.get("correction_sha256", "")).startswith(CORRECTION_SHA_PREFIX))
 
     ok = all(results)
     print(f"VERDICT {'REPLAY_AS_PREREGISTERED' if ok else 'DEVIATION_FROM_PREREGISTRATION'} "
