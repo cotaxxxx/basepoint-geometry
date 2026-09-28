@@ -1,0 +1,4 @@
+(9,15,0) stop=accepted regular=58826 cut=0 L=+2.7613e-01 Bcut=0.0000e+00 SumUp=+5.0259e+00 J_true=+3.012131e+00 containment_violations=0 worst=0.000e+00 62s
+(0,13,0) stop=not_accepted regular=58826 cut=0 L=-8.3627e-01 Bcut=0.0000e+00 SumUp=+6.4572e+00 J_true=+3.156889e+00 containment_violations=0 worst=0.000e+00 64s
+(6,14,0) stop=not_accepted regular=60023 cut=0 L=-2.1222e-01 Bcut=0.0000e+00 SumUp=+5.6279e+00 J_true=+3.062529e+00 containment_violations=0 worst=0.000e+00 65s
+(10,15,0) stop=not_accepted regular=60023 cut=0 L=-7.7970e-01 Bcut=0.0000e+00 SumUp=+5.5606e+00 J_true=+2.994746e+00 containment_violations=0 worst=0.000e+00 65s
