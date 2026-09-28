@@ -153,9 +153,12 @@ def build_b44(path):
         r, t, lam = num(row[col["r"]]), num(row[col["t"]]), num(row[col["lam"]])
         ir, it, il = (int(math.floor((r - R0) / WR)), int(math.floor((t - T0) / WT)), int(math.floor((lam - L0) / WL)))
         rc, tc, lc = R0 + WR * Q(2 * ir + 1, 2), T0 + WT * Q(2 * it + 1, 2), L0 + WL * Q(2 * il + 1, 2)
-        for a, b in ((r, rc), (t, tc), (lam, lc)):
-            if abs(float(a) - float(b)) > 1e-12:
-                raise ValueError(f"row is not a cell centre: {(ir, it, il)}")
+        for raw, a, b in ((row[col["r"]], r, rc), (row[col["t"]], t, tc), (row[col["lam"]], lam, lc)):
+            # exact identity: rational field must equal the exact centre; a decimal field must be
+            # the correctly rounded double of the exact centre (bitwise double equality)
+            same = (a == b) if "/" in raw else (float(raw.strip()) == float(b))
+            if not same:
+                raise ValueError(f"row is not an exact cell centre: {(ir, it, il)} field={raw!r} centre={b}")
         rho = rc * (1 - tc * tc) / (1 + tc * tc); z = lc * rc * 2 * tc / (1 + tc * tc)
         pts.append({"key": f"{ir},{it},{il}", "cell": [ir, it, il], "r": rc, "t": tc, "lam_q": lc,
                     "rho": float(rho), "z": float(z), "lam": float(lc)})
@@ -180,7 +183,10 @@ def main():
               "steps_rho_factor": [s for s, _ in STEPS], "d0": D0, "rel": REL,
               "criterion4_routes": ["B", f"A{D0}"], "J_from_H": "J = 2*pi*lambda*H",
               "class_B_rule": "stop_reason == max_cell_count and L.lower > 0",
-              "c5": "not used in Phase 0", "utc_start": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}
+              "c5": "not used in Phase 0",
+              "initial_box_index": list(BOX["initial"]),
+              "target_bounds": {k: [str(BOX[k][0]), str(BOX[k][1])] for k in ("r", "t", "lam")},
+              "cell_centre_identity": "rational field exact equality; decimal field bitwise double equality", "utc_start": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}
     json.dump(header, open(os.path.join(a.out, "header.json"), "w"), indent=2, sort_keys=True)
     if header["pinned_sha256"] != PINNED_SHA or header["results_sha256"] != RESULTS_SHA:
         log("INVALID pin mismatch"); return 2
@@ -198,7 +204,7 @@ def main():
         label, reasons = decide(res["values"], res["errors"])
         counts[label] += 1
         v = res["values"]
-        rows.append({"key": p["key"], "r": str(p["r"]), "t": str(p["t"]), "lambda": str(p["lam_q"]),
+        rows.append({"key": p["key"], "initial_box": "7,7,0", "r": str(p["r"]), "t": str(p["t"]), "lambda": str(p["lam_q"]),
                      "rho": p["rho"], "z": p["z"], "lambda_minus_z": p["lam"] - p["z"],
                      **{k: v.get(k) for k in sorted(v)},
                      "J_B_standard": 2 * math.pi * p["lam"] * v["B_standard"] if "B_standard" in v else None,
