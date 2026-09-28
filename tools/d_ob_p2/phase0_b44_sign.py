@@ -13,7 +13,7 @@ Usage:
 Exit codes: 0 completed (gate label in summary), 2 INVALID (pin / input /
 G4 failure), anything else = crash.
 """
-import argparse, csv, hashlib, importlib.util, json, math, os, re, signal, sys, time, warnings
+import argparse, csv, hashlib, importlib.util, json, math, os, signal, sys, time, warnings
 from fractions import Fraction as Q
 from multiprocessing import Pool
 
@@ -123,12 +123,22 @@ def decide(v, errors):
     return ("POSITIVE" if hb > 0 else "NEGATIVE"), []
 
 
-SYN = {"r": ["r"], "t": ["t"], "lam": ["lambda", "lam"], "stop": ["stopreason", "stop", "reason"],
-       "L": ["llower", "lower"]}
+# Exact, case-sensitive header names (no normalisation: the real TSV has both "r" and "R").
+# Exactly one candidate per field must be present, otherwise fail closed.
+COLS = {"r": ["r"], "t": ["t"], "lam": ["lambda_", "lambda"],
+        "stop": ["stop_reason"], "L": ["L_lower", "L.lower", "Llower"]}
 
 
-def norm(s):
-    return re.sub(r"[^a-z0-9]", "", s.lower())
+def pick_columns(header):
+    if len(set(header)) != len(header):
+        raise ValueError(f"duplicate header names: {header}")
+    col = {}
+    for k, cands in COLS.items():
+        hit = [c for c in cands if c in header]
+        if len(hit) != 1:
+            raise ValueError(f"column {k}: candidates {cands} matched {hit} in header {header}")
+        col[k] = hit[0]
+    return col
 
 
 def num(s):
@@ -138,13 +148,7 @@ def num(s):
 
 def build_b44(path):
     rows = list(csv.DictReader(open(path, newline="", encoding="utf-8"), delimiter="\t"))
-    normed = {norm(h): h for h in rows[0].keys()}
-    col = {}
-    for k, syns in SYN.items():
-        hit = [normed[s] for s in syns if s in normed]
-        if not hit:
-            raise ValueError(f"column {k} not found in {list(rows[0].keys())}")
-        col[k] = hit[0]
+    col = pick_columns(list(rows[0].keys()))
     pts = []
     for row in rows:
         stop, L = row[col["stop"]].strip(), num(row[col["L"]])
@@ -173,7 +177,21 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--pinned", required=True); ap.add_argument("--results", required=True)
     ap.add_argument("--out", required=True); ap.add_argument("--workers", type=int, default=4)
+    ap.add_argument("--check-only", action="store_true",
+                    help="pins, B44 construction and G4 only; no integration, writes nothing")
     a = ap.parse_args()
+    if a.check_only:
+        ok_pins = sha256_file(a.pinned) == PINNED_SHA and sha256_file(a.results) == RESULTS_SHA
+        with open(a.results, newline="", encoding="utf-8") as f:
+            cols = pick_columns(next(csv.reader(f, delimiter="\t")))
+        pts = build_b44(a.results)
+        bad = [p["key"] for p in pts if not g4(p)]
+        print(f"PINS_OK={ok_pins} COLUMNS={cols} B44_COUNT={len(pts)} G4_BAD={bad}")
+        return 0 if ok_pins and len(pts) == N_EXPECTED and not bad else 2
+    try:
+        import scipy  # noqa: F401  (preflight: fail closed before any output)
+    except ImportError:
+        print("INVALID scipy not importable", flush=True); return 2
     start = time.time()
     os.makedirs(a.out, exist_ok=False)
     log = lambda m: print(m, flush=True)

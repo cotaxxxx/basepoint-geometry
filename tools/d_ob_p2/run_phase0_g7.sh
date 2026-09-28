@@ -9,6 +9,7 @@ HARNESS=$1; PINNED=$2; RESULTS=$3; OUT=$4; COMMIT=$5; WORKERS=${6:-10}
 MAN="${OUT}.manifest"; LOG="${OUT}.log"
 if [ -e "$OUT" ] || [ -e "$MAN" ]; then echo "ABORT: $OUT or $MAN exists" >&2; exit 3; fi
 sha() { sha256sum "$1" 2>/dev/null | cut -d' ' -f1; }
+if ! python3 -c 'import scipy' >/dev/null 2>&1; then echo "ABORT: scipy not importable (preflight)" >&2; exit 4; fi
 {
   echo "label=DIAGNOSTIC / NOT_EVIDENCE"
   echo "utc_start=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
