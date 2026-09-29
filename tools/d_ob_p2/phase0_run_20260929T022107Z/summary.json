@@ -1,0 +1,11 @@
+{
+  "counts": {
+    "INCONCLUSIVE": 0,
+    "NEGATIVE": 0,
+    "POSITIVE": 44
+  },
+  "elapsed_seconds": 1.0,
+  "gate": "P0-A",
+  "label": "DIAGNOSTIC / NOT_EVIDENCE",
+  "utc_end": "2026-09-29T02:21:08Z"
+}
