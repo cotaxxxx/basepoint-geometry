@@ -1,0 +1,18 @@
+DIAGNOSTIC / NOT_EVIDENCE. Execution environment of the chat-side Phase 0 reproduction (commit 96f1481).
+
+host: Claude Code remote cloud container (hostname "vm", as recorded by run_phase0_g7.sh in the
+      same container during wrapper testing); ephemeral, reclaimed after the session
+kernel: Linux 6.18.44 (container)
+python: 3.11.15 (/usr/bin/python3 in the container)
+scipy: 1.17.1
+numpy: 2.4.6
+harness: tools/d_ob_p2/phase0_b44_sign.py, SHA-256 7268ee90518c752658fa7744e956a3efc5386e2ce56544e547a056dcb3e05eda (unmodified)
+pinned math: independent_H_sign.py, SHA-256 2dcd16673c214369ba0555e653dae51fca7d3f3cf13c83aeac4fd000d5bfccd7
+input: b44_from_strips.tsv, produced by gen_b44_from_strips.py (run in an empty working directory)
+runner: run_repro.py (replaces only the harness input-SHA pin; run with the working directory
+        containing pinned.py = a copy of independent_H_sign.py and b44_from_strips.tsv)
+fingerprint: fingerprint.py phase0_points.tsv
+
+Provenance note: gen_b44_from_strips.py and run_repro.py were originally executed inline and were
+not committed with 96f1481; they were restored as files afterwards (this commit). Byte identity of
+the regenerated TSV and of run_repro.py with the originally executed runner is checked below.
