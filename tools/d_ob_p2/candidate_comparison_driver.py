@@ -119,8 +119,11 @@ def load_cfg(path):
 def configure(m,c):
  m.MAX_CELL_COUNT=c.max_cell_count; m.MAX_CELL_DEPTH=c.max_cell_depth; m.MAX_BOX_DEPTH=c.max_box_depth; m.RHO0=c.rho0
 
-def run_one(m,c,cid,set_id,initial,r,t,l,B,indJ,c5flag):
- t0=time.process_time(); cells,data=m.refine_cells(B); cpu=time.process_time()-t0
+def run_one(m,c,cid,set_id,initial,r,t,l,B,indJ,c5flag,prepared_data=None,prepared_cpu=None):
+ if prepared_data is None:
+  t0=time.process_time(); cells,data=m.refine_cells(B); cpu=time.process_time()-t0
+ else:
+  data=prepared_data; cpu=prepared_cpu
  current=[x[0] for x in data["regular"]]+list(data["cut"])
  L=arb_lo(data["L"]); bcut=arb_hi(data["Bcut"])
  upper=sum(arb_hi(cell.area()*kval) for cell,kval,_ in data["regular"])+bcut
@@ -145,6 +148,7 @@ def walk_c5_target(m,c,cid,initial,r,t,l,B):
  Only the unique descendant containing the frozen target supplies point metrics; achieved
  box depth is recorded, not the configured ceiling.
  """
+ t0=time.process_time()
  leaves=[]
  def walk(X):
   col=X.column()
@@ -162,7 +166,7 @@ def walk_c5_target(m,c,cid,initial,r,t,l,B):
  X,cells,data,state=hit[0]
  if data is None:
   return {"candidate_id":cid,"candidate_status":"DIAGNOSTIC","code_config_identity":"frozen-v2-config","used_producer_sha256":sha(m.__file__),"set_id":"C5","initial_box_index":initial,"r":str(r),"t":str(t),"lambda":str(l),"c5_box_bounds":"|".join(map(str,(X.r0,X.r1,X.t0,X.t1,X.l0,X.l1))),"accepted":False,"unresolved":True,"cut_cells":None,"regular_cells":None,"L":None,"B_cut":None,"independent_J":None,"c5_center_J_flag":"true_reference_only","upper_sum":None,"enclosure_width":None,"J_minus_L":None,"SumUpper_minus_J":None,"cell_count":None,"max_cell_depth":None,"max_box_depth":X.depth,"runtime_cpu":None,"resource_settings":json.dumps({"MAX_CELL_COUNT":c.max_cell_count,"MAX_CELL_DEPTH":c.max_cell_depth,"MAX_BOX_DEPTH":c.max_box_depth,"RHO0":str(c.rho0),"regular":f"{c.regular_num}/{c.regular_den}"},sort_keys=True),"failure_reason":state,"missing_reason":"independent_J_unavailable_for_frozen_set;bounds_unavailable_for_straddle"}
- return run_one(m,c,cid,"C5",initial,r,t,l,X,None,"true_reference_only")
+ return run_one(m,c,cid,"C5",initial,r,t,l,X,None,"true_reference_only",prepared_data=data,prepared_cpu=time.process_time()-t0)
 
 def execute_set(a,cfg,cid,c1,c2,c3,c4,c5,c4j):
  c=cfg.CONFIGS[cid]; mpath=a.derived_producer if cid=="C-regular" else a.base_producer; expected=DERIVED_SHA if cid=="C-regular" else BASE_SHA

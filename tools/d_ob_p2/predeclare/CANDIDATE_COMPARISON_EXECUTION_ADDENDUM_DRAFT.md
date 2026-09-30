@@ -8,7 +8,7 @@ Derived producer SHA-256: `b7ad3fbf7ca41539b43959fd3645a2e34d397decb175cf7511daa
 The only source-line delta is `take=(nreg+3)//4` -> `take=(nreg+1)//2`; verifier SHA `7339506ce354507868c1860c733e75859beeb8e360d384057c86d60d66dccf59` fails closed otherwise. Every output row records `used_producer_sha256`. C-regular alone uses the derived producer. Both are DIAGNOSTIC / NOT_EVIDENCE.
 
 ## D2 — full driver and frozen inputs
-Config SHA: `4014210732502fa6c3f4f4aa9348b1df8c7384a921b3ba8f426891c66725226e`. Driver SHA: `4835b543b188557a554cca97fa7cfb98016298fac79459addd6648e5d4ff093a`.
+Config SHA: `4014210732502fa6c3f4f4aa9348b1df8c7384a921b3ba8f426891c66725226e`. Driver SHA: `66d9ad0629d39beb54c07ffeb39d9e39be3752de845417fa7ab11e51747e0fe9`.
 All frozen input bytes are committed under `tools/d_ob_p2/` and are refuse-on-mismatch. The five host-origin TSVs are marked `-text -diff` in `.gitattributes` solely to preserve their original bytes/CRLF and prevent Git whitespace normalization:
 - C1 `results_192.tsv`: `6ad29461e42c265ce136e8df114400072e939335d72e2033b79741461e93fa90`, 192 rows.
 - C2 `independent_H_sign_N7_result.tsv`: `ea166df49d8d0486fe836088fdbc13acbd0154811c882ae98b2a3f92275a8b9c`, provenance commit `dabc2a3b`; 9 rows, class/key mechanically read, 2A+7N asserted, exact centre reconstructed from key. TSV float rho/z/lambda are reference-only.
@@ -26,7 +26,7 @@ G1/G2 diagnostic rule: this comparison driver does NOT claim independent lower/u
 Diagnostic tooling home is basepoint-geometry. This branch is based on basepoint-geometry `origin/main` `abf704b8701f3da8eb41d8a99408570a413b2214`. No comparison harness commit is to be merged/cherry-picked into the canonical D-OB certification repository. Future canonical push may carry D-OB documentation commits only. Formal producer/checker RUN_DIR is never used.
 
 ## D4 — execution identity and staged plan
-Executor: `/home/daybreak/.pyenv/versions/3.11.16/bin/python`. Host: `daybreak-works`. Repository/worktree at audit: `/tmp/dob-p2-comparison-clean`. Diagnostic output root: `/home/daybreak/basepoint-geometry-artifacts/D_OB_P2_candidate_comparison/` only. Workers provenance field: `10`; current driver is serial, so this field records resource intent and does not alter computation. G7 wrapper SHA: `408975e35cdb8b677e0c9a336985de7813c694fd7d0a4657a9a0d0c6bcc0e443`.
+Executor: `/home/daybreak/.pyenv/versions/3.11.16/bin/python`. Host: `daybreak-works`. Repository/worktree at audit: `/tmp/dob-p2-comparison-clean`. Diagnostic output root: `/home/daybreak/basepoint-geometry-artifacts/D_OB_P2_candidate_comparison/` only. Workers provenance field: `10`; current driver is serial, so this field records resource intent and does not alter computation. G7 wrapper SHA: `0ef74b4f7542083e49246a795c0a65877dd9de1970127ca523b78ade0f794137`.
 
 The G7 wrapper accepts candidate/set exactly once, constructs all driver paths itself, hashes driver/config/derived producer/base producer and every frozen input TSV, records host/PID/UTC start/end/actual exit/log+result SHA, and rejects output outside the diagnostic root or an existing output directory.
 
