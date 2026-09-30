@@ -1,0 +1,6 @@
+# Frozen diagnostic TSV artifacts: preserve source bytes (including CRLF) and exclude from whitespace diff checks.
+tools/d_ob_p2/results_192.tsv -text -diff
+tools/d_ob_p2/phase0_points.tsv -text -diff
+tools/d_ob_p2/P003_lambda251.tsv -text -diff
+tools/d_ob_p2/P003_independent_J_lambda251.tsv -text -diff
+tools/d_ob_p2/full_terminal_map.tsv -text -diff

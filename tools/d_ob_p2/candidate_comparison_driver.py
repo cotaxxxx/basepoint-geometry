@@ -119,22 +119,50 @@ def load_cfg(path):
 def configure(m,c):
  m.MAX_CELL_COUNT=c.max_cell_count; m.MAX_CELL_DEPTH=c.max_cell_depth; m.MAX_BOX_DEPTH=c.max_box_depth; m.RHO0=c.rho0
 
-def run_one(m,cid,set_id,initial,r,t,l,B,indJ,c5flag):
+def run_one(m,c,cid,set_id,initial,r,t,l,B,indJ,c5flag):
  t0=time.process_time(); cells,data=m.refine_cells(B); cpu=time.process_time()-t0
  current=[x[0] for x in data["regular"]]+list(data["cut"])
  L=arb_lo(data["L"]); bcut=arb_hi(data["Bcut"])
  upper=sum(arb_hi(cell.area()*kval) for cell,kval,_ in data["regular"])+bcut
  width=upper-L; miss=[]
  if indJ is None: miss.append("independent_J_unavailable_for_frozen_set")
+ if set_id!="C5": miss.append("box_depth_not_evaluated_outside_C5")
  return {"candidate_id":cid,"candidate_status":"DIAGNOSTIC","code_config_identity":"frozen-v2-config",
   "used_producer_sha256":sha(m.__file__),"set_id":set_id,"initial_box_index":initial,"r":str(r),"t":str(t),"lambda":str(l),
   "c5_box_bounds":"" if set_id!="C5" else "|".join(map(str,(B.r0,B.r1,B.t0,B.t1,B.l0,B.l1))),
   "accepted":bool(data["accepted"]),"unresolved":not bool(data["accepted"]),"cut_cells":len(data["cut"]),"regular_cells":len(data["regular"]),
   "L":L,"B_cut":bcut,"independent_J":indJ,"c5_center_J_flag":c5flag,"upper_sum":upper,"enclosure_width":width,
   "J_minus_L":None if indJ is None else indJ-L,"SumUpper_minus_J":None if indJ is None else upper-indJ,"cell_count":len(current),
-  "max_cell_depth":max((x.depth for x in current),default=0),"max_box_depth":c.max_box_depth,"runtime_cpu":cpu,
+  "max_cell_depth":max((x.depth for x in current),default=0),"max_box_depth":B.depth if set_id=="C5" else None,"runtime_cpu":cpu,
   "resource_settings":json.dumps({"MAX_CELL_COUNT":c.max_cell_count,"MAX_CELL_DEPTH":c.max_cell_depth,"MAX_BOX_DEPTH":c.max_box_depth,"RHO0":str(c.rho0),"regular":f"{c.regular_num}/{c.regular_den}"},sort_keys=True),
   "failure_reason":"" if data["accepted"] else "refine_cells_not_accepted","missing_reason":";".join(miss)}
+
+def contains_point(B,r,t,l):
+ return inside(r,B.r0,B.r1,Q(1)) and inside(t,B.t0,B.t1,Q(1)) and inside(l,B.l0,B.l1,Q(33,50))
+def walk_c5_target(m,c,cid,initial,r,t,l,B):
+ """Run the producer box-tree decision from the frozen C5 terminal box.
+ C0 at depth 12 is therefore terminal exactly as frozen; C-box-depth=13 can split once.
+ Only the unique descendant containing the frozen target supplies point metrics; achieved
+ box depth is recorded, not the configured ceiling.
+ """
+ leaves=[]
+ def walk(X):
+  col=X.column()
+  if col=="straddle":
+   if X.depth>=c.max_box_depth: leaves.append((X,None,None,"unresolved_straddle")); return
+   for ch in X.split(): walk(ch)
+   return
+  cells,data=m.refine_cells(X)
+  if cells is not None: leaves.append((X,cells,data,"accepted")); return
+  if X.depth>=c.max_box_depth: leaves.append((X,cells,data,"unresolved")); return
+  for ch in X.split(): walk(ch)
+ walk(B)
+ hit=[z for z in leaves if contains_point(z[0],r,t,l)]
+ if len(hit)!=1: die(f"C5_WALK_EXACTLY_ONE_{cid}_{r}_{t}_{l}_{len(hit)}")
+ X,cells,data,state=hit[0]
+ if data is None:
+  return {"candidate_id":cid,"candidate_status":"DIAGNOSTIC","code_config_identity":"frozen-v2-config","used_producer_sha256":sha(m.__file__),"set_id":"C5","initial_box_index":initial,"r":str(r),"t":str(t),"lambda":str(l),"c5_box_bounds":"|".join(map(str,(X.r0,X.r1,X.t0,X.t1,X.l0,X.l1))),"accepted":False,"unresolved":True,"cut_cells":None,"regular_cells":None,"L":None,"B_cut":None,"independent_J":None,"c5_center_J_flag":"true_reference_only","upper_sum":None,"enclosure_width":None,"J_minus_L":None,"SumUpper_minus_J":None,"cell_count":None,"max_cell_depth":None,"max_box_depth":X.depth,"runtime_cpu":None,"resource_settings":json.dumps({"MAX_CELL_COUNT":c.max_cell_count,"MAX_CELL_DEPTH":c.max_cell_depth,"MAX_BOX_DEPTH":c.max_box_depth,"RHO0":str(c.rho0),"regular":f"{c.regular_num}/{c.regular_den}"},sort_keys=True),"failure_reason":state,"missing_reason":"independent_J_unavailable_for_frozen_set;bounds_unavailable_for_straddle"}
+ return run_one(m,c,cid,"C5",initial,r,t,l,X,None,"true_reference_only")
 
 def execute_set(a,cfg,cid,c1,c2,c3,c4,c5,c4j):
  c=cfg.CONFIGS[cid]; mpath=a.derived_producer if cid=="C-regular" else a.base_producer; expected=DERIVED_SHA if cid=="C-regular" else BASE_SHA
@@ -152,11 +180,13 @@ def execute_set(a,cfg,cid,c1,c2,c3,c4,c5,c4j):
   for raw in c4:
    r,t,l=q(raw["r"]),q(raw["tau"]),q(raw["lam"]); todo.append(("C4","0,0,3",r,t,l,m.PBox(r,r,t,t,l,l,12),c4j[r],"false"))
  elif a.set_id=="C5":
+  out=[]
   for src,r,t,l,hit in c5:
-   raw,b=hit; todo.append(("C5",raw["box"],r,t,l,m.PBox(*b,int(raw["depth"])),None,"true_reference_only"))
+   raw,b=hit; out.append(walk_c5_target(m,c,cid,raw["box"],r,t,l,m.PBox(*b,int(raw["depth"]))))
  else: die("SET_ID")
- out=[]
- for z in todo: out.append(run_one(m,cid,*z))
+ if a.set_id!="C5":
+  out=[]
+  for z in todo: out.append(run_one(m,c,cid,*z))
  Path(a.out).parent.mkdir(parents=True,exist_ok=True)
  with open(a.out,"w",newline="") as f:
   f.write("# DIAGNOSTIC / NOT_EVIDENCE\n"); w=csv.DictWriter(f,fieldnames=EXPECTED_COLUMNS,delimiter="\t"); w.writeheader(); w.writerows(out)
