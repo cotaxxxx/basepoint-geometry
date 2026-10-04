@@ -1,0 +1,3 @@
+exit_code=1
+status=NOT_ADOPTED
+cause=malformed invocation used candidate=set:path instead of candidate:set:path
