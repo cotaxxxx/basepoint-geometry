@@ -1,0 +1,21 @@
+{
+  "label": "DIAGNOSTIC / NOT_EVIDENCE",
+  "target": "B_9_14_10",
+  "identity": "PASS",
+  "regular_cells": 37087,
+  "cut_cells": 1024,
+  "aggregate_W1": 0.1395574904038211,
+  "aggregate_W2": 2.1084989386788178,
+  "aggregate_W3": 4.9540081750407685,
+  "aggregate_average_to_range": 0.1395574904038211,
+  "aggregate_dependency": 1.9689414482749967,
+  "aggregate_surface": 2.8455092363619507,
+  "normalized_raw_width_area_sum": 4.357019834040532,
+  "normalized_clipped_width_area_sum": 3.693808497130995,
+  "C_int_composite_midpoint_reference": "1.052897764662855548416954099041181076287881249173840130151708329528361649446435543289175246451201878",
+  "unresolved_reference_cells": 0,
+  "B_cut": 32.180495824503375,
+  "true_cap": false,
+  "B_cut_floor": "0.0",
+  "B_cut_resolution_excess": "32.18049582450337453565225587226450443267822265625"
+}
