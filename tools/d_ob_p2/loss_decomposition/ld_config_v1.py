@@ -1,0 +1,28 @@
+# D-OB P2 loss-decomposition diagnostic config v1
+# DIAGNOSTIC / NOT_EVIDENCE. Execution requires chat countersign.
+from fractions import Fraction as Q
+LABEL="DIAGNOSTIC / NOT_EVIDENCE"
+EXECUTION_TOKEN="LD-V1-COUNTERSIGNED"
+PRODUCER_SHA256="dff79bc40d78d53a1491c3edbe368034b2d28a4894da45ac13b3b04c3ad0f19b"
+RESULTS192_SHA256="6ad29461e42c265ce136e8df114400072e939335d72e2033b79741461e93fa90"
+P003_SHA256="85d6146ac1b92d50fac85a6560b2679f7aa74fa89afd904f5d3838309ccca360"
+MAX_CELL_COUNT=2**16
+MAX_CELL_DEPTH=10
+MAX_BOX_DEPTH=12
+RHO0=Q(1,8)
+ARB_BITS=160
+MP_DPS_PRIMARY=80
+MP_DPS_TIGHT=100
+QUAD_METHOD="mpmath_tanh_sinh"
+QUAD_MAXDEGREE=12
+RANGE_GRID_N=4097
+RANGE_REFINE_STEPS=120
+REFERENCE_STABILITY_ABS="1e-50"
+QV_POLICY="report_raw_and_clipped"
+TARGETS=[
+ dict(id="P003_r022",source="C4",index=None,r=Q(11,500),t=Q(1,64),lam=Q(251,400),expected_L="0.27022478774068104",expected_U="11.86008827482411"),
+ dict(id="P003_r030",source="C4",index=None,r=Q(3,100),t=Q(1,64),lam=Q(251,400),expected_L="-1.3965024783242523",expected_U="13.347329938681026"),
+ dict(id="N_12_15_0",source="C1",index=(12,15,0),r=Q(249,256),t=Q(255,256),lam=Q(2573,6400),expected_L="-10.338795480342077",expected_U="10.929511631133845"),
+ dict(id="B_14_13_0",source="C1",index=(14,13,0),r=Q(253,256),t=Q(251,256),lam=Q(2573,6400),expected_L="0.16062028062723435",expected_U="40.85057501948991"),
+ dict(id="B_9_14_10",source="C1",index=(9,14,10),r=Q(243,256),t=Q(253,256),lam=Q(2833,6400),expected_L="0.5131302950210003",expected_U="37.647634307888666"),
+]
