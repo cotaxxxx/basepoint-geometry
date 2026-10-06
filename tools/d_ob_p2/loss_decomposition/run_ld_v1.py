@@ -3,7 +3,7 @@
 DIAGNOSTIC / NOT_EVIDENCE. User-direct execution only after chat countersign.
 """
 from __future__ import annotations
-import argparse,csv,hashlib,importlib.util,json,math,sys
+import argparse,csv,hashlib,importlib.util,json,math,multiprocessing as multiprocessing,sys
 from fractions import Fraction as Q
 from pathlib import Path
 import mpmath as mp
@@ -80,6 +80,11 @@ def stable_refs(rho,z,mu,phi,lam):
     ok=all(abs(x-y)<=tol for x,y in zip(a,b))
     return b,ok,max(abs(x-y) for x,y in zip(a,b))
 
+def stable_refs_task(args):
+    rho,z,mu,phi,lam=args
+    refs,ok,stab=stable_refs(rho,z,mu,phi,lam)
+    return tuple(str(x) for x in refs),ok,str(stab)
+
 def line_avg_only(rho,z,mu,phi,lam,dps):
     mp.mp.dps=dps; rr=fracmp(rho); zz=fracmp(z); mm=fracmp(mu); pp=mp.pi*fracmp(phi); ll=fracmp(lam)
     f=lambda s: mp_frr(s,zz,mm,pp,ll)[0]
@@ -90,7 +95,12 @@ def stable_avg(rho,z,mu,phi,lam):
     b=line_avg_only(rho,z,mu,phi,lam,C.MP_DPS_TIGHT)
     return b,abs(a-b)<=mp.mpf(C.REFERENCE_STABILITY_ABS),abs(a-b)
 
-def primitives(m,cell,B,midpoint_surface):
+def stable_avg_task(args):
+    rho,z,mu,phi,lam=args
+    av,ok,stab=stable_avg(rho,z,mu,phi,lam)
+    return str(av),ok,str(stab)
+
+def kernel_args(m,cell,B,midpoint_surface):
     if midpoint_surface:
         muq=midpoint(cell.m0,cell.m1); phiq=midpoint(cell.p0,cell.p1)
         mu=m.aq(muq); phi=m.PI*m.aq(phiq)
@@ -98,6 +108,10 @@ def primitives(m,cell,B,midpoint_surface):
     else:
         mu,a,cp,sp,lam=m.surface_intervals(cell,B)
     rho,_,z0,z1=B.bounds(); rs=m.boxq(-rho,rho); z=m.boxq(z0,z1)
+    return rs,z,mu,a,cp,sp,lam
+
+def primitives(m,cell,B,midpoint_surface):
+    rs,z,mu,a,cp,sp,lam=kernel_args(m,cell,B,midpoint_surface)
     b=a*cp; w2=lam*lam*(m.arb(1)-m.sq_nonnegative(mu))+m.sq_nonnegative(mu); w=w2.sqrt()
     D2=m.sq_nonnegative(b-rs)+m.sq_nonnegative(a*sp)+m.sq_nonnegative(lam*mu-z); D=D2.sqrt()
     h=lam*(m.arb(1)-rs*b)-z*mu; Dw=m.pos_mul(D,w); D3w=m.pos_mul(m.pos_pow(D,3),w)
@@ -156,11 +170,21 @@ def run_target(m,t,out):
     fields=["D","h","gamma","R","R_gamma","gamma_rho","gamma_rhorho","T1","T2","T3"]
     totals=dict(W1=0.0,W2=0.0,W3=0.0,norm_raw=0.0,norm_clip=0.0,area=0.0,unresolved_ref=0,kh_sum=mp.mpf("0"),kh_abs=mp.mpf("0"))
     rows=[]
+    # Fail-closed producer-identity gate before any high-cost reference work.
     for n,(cell,kval,_) in enumerate(data["regular"]):
-        Pfull=primitives(m,cell,B,False); Pmid=primitives(m,cell,B,True)
+        kval_check=m.kernel_point(*kernel_args(m,cell,B,False),True)
+        if str(kval_check.lower())!=str(kval.lower()) or str(kval_check.upper())!=str(kval.upper()):
+            die("KVAL_ENDPOINT_MISMATCH_"+t["id"]+"_"+str(n))
+    ref_args=[(rho,z,midpoint(cell.m0,cell.m1),midpoint(cell.p0,cell.p1),t["lam"]) for cell,_,_ in data["regular"]]
+    with multiprocessing.Pool(processes=C.REFERENCE_WORKERS) as pool:
+        ref_results=pool.map(stable_refs_task,ref_args,chunksize=1)
+    for n,(cell,kval,_) in enumerate(data["regular"]):
+        Pfull=primitives(m,cell,B,False)
+        producer_mid=m.kernel_point(*kernel_args(m,cell,B,True),True)
         mu=midpoint(cell.m0,cell.m1); phi=midpoint(cell.p0,cell.p1)
-        refs,ok,stab=stable_refs(rho,z,mu,phi,t["lam"])
-        W1=float(refs[2]-refs[1]); W2=widthf(Pmid["F"]); W3=widthf(Pfull["F"])
+        ref_strings,ok,stab_string=ref_results[n]
+        mp.mp.dps=C.MP_DPS_TIGHT; refs=tuple(mp.mpf(x) for x in ref_strings); stab=mp.mpf(stab_string)
+        W1=float(refs[2]-refs[1]); W2=widthf(producer_mid); W3=widthf(kval)
         raw=normalized(m,Pfull,False); clipped=normalized(m,Pfull,True)
         area=float(cell.area()); totals["area"]+=area
         totals["W1"]+=area*W1; totals["W2"]+=area*W2; totals["W3"]+=area*W3
@@ -184,9 +208,11 @@ def run_target(m,t,out):
         cols=list(rows[0]) if rows else ["cell"]; wr=csv.DictWriter(f,fieldnames=cols,delimiter="\t"); wr.writeheader(); wr.writerows(rows)
     # C_int reference: composite midpoint quadrature on every frozen leaf,
     # including cut leaves. This is a non-interval reference approximation.
-    for cell in data["cut"]:
-        mu=midpoint(cell.m0,cell.m1); phi=midpoint(cell.p0,cell.p1)
-        av,ok,_=stable_avg(rho,z,mu,phi,t["lam"])
+    cut_args=[(rho,z,midpoint(cell.m0,cell.m1),midpoint(cell.p0,cell.p1),t["lam"]) for cell in data["cut"]]
+    with multiprocessing.Pool(processes=C.REFERENCE_WORKERS) as pool:
+        cut_refs=pool.map(stable_avg_task,cut_args,chunksize=1) if cut_args else []
+    for cell,(av_string,ok,_) in zip(data["cut"],cut_refs):
+        mp.mp.dps=C.MP_DPS_TIGHT; av=mp.mpf(av_string)
         if not ok: totals["unresolved_ref"]+=1
         area=mp.mpf(str(float(cell.area()))); totals["kh_sum"]+=area*av; totals["kh_abs"]+=area*abs(av)
     cint="ZERO_DENOMINATOR" if totals["kh_sum"]==0 else str(totals["kh_abs"]/abs(totals["kh_sum"]))
@@ -207,7 +233,7 @@ def main():
     if sha(a.results192)!=C.RESULTS192_SHA256 or sha(a.p003)!=C.P003_SHA256: die("INPUT_PIN")
     out=Path(a.out).resolve()
     forbidden=[Path(a.producer).resolve().parent.parent,Path(__file__).resolve().parents[1]/"comparison_runs"]
-    if any(str(out).startswith(str(x)) for x in forbidden): die("OUTPUT_PATH")
+    if any(out==x or out.is_relative_to(x) for x in forbidden): die("OUTPUT_PATH")
     if out.exists() and any(out.iterdir()): die("OUTPUT_NOT_EMPTY")
     out.mkdir(parents=True,exist_ok=True); m=load_prod(a.producer)
     manifest={"label":C.LABEL,"producer_sha256":sha(a.producer),"results192_sha256":sha(a.results192),"p003_sha256":sha(a.p003),

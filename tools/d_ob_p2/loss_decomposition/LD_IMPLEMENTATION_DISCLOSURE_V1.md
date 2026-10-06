@@ -50,8 +50,10 @@ For every regular cell c:
 Define:
 - `W0(c)=0`: the high-precision non-interval s-line average at x_c is a scalar.
 - `W1(c)=max_{s in I_s} F_rhorho(s;x_c) - min_{s in I_s} F_rhorho(s;x_c)`: high-precision non-interval true-range reference.
-- `W2(c)`: width of the current decomposed natural-interval formula on I_s with mu, phi, lambda and z degenerate at exact target/cell midpoint values.
-- `W3(c)`: width of the current decomposed natural-interval formula on the same I_s and the complete frozen surface-cell intervals.
+- `W2(c)`: width returned by the pinned producer `kernel_point(rs,z,mu,a,cp,sp,lam,True)` with the same I_s and mu, phi, lambda and z degenerate at exact target/cell midpoint values. No LD-side T1/T2/T3 recombination is used for W2.
+- `W3(c)`: width of the exact `kval` stored in `data["regular"]` by the pinned producer for that complete frozen surface cell. No LD-side T1/T2/T3 recombination is used for W3.
+
+At every regular cell, LD also calls the pinned producer `kernel_point` again on the complete cell arguments and requires its lower and upper endpoint strings to equal the stored `kval` endpoint strings exactly. Any mismatch is fail-closed as `KVAL_ENDPOINT_MISMATCH` before that cell is used. T1/T2/T3 remain record-only primitive intervals and their separately distributed sum is never used as W2 or W3.
 
 Attribution is fixed as:
 - `Delta_avg_to_range = W1 - W0 = W1`
@@ -134,12 +136,21 @@ The implementation reports a **non-interval composite-midpoint approximation** o
 - each grid-local candidate extremum: 120 deterministic golden-section iterations on its adjacent grid bracket
 - surface reference point: exact cell midpoint
 - stability threshold: primary/tightened scalar line-average/extremum values differ by at most `1e-50` absolute
+- reference workers: exactly 10 processes
 
 Failure is `UNRESOLVED_REFERENCE`; it is never promoted to an interval bound. These settings cannot be changed after ignition.
 
+### Runtime estimate and fixed mitigation
+
+The pre-ignition audit measured one high-precision kernel evaluation at roughly 200 microseconds at 80 digits and 220 microseconds at 100 digits. With 4097 range-grid samples, golden-section refinement, and two precision passes, the audit estimates roughly 2 seconds per regular cell. With about 37,000--59,000 regular cells per target, a single process was estimated at about 150 hours for all five targets.
+
+The frozen mitigation is option (a): **cell-reference parallelization with exactly 10 worker processes**. The 4097-point grid, 120 golden iterations, 80/100-digit precisions, quadrature degree, and stability threshold are unchanged. On ideal scaling this reduces the reference-dominated estimate to about 15 hours; actual wall time may be longer because process overhead, producer reconstruction, interval diagnostics, I/O, and cut-leaf reference work are not included in the ideal estimate.
+
+Parallelism changes scheduling only. Each cell reference is a pure function of its frozen exact target/cell coordinates and the frozen numerical protocol, and results are returned in input order by `Pool.map`. No threshold, precision, grid, or attribution rule depends on worker timing.
+
 ## Output paths and schema
 
-A new user-supplied output directory is mandatory and must be outside the canonical producer repository and outside `tools/d_ob_p2/comparison_runs`. An existing nonempty output directory is rejected.
+A new user-supplied output directory is mandatory and must be outside the canonical producer repository and outside `tools/d_ob_p2/comparison_runs`. Containment is tested with resolved `Path` equality / `Path.is_relative_to`, not string-prefix matching. An existing nonempty output directory is rejected.
 
 Per target:
 - `identity.json`
