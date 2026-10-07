@@ -1,7 +1,9 @@
 # D-OB P2 LD v1 Diagnostic Result Record
 
-**Status:** FINAL DRAFT FOR CHAT AUDIT / DIAGNOSTIC / NOT_EVIDENCE / D-P2 NOT_CERTIFIED
+**Status:** CHAT AUDIT PASS / DIAGNOSTIC / NOT_EVIDENCE / D-P2 NOT_CERTIFIED
 **Date:** 2026-10-07
+**Chat audit date:** 2026-10-07
+**Chat-audited HEAD:** `06d8ca4eff94f485dbd8dc69fd30967883f6f1d6`
 **Artifact branch:** `candidate/dob-p2-closure-erratum`
 **Artifact commit:** `29205372ea4cc0333c5c567a5a25f05a528b8d83`
 **Artifact parent:** `6a508b8d62e92ee788a00ab7b40f2d7bc9b65285`
