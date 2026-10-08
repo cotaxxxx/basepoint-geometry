@@ -1,8 +1,8 @@
-# Contract 43 — North near band — PREDECLARE DRAFT v3 (FREEZE candidate)
+# Contract 43 — North near band — PREDECLARE DRAFT v3.1 (FREEZE candidate)
 
 STATUS: DRAFT v3 / SUBMITTED FOR CHAT DESIGN AUDIT / NOT FROZEN / NOT AUTHORIZED FOR CERTIFICATE EXECUTION.
 Contract 43 OPEN (countersign in progress).  D-P2 NOT_CERTIFIED.  No diagnostic value appears in this document.
-Supersedes v2 (3665f33e, CONDITIONAL PASS).  Basis: chat instruction "Predeclare v3 作成・独立証明書準備 (CHAT AUDIT 裁定統合版)".
+Supersedes v2 (3665f33e, CONDITIONAL PASS).  v3 (459abecf) design audit: CHAT AUDIT PASS (FREEZE condition 1 of 4); v3.1 = pin update only.  Basis: chat instruction "Predeclare v3 作成・独立証明書準備 (CHAT AUDIT 裁定統合版)".
 The formal proof route of Contract 43 is the Astra L43 single-piece chain (5.5) -> (5.7) -> (6.5) -> §7.  The former route (C1)-(C5)
 is SHELVED: preserved at commit a6479efe3d173a5952087f9bd3df67da02856fb5, not an alternative route of this contract, not used here.
 Any change of the main chain is re-submitted to CHAT AUDIT before implementation.
@@ -43,7 +43,7 @@ certificate-39' south lemma inputs listed in row 1's pin table).  Row 1 and row 
 | # | item | commit | git blob | SHA-256 | state |
 |---|---|---|---|---|---|
 | 6 | 22'' v1.2 budget document (Judge adopted) | PENDING | PENDING | PENDING | PENDING (not committed/pinned; (C6) number stays PENDING) |
-| — | 22'' v1.1 (frozen text in force): contract commit b1a10ea6..., SHA-256 db975dab... (prefixes as previously pinned; full values in the contract pin table) | — | — | — | FROZEN; official budget 104/625 |
+| — | 22'' v1.1 (frozen text in force): `analysis/D_OB_P2_D_AN1_FT_Q_CONTRACT_20_DOUBLE_PRIME_TO_23_DOUBLE_PRIME_V1_1.md` in `cotaxxxx/bg-oblate-spheroid` (verified by Code in the read-only canonical clone) | b1a10ea6f0ef127aaf4a40a93070cf270d03e073 | 49e658b0487123249eb81d70bde1ef188ff640d7 | db975daba9d712246ed5e27465437f34450b356f453729a5fb78ec8ceab468cb | FROZEN; official budget 104/625 |
 
 ## 1. Region, variables, normalization (frozen sources)
 s := m - mu (mu the surface coordinate, m = 2 tau/(1 + tau^2)).  Formal band (contract 24, kappa = 1): |mu - m| <= rho, i.e. s in [-rho, rho].
@@ -123,7 +123,9 @@ alone exceeds the budget; this contract does not change that fact and does not r
 ## 6. Governance
  FREEZE requires all four: (1) v3 design audit CHAT AUDIT PASS; (2) Astra five deliverables pinned and the exact script CHAT AUDITED;
  (3) H-43-1(ii) independent lemma confirmed; (4) 22'' v1.2 commit/SHA-256 pinned.  FREEZE only by explicit chat ruling.
- Code certificate `ftq_cert/north_near_l43_cert.py`: drafting allowed now; EXECUTION and use of its output as evidence only after FREEZE.
+ Code certificate `ftq_cert/north_near_l43_cert.py`: source committed (static review by chat done; S-1/S-2/R-S1 applied); syntax check by ast.parse
+ permitted and done; EXECUTION and use of its output as evidence only after FREEZE.  Its final line distinguishes machine-checked items, paper
+ steps and external obligations, and reads "C6 PENDING; NOT CERTIFIED" while 22'' v1.2 is unpinned.
  Independence: Code and Astra may share decompositions, notes and mathematical reports (both directions opened by chat); certificate CODE is
  never copied in either direction; the Code implementation and the Astra implementation remain separate evidence.
  Method (B) not used.  Diagnostics NOT_EVIDENCE, not cited.
@@ -152,5 +154,7 @@ alone exceeds the budget; this contract does not change that fact and does not r
  v1.1 a6479efe3d173a5952087f9bd3df67da02856fb5  formal CHAT AUDIT PASS NOT obtained (pre-review corrections A-D applied).  The former route
       (C1)-(C5), appendices A and B are preserved at this commit and are NOT used in this contract.
  v2  3665f33e82ee1cfa5a1ea1166d8cf1d8bcb3958a  CONDITIONAL PASS; superseded by v3.
- v3  this document: R-1 former route removed (history kept); R-2 pin tables with PENDING; R-3 this list; R-4 S''_lb rows separated;
+ v3  459abecf3249ace4789e4a94708218fa0128363e  design audit CHAT AUDIT PASS (FREEZE condition 1/4).
+ v3.1 this document: §0.4 v1.1 row completed with full commit/blob/SHA-256 verified in the canonical clone; §6 certificate status updated.
+ v3  content: R-1 former route removed (history kept); R-2 pin tables with PENDING; R-3 this list; R-4 S''_lb rows separated;
      (A7) defines (r_0, H_0) and the logarithm/monotonicity bookkeeping; §1 cites the collation note for the normalization.
