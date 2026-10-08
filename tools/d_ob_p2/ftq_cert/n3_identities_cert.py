@@ -1,9 +1,17 @@
 """Exact certificates for contracts 44 and 46 (FT_q north far, N3 route).  Polynomial identity checks + rational Bernstein.
 
 CONTRACT 44 -- symbols and sources (no collision with FT_q symbols v = D_+ D_-, q = b^2):
-  Base point on the segment: (xi, 0, z), xi in [-rho, rho], z = lambda m.  Surface point x(mu, phi), a^2 = 1 - mu^2,
+  Base point on the segment: p_xi = (xi, 0, z), xi in [-rho, rho], z = lambda m.  Surface point x(mu, phi), a^2 = 1 - mu^2,
   b = a cos phi, mu = m - s, rho^2 = 1 - m^2.  P1 (design note SHA-256 2c304ee6..., Lemma 3.1/3.3/3.4; pinned producer
   dff79bc4..., kernel_point(second=True)):
+  CONVENTIONS (audit E2):
+   * The subscript "rho" below denotes the partial derivative d/d xi of the base-point coordinate, at FIXED lambda, z = lambda m,
+     mu, phi (hence fixed m, s, a, b, w); rho (the half-width of the segment) is a fixed parameter, never differentiated.
+   * The density is the P1 unpaired density  calF = h (arccos gamma)^2  and F_rhorho := d^2 calF / d xi^2.  It is NOT the
+     paired FT_q quantity F = Rbar A + b (DeltaR/rho) K_R of the P-decomposition.
+   * nu := lambda b / w is a SCALAR: the first component of the P1 unit normal n = (lambda b, lambda a sin phi, mu)/w.
+     (P1 writes the normal as nu; here that vector is n.)
+   * All fractional identities are asserted at points with D > 0 (then also h > 0, w >= lambda > 0).
     h = lambda (1 - xi b) - z mu,                 D^2 = (b - xi)^2 + a^2 sin^2 phi + L s^2,   w^2 = mu^2 + L a^2,
     gamma = h/(w D),   R = R(gamma) in [1, pi/2],   R_gamma in [-1, 0],
     gamma_rho = -lambda b/(w D) + h (b - xi)/(w D^3),
@@ -19,7 +27,9 @@ CONTRACT 44 -- symbols and sources (no collision with FT_q symbols v = D_+ D_-, 
    (44.3) nu - gamma kappa = N/(w D^2),   N = lambda [ b s (m - (1-L) s) - xi (b^2 - rho^2 - m s) ]
    (44.4) (w/D) Phi = [ 2 N^2 - h^2 (a^2 sin^2 phi + L s^2) ] / (w D^5)
    (44.5) a^2 = rho^2 + 2 m s - s^2,   1 - m mu = rho^2 + m s
-CONTRACT 46 -- on north far (s >= rho, 0 < s <= 1/2, m in [112/113, 1]):  a - rho >= (51/100) sqrt(s).
+CONTRACT 46 -- on north far (rho <= s <= 1/2, m in [112/113, 1]):  a - rho >= (51/100) sqrt(s).
+  For s > 0 the proof below uses the quotient s(2m - s)/(a + rho) and a strict inequality; at the zero endpoint
+  s = 0 (which forces rho = 0, m = 1, a = 0) the target is the trivial 0 >= 0 and the quotient is 0/0, not used.
   a - rho = s(2m - s)/(a + rho) > 0;  (a + rho)^2 <= 2(a^2 + rho^2) = 2(2 rho^2 + 2 m s - s^2) <= 2(s^2 + 2 m s) (rho <= s);
   so (a - rho)^2 >= s (2m - s)^2 / (2 (s + 2m)), and it suffices that (2m - s)^2 - 2 c^2 (s + 2m) > 0, c = 51/100
   (Bernstein on m in [112/113, 1], s in [0, 1/2]).
@@ -80,5 +90,7 @@ c = sp.Rational(51, 100)
 check("(46.0) a^2 - rho^2 == s(2m - s)", is_identity(a2 - rho**2 - s*(2*m - s)))
 mn = bern_min(sp.expand((2*m - s)**2 - 2*c**2*(s + 2*m)), [(m, Q(112, 113), Q(1)), (s, Q(0), Q(1, 2))])
 check("(46.1) (2m - s)^2 - 2(51/100)^2 (s + 2m) > 0 on m in [112/113,1], s in [0,1/2]", mn > 0, f"min Bernstein coeff = {mn}")
-print("Hence on north far (rho <= s <= 1/2): (a - rho)^2 = s^2 (2m-s)^2/(a+rho)^2 >= s^2 (2m-s)^2/(2 s (s + 2m)) > (51/100)^2 s.")
+print("Hence on north far with s > 0 (rho <= s <= 1/2): (a - rho)^2 = s^2 (2m-s)^2/(a+rho)^2 >= s^2 (2m-s)^2/(2 s (s + 2m)) > (51/100)^2 s;")
+print("at the zero endpoint s = 0 (rho = 0, m = 1, a = 0) the target a - rho >= (51/100) sqrt(s) reads 0 >= 0 and holds directly.")
 print("ALL CERTIFICATES PASS" if ok else "SOME CERTIFICATE FAILED")
+raise SystemExit(0 if ok else 1)
