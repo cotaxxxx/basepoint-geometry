@@ -1,6 +1,6 @@
 """Contract 43 (north near band) -- Code INDEPENDENT exact certificate of the L43 single-piece chain.
 
-STATUS AT COMMIT: SOURCE ONLY.  NOT EXECUTED.  NOT COMPILED.  Execution and use of its output as evidence are authorized only after
+STATUS AT COMMIT: SOURCE ONLY.  NOT EXECUTED.  Syntax checked with ast.parse only (chat permission 2026-10-09; no import, no run).  Execution and use of its output as evidence are authorized only after
 the FREEZE of predeclare v3 (CONTRACT43_NEAR_BAND_PREDECLARE_DRAFT.md) by explicit chat ruling.
 INDEPENDENCE DECLARATION: this file was written by Code from the predeclare v3 chain (A1)-(A8) and Code's own collation; Code has never
 received or seen Astra's `l43_graph_majorant_exact.py`; nothing here is imported or copied from it.
@@ -119,10 +119,13 @@ check("(A5) c_g = 51/50 = 1 + 1/50 and 189/500 <= 1  (so (1-L)s^2 <= D^2 + delta
 
 # ------------------------------------------------------------------ (A6)
 th = sp.symbols('theta', real=True)
-check("(A6) int_0^pi |cos| == 2;  int_0^pi cos^2 == pi/2", sp.integrate(sp.Abs(sp.cos(th)), (th, 0, sp.pi)) == 2 and sp.integrate(sp.cos(th)**2, (th, 0, sp.pi)) == sp.pi/2)
+# |cos theta| on [0, pi]: cos >= 0 on [0, pi/2], cos <= 0 on [pi/2, pi]; split (no Abs integration).
+check("(A6) int_0^pi |cos| == 2 (split at pi/2);  int_0^pi cos^2 == pi/2",
+      sp.integrate(sp.cos(th), (th, 0, sp.pi/2)) - sp.integrate(sp.cos(th), (th, sp.pi/2, sp.pi)) == 2 and sp.integrate(sp.cos(th)**2, (th, 0, sp.pi)) == sp.pi/2)
 rp = sp.symbols('rp', positive=True); xr = sp.symbols('xr', real=True)
-check("(A6) <xi^2> = rho^2/3, <|xi|> = rho/2, <delta> = 2 rho^2/3",
-      sp.simplify(sp.integrate(xr**2, (xr, -rp, rp))/(2*rp) - rp**2/3) == 0 and sp.simplify(sp.integrate(sp.Abs(xr), (xr, -rp, rp))/(2*rp) - rp/2) == 0
+# |xi| on [-rho, rho] is even: int_{-rho}^{rho} |xi| dxi = 2 int_0^rho xi dxi  (no Abs integration).
+check("(A6) <xi^2> = rho^2/3, <|xi|> = rho/2 (by symmetry), <delta> = 2 rho^2/3",
+      sp.simplify(sp.integrate(xr**2, (xr, -rp, rp))/(2*rp) - rp**2/3) == 0 and sp.simplify(2*sp.integrate(xr, (xr, 0, rp))/(2*rp) - rp/2) == 0
       and sp.simplify(sp.integrate(rp**2 - xr**2, (xr, -rp, rp))/(2*rp) - 2*rp**2/3) == 0)
 r, d = sp.symbols('r d', positive=True)
 check("(A6) d/dr[arsinh(r/d) - r/sqrt(r^2+d^2)] == r^2 (r^2+d^2)^(-3/2)", sp.simplify(sp.diff(sp.asinh(r/d) - r/sp.sqrt(r**2 + d**2), r) - r**2*(r**2 + d**2)**sp.Rational(-3, 2)) == 0)
@@ -170,9 +173,25 @@ check("(A8) cross-check against the value stated in the Astra report (independen
 
 # ------------------------------------------------------------------ (C6)
 BUDGET_V12 = None      # set to the pinned 22'' v1.2 near-band residual (Fraction) ONLY after the v1.2 commit/SHA-256 pin; never before.
-if BUDGET_V12 is None:
-    print("(C6) budget comparison: PENDING (22'' v1.2 not pinned; no number is asserted)")
-else:
+c6_done = BUDGET_V12 is not None
+if c6_done:
     check("(C6) U_43^N3 < pinned near-band budget", U43 < BUDGET_V12, f"margin = {BUDGET_V12 - U43}")
-print("ALL CERTIFICATES PASS" if ok else "SOME CERTIFICATE FAILED")
-raise SystemExit(0 if ok else 1)
+else:
+    print("(C6) budget comparison: PENDING (22'' v1.2 not pinned; no number is asserted)")
+
+# ------------------------------------------------------------------ scope statement (S-2): what this run does and does not establish
+print("SCOPE OF THIS CERTIFICATE RUN")
+print("  machine-checked here: ring identities (A1), (A2), (A5); SOS identities (A4); Bernstein positivity (A3), (A4); symbolic integrals,")
+print("    antiderivatives and limits (A6); rational constants, enclosures and monotone evaluation points (A7); exact arithmetic (A8).")
+print("  paper steps relied on (stated in the docstring, NOT machine-verified): Cauchy-Schwarz consequence of the Gram identity (A2);")
+print("    mean-value/Lipschitz bound on the convex disk and the triangle inequality for R_e (A3); assembly of (A4) into (1-L)s^2 <= (189/500)r^2")
+print("    + delta/50 and D^2 >= (3/4)(r^2 + L l^2); the zeta-interval and the one-sided majorant (A5); region extension, Tonelli/order of")
+print("    integration, and the rho/R_e/lambda monotonicity used to evaluate at (r_0, H_0, 93/200) (A6)-(A7); normalization (S0) of contract 44.")
+print("  external obligations NOT covered: H-43-1(i) formal pin and closure; H-43-1(ii) (Astra independent lemma, Lemma V boundary values);")
+print("    Astra deliverables pin/audit; 22'' v1.2 pin; FREEZE and CHAT AUDIT of this run.")
+if not ok:
+    print("RESULT: SOME CERTIFICATE CHECK FAILED -- NOT CERTIFIED"); raise SystemExit(1)
+if not c6_done:
+    print("RESULT: PRE-BUDGET CHECKS PASS; C6 PENDING; NOT CERTIFIED  (exit 0 means only: every implemented check passed)"); raise SystemExit(0)
+print("RESULT: ALL IMPLEMENTED CHECKS PASS INCLUDING C6; paper steps and external obligations above remain subject to CHAT AUDIT; NOT a D-P2 certification")
+raise SystemExit(0)
