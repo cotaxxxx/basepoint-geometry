@@ -10,10 +10,10 @@
 | object | identity |
 |---|---|
 | FT_q reduction (audited) | `analysis/D_OB_P2_D_AN1_FT_Q_DRAFT.md`, commit `20c5c59bd74f940fe0b1e05892bd2169e09d4fde`, SHA-256 `46443f0e981f360e57fb70d99754b0e480042d246e22d36732b00b96102a9cd1` |
-| P exact decomposition (audited) | `analysis/D_OB_P2_D_AN1_FT_Q_P_DECOMPOSITION_DRAFT.md`, commit `641e2a2` (bytes identical at `1a4b7c3dfb7437106cdf0ada3db2514ad7d02228`), SHA-256 prefix `67d821d46120` |
-| C0/B1 root structure (audited) | `analysis/D_OB_P2_D_AN1_FT_Q_C0_B1_ROOT_STRUCTURE_DRAFT.md`, commit `32308e8`, SHA-256 prefix `d2dc0cf0aee3` |
-| B1 ordering lemma (audited) | `analysis/D_OB_P2_D_AN1_FT_Q_B1_ORDERING_LEMMA_DRAFT.md`, commit `428320ec7fda757e17e9e19d0e0236aba99d9aab`, SHA-256 prefix `4145624ad9b8` |
-| Judge contracts 20''–23'' v1.1 (frozen) | `analysis/D_OB_P2_D_AN1_FT_Q_CONTRACT_20_DOUBLE_PRIME_TO_23_DOUBLE_PRIME_V1_1.md`, parent fixed contract `00138df257cee8e5480b412157dce36ae90743d0` |
+| P exact decomposition (audited) | `analysis/D_OB_P2_D_AN1_FT_Q_P_DECOMPOSITION_DRAFT.md`, commit `641e2a2d4b0720e47c73f257cbf8de1b89eac9c5`, SHA-256 `67d821d4612015648758de57887fce699db1143952b658e6733cba1ebd61b518` |
+| C0/B1 root structure (audited) | `analysis/D_OB_P2_D_AN1_FT_Q_C0_B1_ROOT_STRUCTURE_DRAFT.md`, commit `32308e842681b72c5fe661cb73ce4daecbd4ea4e`, SHA-256 `d2dc0cf0aee36ae73a97f9d4b461b1aed82678a0d7f716ed5ec2cc65de217bb8` |
+| B1 ordering lemma (audited) | `analysis/D_OB_P2_D_AN1_FT_Q_B1_ORDERING_LEMMA_DRAFT.md`, commit `428320ec7fda757e17e9e19d0e0236aba99d9aab`, SHA-256 `4145624ad9b8b8203ada46d02fad9c2c39e2798e8253809b7f101bedffdfc283` |
+| Judge contracts 20''–23'' v1.1 (frozen) | `analysis/D_OB_P2_D_AN1_FT_Q_CONTRACT_20_DOUBLE_PRIME_TO_23_DOUBLE_PRIME_V1_1.md`, commit `b1a10ea6f0ef127aaf4a40a93070cf270d03e073`, SHA-256 `db975daba9d712246ed5e27465437f34450b356f453729a5fb78ec8ceab468cb`; parent fixed contract `analysis/D_OB_P2_D_AN1_FT_Q_CONTRACT_20_DOUBLE_PRIME_TO_23_DOUBLE_PRIME.md`, commit `00138df257cee8e5480b412157dce36ae90743d0`, SHA-256 `80c0570329dfba48cd9e60f0d330afe6d4a526887c44b0cca826eca5ed0db39d` |
 | Astra 39' independent report (audited) | `D_OB_P2_certificate39prime_independent_report_2026-10-08.md`, SHA-256 `1d084881ffe60fb4fb7f7f37ac48aae06ba6be2693f76fd2b091d222a0c60d9f` |
 | Astra 39' exact script | `certificate39prime_exact.py`, SHA-256 `4b51bd9b57bb83c40737f6c10ce61fab736ed08334f29ed430a5825d8b0d8888` |
 | Astra 39' coefficients | `certificate39prime_coefficients.json`, SHA-256 `853d022e0fa8720a99f34a81b5ff5664e0c2c6f6fa6fa2e6fdccc78fe4d40a80` |
@@ -94,11 +94,11 @@ and, by exact integration of the polynomial on the right,
 With contract 21'' partition `[-1,1] = [-1,1/2] ∪ (1/2, mu_C) ∪ [mu_C, m - rho) ∪ [m - rho, 1]`:
 - `(1/2, mu_C)`: `G > 0` by Lemma A, so it may be dropped one-sidedly (`U_south,rem = 0`).
 - `[mu_C, m - rho)` (north far) and `[m - rho, 1]` (near band incl. cap): OPEN; write `U_north + U_near >= int [-G]_+` over them.
-Then, exactly,
+Consequently,
 
-    2 pi lambda H >= S''_lb - (U_north + U_near),
+    2 pi lambda H >= S''_lb - (U_north + U_near).
 
-so a certified `U_north + U_near < S''_lb` would give `H > 0` on the face with `c_FT = (S''_lb - U_north - U_near)/(2 pi lambda)` bounded below rationally. **None of `U_north`, `U_near`, `c_FT`, `m0` is established here.** Until 22'' is updated, the active budget remains `U_north + U_near < 104/625`.
+If a uniform certified rational bound `U_north + U_near < S''_lb` is established, the resulting positive gap can be used to derive an explicit uniform lower bound for `H` on the face, and only then may a rational `c_FT` be declared (22''). **None of `U_north`, `U_near`, `c_FT`, `m0` is established here; `c_FT` remains UNSET.** Until 22'' is updated, the active budget remains `U_north + U_near < 104/625`.
 
 ## 7. Not claimed
 
