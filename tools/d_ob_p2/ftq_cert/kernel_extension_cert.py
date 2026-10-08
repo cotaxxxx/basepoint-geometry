@@ -3,6 +3,8 @@
 Lemma (to be audited):  -F/S3 >= (-C0) sin^2 phi + (3/200) cos^2 phi  on mu in K, all parameters.
 Combined with the audited exterior-south lemma (39' C4) this holds on [-1, mu_C), and then
     int_{-1}^{1/2} G(mu) dmu  >  (3/10) int_{-1}^{1/2} (112/113 - mu)(-C0*(mu) + 3/200) dmu  =  635530452759/817216000000,
+which is a lower bound for the WHOLE interval [-1, 1/2] and replaces (is not added to) the earlier S_K >= 207/5000 and
+C_core >= 1/8 (sum 104/625).
 C0* = C0 at (L, m) = (8649/40000, 112/113) (C0 is decreasing in m and increasing in L, dC0/dm = -(L mu^2 + 1 - L),
 dC0/dL = (m - mu)(1 - mu^2)), pi >= 3, S3/v^3 >= 2 d^{-3/2} > 5/4 (d < 13/10), lambda^2 s / w >= (4/25)(112/113 - mu).
 
@@ -105,5 +107,5 @@ C0s = C0.subs({L: sp.Rational(8649, 40000), m: sp.Rational(112, 113)})
 I = sp.integrate((sp.Rational(112, 113) - mu)*(-C0s + sp.Rational(3, 200)), (mu, -1, sp.Rational(1, 2)))
 I = Q(int(sp.fraction(I)[0]), int(sp.fraction(I)[1]))
 print(f"(5b) int_{{-1}}^{{1/2}} (112/113-mu)(-C0*+3/200) dmu = {I} (~{float(I):.5f}); with pi>=3: (3/10)*I = {Q(3,10)*I} (~{float(Q(3,10)*I):.5f})")
-check("(5c) (3/10)*I > 104/625 + 207/5000 (previous total budget)", Q(3, 10)*I > Q(104, 625) + Q(207, 5000))
+check("(5c) (3/10)*I > 104/625 (previous total positive-mass lower bound 207/5000 + 1/8; the new bound REPLACES it, no addition)", Q(3, 10)*I > Q(104, 625))
 print("ALL CERTIFICATES PASS" if ok else "SOME CERTIFICATE FAILED")
