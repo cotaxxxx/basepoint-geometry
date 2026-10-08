@@ -1,6 +1,7 @@
 # Contract 43 (north near band) — Code preliminary structure note
 
-Status: CODE NOTE / INPUT TO ASTRA AUDIT AND TO THE CONTRACT 43 PREDECLARE.  Not a certificate of any integral bound.
+Status: CODE NOTE / INPUT TO THE CONTRACT 43 PREDECLARE.  NOT TO BE SHARED WITH ASTRA before Astra's independent report is received
+(chat instruction 2026-10-09); chat will collate the two independent results afterwards.  Not a certificate of any integral bound.
 Exact statements are certified by `n43_decomposition_cert.py` (this directory); numerical values are DIAGNOSTIC_ONLY / NOT_EVIDENCE
 (`../diagnostics/near_band_majorant_forms.py`).  D-P2 overall: NOT_CERTIFIED.
 
