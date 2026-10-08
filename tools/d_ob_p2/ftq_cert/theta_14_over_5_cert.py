@@ -9,11 +9,11 @@ Claim: theta d > 14/5 on the box.
 Proof: theta d > 14/5  <=>  7 v^2 - 2 d v - 4 d^2 > 0  <=  v > (1 + sqrt 29)/7 * d  <=  v >= c d with the
 rational c = 913/1000 > (1 + sqrt 29)/7 (checked exactly: 7c > 1 and (7c - 1)^2 > 29)  <=  v^2 >= c^2 d^2
 <=  (1 - c^2) d^2 - e > 0.  The last polynomial in (L, m, mu) has all tensor-Bernstein coefficients
-positive on the box (degree (2, 3, 5); exact Fractions only, no floating point), which proves it.
+positive on the box (degree (2, 4, 4); exact Fractions only, no floating point), which proves it.
 
 Expected output (sympy 1.14.0, Python 3.11):
   c=913/1000 exceeds (1+sqrt29)/7: True
-  (1-c^2) d^2 - e: degree (2, 3, 5), 72 coefficients, min = 2058768436330482951/63690375390625000000
+  (1-c^2) d^2 - e: degree (2, 4, 4), 75 coefficients, min = 2058768436330482951/63690375390625000000
   CERTIFIED: theta*d > 14/5 on the box
 """
 from fractions import Fraction as Q
