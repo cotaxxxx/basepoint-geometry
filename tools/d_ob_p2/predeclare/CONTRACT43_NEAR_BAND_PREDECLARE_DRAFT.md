@@ -5,7 +5,10 @@ STATUS: DRAFT / NOT FROZEN / NOT AUTHORIZED FOR CERTIFICATE SUBMISSION.  Conditi
 Nothing here selects a constant or threshold from diagnostics; the piece boundaries below are structural (sign of s).
 
 ## 1. Region and chain inherited (frozen sources)
-Near band (contract 21'' v1.1): mu in [m - rho, 1]  <=>  s := m - mu in [m - 1, rho];  |xi| <= rho;  phi in [0, pi].
+Near band (contract 24 baseline band kappa = 1, contract 21'' v1.1): |mu - m| <= rho, mu <= 1  <=>  s := m - mu in [-rho, rho] cap {mu <= 1}
+= [m - 1, rho]  (cap side mu > m is s < 0; m - 1 = -rho^2/(1+m) > -rho);  |xi| <= rho;  phi in [0, pi].
+The diagonal singular points (s = 0, phi in {0, pi}, xi = +-rho) lie inside the band; Q0 (applicability of the N3 form) is answered
+in CONTRACT43_CODE_PRELIM_NOTE.md section 0': pointwise inequalities hold off a null set and the kernels are absolutely integrable.
 Box: L in [4/25, 8649/40000], m in [112/113, 1], rho^2 = 1 - m^2.
 (S0) as in contract 45: [-K_H]_+ <= pi * mean_xi [2N^2 - h^2 T]_+/(w D^5) <= pi * mean_xi 2N^2/(w D^5)   (contract 44, N2/N3).
 U_near <= int_{m-1}^{rho} int_0^pi mean_xi pi 2N^2/(w D^5) dphi ds.   Pairing (xi, phi) -> (-xi, pi - phi) may be used as in 45.

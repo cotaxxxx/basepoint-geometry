@@ -19,6 +19,16 @@ Exact statements are certified by `n43_decomposition_cert.py` (this directory); 
 3. **Far band pins.**  Piece 1: 99c9b62 (SHA ad564945...); Piece 2: 7ba339a8 (SHA 8910105d...); Piece 3: 9cb723c0
    (SHA 308e626e...), audit package a11def1e.
 
+## 0'. Q0 (added after chat correction E-43-1): is the N3 xi-averaged form applicable on the near band?
+
+Yes, in the following precise sense.  Contract 44 (N1, N2) are pointwise inequalities valid wherever D > 0, i.e. everywhere except
+the two diagonal singular points (s = 0, phi in {0, pi}, xi = +-rho), a null set.  Integrability: by (43.2), 2N^2/(w D^5) <= 2C^2/(w D)
+with C <= (3/2) lambda + 1/2 and w >= m - rho > 0, and  int dxi dphi ds / D < infinity  on the near band because, in the local coordinates
+(p, q, r) = (b - xi, a sin phi, sqrt(L) s), D is the Euclidean norm and the Jacobian is bounded away from 0 and infinity near the singular
+points (a -> rho > 0).  Hence [2N^2 - h^2 T]_+/(w D^5) and 2N^2/(w D^5) are absolutely integrable over (xi, phi, s), the xi-mean exists
+for every (s, phi) outside a null set, and the one-sided inequalities pass to the integrals.  The D^5 denominator is therefore not an
+obstruction; the obstruction is quantitative (section 2).  The region is s in [-rho, rho] intersected with mu <= 1, i.e. s in [m - 1, rho].
+
 ## 1. Singular point and exact decomposition
 
 D^2 = (b - xi)^2 + a^2 sin^2 phi + L s^2 vanishes only at s = 0, sin phi = 0, b = xi, i.e. a = rho, phi in {0, pi}, xi = +-rho:
