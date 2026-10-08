@@ -8,6 +8,10 @@ No constant, threshold, piece boundary or kappa in this document comes from a di
 (sign of s = sign of a - rho; cap side a < rho).
 
 ## 1. Region and chain inherited (frozen sources)
+Definition of the band variable: s := m - mu, where mu is the surface coordinate (mu in [-1, 1]) and m = 2 tau/(1 + tau^2).
+Formal band (contract 24, kappa = 1): |mu - m| <= rho, i.e. s in [-rho, rho].  Physical region: the formal band intersected with the
+surface mu <= 1, i.e. s in [m - 1, rho] (the part s in [-rho, m - 1) corresponds to mu > 1 and is not part of the surface).
+All integrals of this contract are over the physical region s in [m - 1, rho].
 Near band (contract 24 baseline band kappa = 1, contract 21'' v1.1): |mu - m| <= rho, mu <= 1  <=>  s := m - mu in [-rho, rho] cap {mu <= 1}
 = [m - 1, rho]  (cap side mu > m is s < 0; m - 1 = -rho^2/(1+m) > -rho);  |xi| <= rho;  phi in [0, pi].
 The diagonal singular points (s = 0, phi in {0, pi}, xi = +-rho) lie inside the band; Q0 (applicability of the N3 form) is answered
@@ -24,7 +28,8 @@ NOT inherited: (S1) D >= D_0 (needs a >= rho, false for s < 0; and D_0 degenerat
  (C1) N = lambda[ b (q^2 + L s^2) + p (s(m - s) - q^2) ],  p = b - xi, q = a sin phi  (certified: n43_decomposition_cert.py).
  (C2) 2N^2 <= 4 lambda^2 [ b^2 (q^2 + L s^2)^2 + p^2 (s(m - s) - q^2)^2 ].
  (C3) xi-integration in closed form over the finite range p in [b - rho, b + rho] with e^2 := q^2 + L s^2 fixed:
-      int p^2 (p^2 + e^2)^{-5/2} dp and int (p^2 + e^2)^{-5/2} dp  (elementary antiderivatives).  Extension to p in R is one-sided
+      int p^2 (p^2 + e^2)^{-5/2} dp and int (p^2 + e^2)^{-5/2} dp  (elementary antiderivatives; certified by differentiation in
+      n43_xi_antiderivative_cert.py: F1 = p(2p^2 + 3e^2)/(3 e^4 (p^2+e^2)^{3/2}), F2 = p^3/(3 e^2 (p^2+e^2)^{3/2})).  Extension to p in R is one-sided
       but is not planned: for e >~ rho the tail |p| > 2 rho carries most of the extended integral (see section 4), so finite limits are kept.
  (C4) w >= m - s >= m - rho (J_2) and w >= m (J_1);  b^2 <= a^2;  a^2 = rho^2 + 2ms - s^2 exact.
  (C5) phi- and s-integration of the resulting algebraic majorants by monotone/convex bounds and exact rational enclosures of the
