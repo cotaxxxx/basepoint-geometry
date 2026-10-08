@@ -40,12 +40,22 @@ NOT inherited: (S1) D >= D_0 (needs a >= rho, false for s < 0, and D_0 degenerat
       Extension of the p-range to R is not planned (section 4(d)); finite limits are kept.
  (C4) w >= m - s >= m - rho on J_2 and w >= m on J_1;  b^2 <= a^2;  a^2 = rho^2 + 2ms - s^2 exact;  e^2 >= L s^2 and e^2 >= q^2.
  (C5) MAIN ROUTE (i), chat ruling: "finite-range xi-integral (algebraic) -> rational majorant -> Bernstein exact evaluation",
-      with the DIFFERENCE STRUCTURE PRESERVED.  Design:
+      with the DIFFERENCE STRUCTURE PRESERVED.  Chat addendum (2026-10-09): after the finite-range xi-integration the two terms are
+      treated as INSEPARABLE EVALUATION UNITS:
+        unit 1:  b^2 e^4 DeltaF1,   DeltaF1 := F1(b+rho) - F1(b-rho),   with the structural fact  0 <= e^4 DeltaF1 <= 4/3;
+                 e^4 and DeltaF1 are never bounded separately (no artificial e^{-4} singularity is introduced);
+        unit 2:  A^2 DeltaF2,  A := s(m-s) - q^2,  DeltaF2 := F2(b+rho) - F2(b-rho),  with  0 <= DeltaF2 <= 2/(3e^2);
+                 the product is the object of the estimate; the factor e^{-2} is never bounded on its own.
+      The vanishing of A near the diagonal singular points may be used, but a uniform constant obtained from a LOCAL approximation
+      is not admissible: any such use must be an exact inequality with its residual.  Boundedness near the singular points and
+      budget compliance on the whole box are SEPARATE proof obligations (L43-E vs L43-Q below).  Design:
       (C5.1) scale p = e u.  Then  F1(b+rho) - F1(b-rho) = e^{-4} [G1(U+) - G1(U-)],  F2(...) = e^{-2} [G2(U+) - G2(U-)],
              U± := (b ± rho)/e,  G1(U) = U(2U^2+3)/(3(1+U^2)^{3/2}),  G2(U) = U^3/(3(1+U^2)^{3/2})  (G_k = int_0^U of the scaled integrands).
-             The prefactors e^4 (first term) and e^2 (second term, after (s(m-s)-q^2)^2 <= 2 s^2 (m-s)^2 + 2 q^4 <= e^2 * [2 (m-s)^2/L + 2 q^2])
-             cancel the negative powers of e, so each xi-mean is bounded by a bounded function of (s, phi); this is the planned
-             endpoint lemma L43-E (section 6, H-43-1(ii)).
+             Unit 1 is then b^2 * [e^4 DeltaF1] = b^2 [G1(U+) - G1(U-)], a bounded quantity.  For unit 2 the exact (approximation-free)
+             bound  A^2/e^2 <= 2 s^2 (m-s)^2/e^2 + 2 q^4/e^2 <= 2 (m-s)^2/L + 2 q^2  (using e^2 >= L s^2 and e^2 >= q^2)  gives
+             A^2 DeltaF2 <= (2/3)[2 (m-s)^2/L + 2 q^2] = 4 (m-s)^2/(3L) + 4 q^2/3, finite and uniform near e -> 0.  This is the content
+             of the planned endpoint lemma L43-E (section 6, H-43-1(ii)); it removes the singularity but is coarse and is NOT the
+             quantitative estimate used for the budget (L43-Q).
       (C5.2) rational majorant of the DIFFERENCE, not of the endpoints: choose, on each sign half-line u >= 0 / u <= 0 (splitting the
              p-range at p = 0 when it contains 0), a RATIONAL function H_k with H_k' >= g_k (g_1 = (1+u^2)^{-5/2}, g_2 = u^2 (1+u^2)^{-5/2})
              and H_k bounded, increasing.  Then  G_k(U+) - G_k(U-) = int_{U-}^{U+} g_k <= H_k(U+) - H_k(U-),  a rational difference that
@@ -104,4 +114,4 @@ NOT inherited: (S1) D >= D_0 (needs a >= rho, false for s < 0, and D_0 degenerat
  -> Code certificate -> CHAT AUDIT.  Code will not execute any integral-evaluation certificate before the predeclare PASS.
  v1 changes (chat ruling 2026-10-09): [1] fixed evidence table; [2] (C5) main route (i) with difference structure, (C5.2) and 4(f);
  [3] route (ii) appendix-only; [4] H-43-1 split into (i)/(ii), section 5; [5] O(rho) motivation removed from 4(b); [6] singular points
- and non-inheritance in section 2; [7] (C6) budget deferred to the 22'' v1.2 pin; [8] formal submission after the Astra report.
+ and non-inheritance in section 2; [7] (C6) budget deferred to the 22'' v1.2 pin; [8] formal submission after the Astra report; v1 addendum: (C5) inseparable units 1 and 2 (chat 2026-10-09).
