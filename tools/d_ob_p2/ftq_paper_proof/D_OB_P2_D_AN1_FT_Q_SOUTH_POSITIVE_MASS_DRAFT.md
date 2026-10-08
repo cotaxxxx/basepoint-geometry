@@ -35,7 +35,10 @@ Kernel pieces (P-decomposition, FT_q §§5–7): `S_3 = u(2d - v) = D_+^3 + D_-^
 `F = Rbar A + b (DeltaR/rho) K_R`, with `Rbar = (R_+ + R_-)/2 in [1, pi/2]`, `DeltaR = (R_+ - R_-)/2`, `-1 <= kappa_R <= 0` the secant coefficient of `R` (P1 trap `-1 <= R_gamma <= 0`).
 **P units** (contract 21''): `I(mu,phi) = -lambda^2 s F W`, `W = 1/(w v^3)`, `G(mu) = int_0^pi I dphi`, and `2 pi lambda H(rho, lambda m; lambda) = int_{-1}^{1} G(mu) dmu`.
 
-Roots (audited root structure): `B_1` has exactly one root `mu_B^- in (-1/2, -1/8)` in `[-1,1]`, `B_1 > 0` to its left and `< 0` to its right; `C_0` has exactly one root `mu_C in (0, m)` in `[-1,1]`, `C_0 < 0` for `mu < mu_C`. Certified in addition: `1/2 < mu_C < 3/5` (39' C4 / `bernstein_south_A.py` C4a, C4b).
+Roots. For `m < 1` (the domain of the audited root-structure lemma): `B_1` has exactly one root `mu_B^- in (-1/2, -1/8)` in `[-1,1]`, `B_1 > 0` to its left and `< 0` to its right; `C_0` has exactly one root `mu_C in (0, m)` in `[-1,1]`, `C_0 < 0` for `mu < mu_C`. Certified in addition: `1/2 < mu_C < 3/5` (39' C4 / `bernstein_south_A.py` C4a, C4b).
+Endpoint `m = 1` (`rho = 0`, included in the frozen box but excluded from the root-structure lemma): both polynomials acquire the additional root `mu = 1`, exactly
+`B_1 = (mu - 1)((1-L) mu + L)`, `C_0 = (mu - 1) P(mu)`, `P(mu) := (1-L)(1 - mu^2) - mu`.
+Hence on `[-1, 1)` the statements above persist at `m = 1`: the inner root of `B_1` is `mu_B^- = -L/(1-L) in (-1/2, -1/8)` (since `1/9 < L < 1/3`), with `B_1 > 0` left of it and `< 0` on `(mu_B^-, 1)`; `P > 0` on `[-1, 0]`, `P' = -2(1-L) mu - 1 < 0` on `[0, 1]`, `P(1/2) = (1-3L)/4 >= 14053/160000 > 0`, `P(3/5) = (1-16L)/25 <= -39/625 < 0`, so `C_0` has exactly one root `mu_C in (1/2, 3/5)` in `[-1, 1)` with `C_0 < 0` for `mu < mu_C`. Uniqueness of the roots is therefore asserted on the half-open interval `[-1, 1)` for all `m in [112/113, 1]`; the extra root `mu = 1` at `m = 1` plays no role below (`[-1, 1/2]` and `[-1, mu_C)` do not contain it).
 
 ## 2. Inputs taken as audited
 
@@ -53,7 +56,7 @@ For all parameters in the box and all `mu in [-1/4, mu_C)`, `phi in [0, pi]`:
 
 Proof structure (constants are those certified in the 39' report and `bernstein_south_A.py`; all on the box `L in [4/25, 8649/40000]`, `m in [112/113, 1]`, `mu in [-1/4, 3/5]`):
 1. `d >= 416/625`, `d < 13/10`; `4 r q/d^2 <= 87890625/552438016 < 23/144`, hence `v/d > 11/12` and `theta d > psi(11/12) = 840/299 > 14/5`. Independent route: `(1-c^2) d^2 - e > 0` with `c = 913/1000 > (1+sqrt 29)/7` (`theta_14_over_5_cert.py`, min Bernstein coefficient `2058768436330482951/63690375390625000000`).
-2. Secant: `h > 2/5`, `u^2 > 62/25`, `-369/32 < Z < 479/80`, `4 r q/(h u^2) < 28125/395839 < 1/14`, so `M > (13/14) h u` and `J_sec <= 7 q r^2 Z^2/(13 m v u) <= (506250/18757661) q < (3/100) q`.
+2. Secant: `h > 2/5`, `u^2 > 62/25`, `-369/32 < Z < 479/80`, `4 r q/(h u^2) < 28125/395839 < 1/14`, so `M > (13/14) h u` and `J_sec <= 7 q r^2 Z^2/(13 m v u) <= (506250/18757661) q <= (3/100) q` (the last inequality is strict for `q > 0`; at `q = 0` both sides vanish, e.g. `mu = 0, phi = pi/2`).
 3. `Pi_t := -(g + (3/100) a^2) d - t B_1 a^2 > 0` for `t = 3` and `t = 14/5` (72 + 72 positive Bernstein coefficients, minima `106592/1953125` and `40192/1953125`); with `d < 13/10`, `Pi_t/d > 3/200`.
 4. With `z = cos^2 phi`: `E + theta B_1 q + (3/100) q = (1-z) C_0 + z[-Pi_t/d + (theta - t/d) B_1 a^2]`; choose `t = 3` where `B_1 >= 0` (`theta <= 3/d`) and `t = 14/5` where `B_1 < 0` (`theta > 14/(5d)`), so the bracket is `<= -Pi_t/d < -3/200`. Hence `E + theta B_1 q <= (1-z) C_0 - (3/200) z - (3/100) q < 0`, and with `Rbar >= 1`:
    `-F/S_3 >= -Rbar (E + theta B_1 q) - J_sec >= -(E + theta B_1 q) - (3/100) q >= (-C_0)(1-z) + (3/200) z`.
@@ -67,7 +70,7 @@ Every condition of §3 is re-proved on the box `L in [4/25, 8649/40000]`, `m in 
 1. `Pi_3 > 0`, `Pi_{14/5} > 0` on `K` (minimum Bernstein coefficients `1572994971/23086352000`, `23286555999/144289700000`).
 2. `(1-c^2) d^2 - e > 0` on `K` with `c = 913/1000` (minimum `665724/9765625`), hence `theta d > 14/5`; `theta d <= 3` by (I3).
 3. Secant on `K`: `d >= 16/25`, `d^2 - e >= 256/625` (so `v >= 16/25`, `u >= 8/5`), `h >= 141/113`, `a^2 <= 15/16`, `T in [22107911/18080000, 67/25]`, `C_0 in [-209/100, -70811733/57856000]`, `E <= g <= -30053/102400 < 0`, `theta E in [3(-209/100)/(16/25), 0)`; therefore `|Z| <= 7924370683/849760000`, `4 r q/(h u^2) <= 28125/1359616 < 1/14`, `M > (13/14) h u`, and
-   `J_sec <= 7 q r^2 Z^2/(13 m v u) <= (5086447708448780805609/355067704829628215459840) q < (3/100) q`.
+   `J_sec <= 7 q r^2 Z^2/(13 m v u) <= (5086447708448780805609/355067704829628215459840) q <= (3/100) q` (strict for `q > 0`; both sides vanish at `q = 0`).
 4. `d < 13/10` on `K` from the identity `d = 2 - (1-2L) m^2/(1-L) - (1-L)(mu + L m/(1-L))^2` (so `d <= 2 - (1-2L) m^2/(1-L) <= 515867950/400320919`), hence `Pi_t/d > 3/200` for both `t`.
 5. The algebra of §3 step 4 is identical; `C_0 < 0` on `K`.
 
