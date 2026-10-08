@@ -1,0 +1,47 @@
+I01 sphere identities: PASS
+I02 N/lambda = bD^2-H0(b-xi): PASS
+I03 2h/lambda = D^2+(1-L)s^2+delta: PASS
+I04 projected normal has unit length after normalization: PASS
+I05 normal dot displacement = h/lambda: PASS
+I06 Gram identity: PASS
+I07 w^2-A^2 = L(rho^2+(1-L)s^2): PASS
+I08 positive numerator identity: PASS
+I09 curvature-depth decomposition: PASS
+I10 simultaneous reflection preserves numerator: PASS
+I11 Young 1/4 square: PASS
+I12 Young 1/3 square: PASS
+C01 sphere endpoint: PASS
+C02 mu lower bound: PASS
+C03 cap contained in baseline band: 1-m=rho^2/(1+m)<=rho: PASS
+C04 graph gradient: PASS {'coefficients': ['9/25', '249/1400', '681/313600'], 'minimum': '681/313600'}
+C05 distance comparison: PASS {'coefficients': ['193/7500', '16477/3000000'], 'minimum': '16477/3000000'}
+C06 depth error: PASS {'coefficients': ['1/50', '1/50', '209/179200'], 'minimum': '209/179200'}
+C07 Young curvature coefficient: PASS
+C08 error coefficient c: PASS
+C09 disk radius bound by squaring: PASS
+C10 W(lambda_hi) > 89/100: PASS 211911/127690000
+C11 (4/3)^(3/2) < 77/50: PASS
+C12 (4/3)^(5/2) < 103/50: PASS
+I13 d(lambda/W) W^3 = mu0^2: PASS
+I14 d(lambda^2/W) W^3: PASS
+A01 cross radial primitive: PASS
+A02 depth radial primitive: PASS
+A03 depth radial integral to infinity: PASS
+A04 half-plane angles: PASS
+A05 exact xi moments: PASS
+A06 logarithm comparison derivative: PASS
+A07 rho-cubed-log derivative: PASS
+C13 log bound < 6 via exp Taylor lower sum: PASS {'exp6_lower': '67591/175', 'argument_upper': '166447/450'}
+A08 exact pi upper bound integral: PASS
+B01 exact sum: PASS 3887073979116207/17284813033600000
+B02 near upper < 9/40: PASS 2008953443793/17284813033600000
+B03 9/40 < design near budget: PASS 3740763159/817216000000
+B04 stated design subtraction: PASS
+B05 conditional design gap: PASS
+M01 cap-core N/D^2 limit = -1/2: PASS
+M02 cap-core scaled positive numerator: PASS
+M03 cap-core rho^2 kernel limit: PASS
+M04 outer D^2/rho limit: PASS
+M05 outer numerator/rho^3 limit: PASS
+M06 positive-part angular integral: PASS
+ALL EXACT CHECKS PASS (46 checks); U_near < 9/40; formal status unchanged.

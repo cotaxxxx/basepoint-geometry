@@ -1,0 +1,12 @@
+{
+  "device": "daybreak-works",
+  "device_id": "fc5b5e63-ea7a-4512-a840-f95669ec2172",
+  "python": "3.11.16",
+  "sympy": "1.14.0",
+  "isolation_flag": "-I",
+  "observed_exit_code": 0,
+  "checks": 46,
+  "stderr": "empty",
+  "certificate_sha256": "6187c2b0c22d3e1b75ede72da3f470185eb6d93722b25265974ce2e01488cf18",
+  "statement": "Exact symbolic/rational checks supporting the analytic proof. No numerical quadrature or grid experiment; formal Contract 43 status unchanged."
+}

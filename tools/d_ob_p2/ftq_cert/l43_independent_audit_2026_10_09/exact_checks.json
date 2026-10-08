@@ -1,0 +1,288 @@
+{
+  "status": "ALL EXACT CHECKS PASS",
+  "scope": "Checks support the accompanying analytic proof; not a formal Contract 43 freeze or D-P2 certification.",
+  "python": "3.11.16",
+  "sympy": "1.14.0",
+  "script_sha256": "6187c2b0c22d3e1b75ede72da3f470185eb6d93722b25265974ce2e01488cf18",
+  "checks": [
+    {
+      "name": "I01 sphere identities",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "I02 N/lambda = bD^2-H0(b-xi)",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "I03 2h/lambda = D^2+(1-L)s^2+delta",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "I04 projected normal has unit length after normalization",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "I05 normal dot displacement = h/lambda",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "I06 Gram identity",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "I07 w^2-A^2 = L(rho^2+(1-L)s^2)",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "I08 positive numerator identity",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "I09 curvature-depth decomposition",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "I10 simultaneous reflection preserves numerator",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "I11 Young 1/4 square",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "I12 Young 1/3 square",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "C01 sphere endpoint",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "C02 mu lower bound",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "C03 cap contained in baseline band: 1-m=rho^2/(1+m)<=rho",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "C04 graph gradient",
+      "passed": true,
+      "detail": {
+        "coefficients": [
+          "9/25",
+          "249/1400",
+          "681/313600"
+        ],
+        "minimum": "681/313600"
+      }
+    },
+    {
+      "name": "C05 distance comparison",
+      "passed": true,
+      "detail": {
+        "coefficients": [
+          "193/7500",
+          "16477/3000000"
+        ],
+        "minimum": "16477/3000000"
+      }
+    },
+    {
+      "name": "C06 depth error",
+      "passed": true,
+      "detail": {
+        "coefficients": [
+          "1/50",
+          "1/50",
+          "209/179200"
+        ],
+        "minimum": "209/179200"
+      }
+    },
+    {
+      "name": "C07 Young curvature coefficient",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "C08 error coefficient c",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "C09 disk radius bound by squaring",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "C10 W(lambda_hi) > 89/100",
+      "passed": true,
+      "detail": "211911/127690000"
+    },
+    {
+      "name": "C11 (4/3)^(3/2) < 77/50",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "C12 (4/3)^(5/2) < 103/50",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "I13 d(lambda/W) W^3 = mu0^2",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "I14 d(lambda^2/W) W^3",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "A01 cross radial primitive",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "A02 depth radial primitive",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "A03 depth radial integral to infinity",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "A04 half-plane angles",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "A05 exact xi moments",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "A06 logarithm comparison derivative",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "A07 rho-cubed-log derivative",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "C13 log bound < 6 via exp Taylor lower sum",
+      "passed": true,
+      "detail": {
+        "exp6_lower": "67591/175",
+        "argument_upper": "166447/450"
+      }
+    },
+    {
+      "name": "A08 exact pi upper bound integral",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "B01 exact sum",
+      "passed": true,
+      "detail": "3887073979116207/17284813033600000"
+    },
+    {
+      "name": "B02 near upper < 9/40",
+      "passed": true,
+      "detail": "2008953443793/17284813033600000"
+    },
+    {
+      "name": "B03 9/40 < design near budget",
+      "passed": true,
+      "detail": "3740763159/817216000000"
+    },
+    {
+      "name": "B04 stated design subtraction",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "B05 conditional design gap",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "M01 cap-core N/D^2 limit = -1/2",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "M02 cap-core scaled positive numerator",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "M03 cap-core rho^2 kernel limit",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "M04 outer D^2/rho limit",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "M05 outer numerator/rho^3 limit",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "M06 positive-part angular integral",
+      "passed": true,
+      "detail": null
+    }
+  ],
+  "bernstein": {
+    "C04 graph gradient": [
+      "9/25",
+      "249/1400",
+      "681/313600"
+    ],
+    "C05 distance comparison": [
+      "193/7500",
+      "16477/3000000"
+    ],
+    "C06 depth error": [
+      "1/50",
+      "1/50",
+      "209/179200"
+    ]
+  },
+  "constants": {
+    "U_curvature": "20682286967199/152962947200000",
+    "U_cross": "4323211299/110234777000",
+    "U_depth": "3014712459/59751151250",
+    "U_exact": "3887073979116207/17284813033600000",
+    "U_near_rounded": "9/40",
+    "rounding_slack": "2008953443793/17284813033600000",
+    "design_near_budget": "187614363159/817216000000",
+    "design_gap": "3740763159/817216000000"
+  }
+}
