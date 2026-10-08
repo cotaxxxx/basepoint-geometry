@@ -4,7 +4,7 @@ Status: CODE COLLATION / NOT A COUNTERSIGN.  Contract 43 OPEN.  D-P2 NOT_CERTIFI
 `D_OB_P2_L43_INDEPENDENT_AUDIT_2026_10_09.md` (report text only; Astra's script `l43_graph_majorant_exact.py`, SHA-256 6187c2b0...,
 its exact output and `source_manifest.json` were NOT received by Code) and the E-43 correction notice (status "未送付").
 
-## 1. What Code re-derived exactly (`astra_l43_collation_check.py`, 30 checks, exit 0)
+## 1. What Code re-derived exactly (`astra_l43_collation_check.py`, 26 checks, exit 0)
 - identities (5.5) N = lambda[xi D^2 + (t/2)(D^2 - (1-L)s^2 - delta)], (2.0) 2h/lambda = D^2 + (1-L)s^2 + rho^2 - xi^2, (2.4), (2.2') and the
   Gram identity (2.2) (x w^2 D^4), all modulo the ring relations y^2 = a^2 - b^2, rho^2 = 1 - m^2, L = lambda^2;
 - the three Bernstein tables of §8 (coefficients reproduced exactly: minima 681/313600, 16477/3000000, 209/179200);
