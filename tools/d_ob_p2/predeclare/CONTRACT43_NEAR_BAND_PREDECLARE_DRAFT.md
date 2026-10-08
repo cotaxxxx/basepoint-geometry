@@ -1,9 +1,10 @@
-# Contract 43 — North near band — PREDECLARE DRAFT v1
+# Contract 43 — North near band — PREDECLARE DRAFT v1.1
 
 STATUS: WORKING DRAFT v1 / NOT FROZEN / NOT YET SUBMITTED (formal submission as v1 follows receipt of Astra's independent report,
 chat ruling 2026-10-09 item 8) / NOT AUTHORIZED FOR CERTIFICATE EXECUTION.  Contract 43 OPEN.  D-P2 NOT_CERTIFIED.
 This document contains no diagnostic values; method choices are justified structurally (section 4).
-Changelog v0 (7cebf22c, chat pre-review) -> v1: items 1-8 of the chat ruling of 2026-10-09 (see section 7).
+Changelog v0 (7cebf22c, chat pre-review) -> v1 (bd890d91): items 1-8 of the chat ruling of 2026-10-09; v1 -> v1.1: chat pre-review
+corrections A-D of 2026-10-09 (see section 7).  Pre-review status of v1: CORRECTIONS REQUESTED (not a CHAT AUDIT PASS).
 
 ## 0. Fixed evidence (identity class, CHAT AUDIT PASS)
 | item | commit | SHA-256 |
@@ -56,17 +57,25 @@ NOT inherited: (S1) D >= D_0 (needs a >= rho, false for s < 0, and D_0 degenerat
              A^2 DeltaF2 <= (2/3)[2 (m-s)^2/L + 2 q^2] = 4 (m-s)^2/(3L) + 4 q^2/3, finite and uniform near e -> 0.  This is the content
              of the planned endpoint lemma L43-E (section 6, H-43-1(ii)); it removes the singularity but is coarse and is NOT the
              quantitative estimate used for the budget (L43-Q).
-      (C5.2) rational majorant of the DIFFERENCE, not of the endpoints: choose, on each sign half-line u >= 0 / u <= 0 (splitting the
-             p-range at p = 0 when it contains 0), a RATIONAL function H_k with H_k' >= g_k (g_1 = (1+u^2)^{-5/2}, g_2 = u^2 (1+u^2)^{-5/2})
-             and H_k bounded, increasing.  Then  G_k(U+) - G_k(U-) = int_{U-}^{U+} g_k <= H_k(U+) - H_k(U-),  a rational difference that
-             vanishes with the interval length and stays bounded as U± -> infinity (this is what "preserving the cancellation" means;
-             bounding G_k(U+) and G_k(U-) separately would lose it).  Candidate family (parameters to be fixed in v1 by matching
-             H_k(0) = 0, H_k'(0) = g_k(0), H_k(+infinity) = G_k(+infinity) = 2/3 resp. 1/3):  H_k(u) = c_k u (u^2 + alpha_k)/((u^2 + beta_k)(u + gamma_k)),
-             u >= 0 (odd extension for u <= 0).  The inequality H_k' >= g_k is certified as a polynomial inequality after clearing
-             denominators and squaring (both sides positive), on u in [0, infinity) via u = v/(1 - v), v in [0, 1) (Bernstein).
-      (C5.3) substitute U± = (b ± rho)/e: the majorant becomes a rational function of (b, e, rho); with b = a cos phi, e^2 = a^2 sin^2 phi + L s^2
-             it is a rational function of (cos phi, sin phi, s, rho, L, m) after the substitution a^2 = rho^2 + 2ms - s^2 and a possible
-             rationalization of a (a appears linearly in b; use the piece-wise monotone bounds of (C4) or square where the sign is fixed).
+      (C5.2) rational majorant of the DIFFERENCE, not of the endpoints.  The integrands g_1 = (1+u^2)^{-5/2}, g_2 = u^2 (1+u^2)^{-5/2}
+             are EVEN, so every interval integral reduces to integrals from 0:  for 0 <= U- <= U+,  int_{U-}^{U+} g = G(U+) - G(U-);
+             for U- < 0 < U+,  int_{U-}^{U+} g = G(|U-|) + G(U+)  (G = G_k = int_0^U g_k).  Hence it suffices to majorize G_k on the
+             HALF-LINE u >= 0 by a RATIONAL function H_k with  H_k(0) = 0,  H_k' >= g_k on [0, infinity)  (then G_k(U) - G_k(V) <= H_k(U) - H_k(V)
+             for 0 <= V <= U, and the two-sided case follows by the reduction above).  No odd extension and no differentiability at
+             u = 0 are needed (correction B).  The limit at infinity is NOT matched: since H_k' - g_k >= 0 on [0, infinity),
+             H_k(+infinity) - G_k(+infinity) = int_0^infinity (H_k' - g_k) du, and requiring equality would force H_k' = g_k, impossible for a
+             rational H_k; so the design requires  H_k(+infinity) > G_k(+infinity) (= 2/3 resp. 1/3) STRICTLY, with the excess as the price
+             of rationality.  Candidate family (parameters fixed in v1.1/v2 by H_k(0) = 0, H_k'(0) >= g_k(0), a prescribed strict excess at
+             infinity, and the certified inequality):  H_k(u) = c_k u (u^2 + alpha_k)/((u^2 + beta_k)(u + gamma_k)),  u >= 0,  c_k > G_k(+infinity).
+             The inequality H_k' >= g_k on [0, infinity) is certified as a polynomial inequality after clearing denominators and squaring
+             (both sides positive), via u = v/(1 - v), v in [0, 1) (Bernstein).  Drafting of this lemma (L43-H) is authorized; its
+             EXECUTION is deferred to after the predeclare PASS (chat ruling: it is the main inequality of the majorant chain, not an identity).
+      (C5.3) substitute U± = (b ± rho)/e.  The majorant H_k(U±) is rational in (b, e, rho) but e = sqrt(q^2 + L s^2) and a = sqrt(rho^2 + 2ms - s^2)
+             are square roots in (s, phi); the result is NOT automatically a rational function of the integration variables (correction D).
+             Rationalization is therefore a SEPARATE step (C5.3'):  either (alpha) rewrite each unit so that only even powers of e and a
+             appear (e^2 = a^2 sin^2 phi + L s^2 and a^2 are polynomial), using the parity of H_k where possible, or (beta) replace the odd
+             powers of e, 1/e, a by rational upper/lower bounds certified on the box (Bernstein after squaring), choosing the direction so
+             that the majorant only increases.  Which of (alpha)/(beta) applies to each unit is recorded in v2 before execution.
       (C5.4) phi- and s-integration of the rational majorant by exact rational arithmetic where closed-form, otherwise by monotone/convex
              bounds and Bernstein on the box, with the few irrational constants (pi, sqrt) enclosed rationally as in pieces 2-3.
       ALTERNATIVE ROUTE (ii) (appendix candidate only, chat ruling item 3): algebraize the phi-integral by q = a sin phi before the
@@ -94,20 +103,28 @@ NOT inherited: (S1) D >= D_0 (needs a >= rho, false for s < 0, and D_0 degenerat
      U- and U+ have the same sign and |U±| >> 1 (e << |b| - rho); separate bounds would be of size O(1) each while the difference
      is O(U+ - U-) * sup g_k.  See (C5.2).
 
-## 5. Analytic obligations H-43-1 (chat label; Code reading of the split, to be confirmed)
- H-43-1(i) INTERNAL INTERCHANGE: the chain uses (S0) pointwise off the null set {D = 0} = two points, then integrates xi first, then
-     (phi, s).  All integrands after (C2) are nonnegative, so the order of integration and the xi-mean/integral interchange are
-     justified by Tonelli; the pairing (xi, phi) -> (-xi, pi - phi) is a measure-preserving involution of the (xi, phi) domain under
-     which 2N^2/(wD^5) is invariant (b -> -b, xi -> -xi; p -> -p, q, e, w unchanged).  Planned as a paper lemma L43-I (no computation).
- H-43-1(ii) ENDPOINT BOUNDARY VALUES: the finite-range xi-integral equals F_k(b+rho) - F_k(b-rho) only for e > 0; e = 0 is the null set
-     {sin phi = 0, s = 0}.  The (phi, s)-integrability near e -> 0 must be shown for the MAJORANT, not assumed: planned lemma L43-E,
-     stating  e^4 [G1(U+) - G1(U-)] <= 4/3  and  e^2 [G2(U+) - G2(U-)] <= 2/3  (from int over R of the scaled integrands) and the
-     boundedness of the (s, phi)-coefficients, so that the majorant is bounded on the band and the singular set is negligible.
-     UNRESOLVED until certified; this is the open endpoint obligation named by chat.
+## 5. Analytic obligations
+ H-43-1 (ORIGINAL obligation, text per chat ruling 2026-10-09; the pinned source statement is to be cited at FREEZE):
+   H-43-1(i)  interchange of differentiation and the surface integral in the FT_q density derivation (the xi-derivatives of the
+              integrated density vs the integral of F_rhorho).
+   H-43-1(ii) one-sided limits of the near-band expressions at the band boundary and their agreement with the Lemma V boundary values,
+              together with the improper-integral representation there.
+   Both are proof obligations of this contract, separate from L43-I / L43-E below, and are NOT replaced by them.  Status: OPEN.
+ L43-I (Code, paper): all integrands after (C2) are nonnegative, so integration order and the xi-mean/integral interchange are justified
+   by Tonelli; the pairing (xi, phi) -> (-xi, pi - phi) is a measure-preserving involution under which 2N^2/(wD^5) is invariant
+   (b -> -b, xi -> -xi; p -> -p, q, e, w unchanged); the set {D = 0} is two points.  Status: to be written; paper only.
+ L43-E (Code, paper derivation permitted as appendix A; NOT to be displayed as certified before audit):  with G_k(U) = int_0^U g_k,
+   DeltaG_1 := e^4 DeltaF_1 = G_1(U+) - G_1(U-) <= G_1(+inf) - G_1(-inf) = 4/3,   DeltaG_2 := e^2 DeltaF_2 = G_2(U+) - G_2(U-) <= 2/3
+   (correction C: the scaling is DeltaG_k = e^{2k} DeltaF_k, with F_k the certified antiderivatives and G_k their scaled forms).
+   These bound the ORIGINAL kernel units (unit 1 <= (4/3) b^2, unit 2 <= (2/3) A^2/e^2 <= 4(m-s)^2/(3L) + 4q^2/3) and remove the
+   singularity.  They do NOT bound the rational majorant of (C5.2) by themselves: the majorant's own endpoint behaviour is a separate
+   obligation L43-E' (H_k bounded on [0, inf) with H_k(+inf) explicit, so that the majorized units are <= H_1(+inf) b^2 and
+   <= H_2(+inf) A^2/e^2, then the same coefficient bounds apply).  Status: appendix A drafted (paper, unaudited); L43-E' open.
 
 ## 6. Planned lemmas (names fixed here; none certified yet)
- L43-I  interchange / pairing (paper).     L43-E  endpoint boundedness (definite-integral statement: NOT executed before PASS of this predeclare).
- L43-H  rational majorants H_k with H_k' >= g_k (polynomial Bernstein certificate).     L43-Q  (phi, s)-integration of the majorant (exact).
+ L43-I  interchange / pairing (paper).   L43-E  endpoint boundedness of the kernel units (paper, appendix A).   L43-E'  endpoint boundedness of the majorant.
+ L43-H  rational majorants H_k with H_k' >= g_k on [0, inf) (drafting authorized; Bernstein execution after predeclare PASS).
+ L43-Q  (phi, s)-integration of the rationalized majorant (exact; execution after predeclare PASS).   H-43-1(i),(ii)  as in section 5.
 
 ## 7. Governance and changelog
  Audit path: Astra L43 structure audit (independent; Code material not shared) -> chat collation -> this predeclare frozen as v1 (or v2)
@@ -115,3 +132,13 @@ NOT inherited: (S1) D >= D_0 (needs a >= rho, false for s < 0, and D_0 degenerat
  v1 changes (chat ruling 2026-10-09): [1] fixed evidence table; [2] (C5) main route (i) with difference structure, (C5.2) and 4(f);
  [3] route (ii) appendix-only; [4] H-43-1 split into (i)/(ii), section 5; [5] O(rho) motivation removed from 4(b); [6] singular points
  and non-inheritance in section 2; [7] (C6) budget deferred to the 22'' v1.2 pin; [8] formal submission after the Astra report; v1 addendum: (C5) inseparable units 1 and 2 (chat 2026-10-09).
+ v1.1 changes (chat pre-review A-D): [A] H-43-1 restored to its original meaning, Code items moved to L43-I/L43-E; [B] (C5.2) half-line
+ design, no odd extension, strict excess at infinity (matching the limit would force H_k' = g_k); [C] L43-E scaling DeltaG_k = e^{2k} DeltaF_k and
+ the separate majorant obligation L43-E'; [D] rationalization step (C5.3').
+
+## Appendix A (paper derivation, UNAUDITED; permitted by chat ruling 2026-10-09; not a certified lemma)
+ From the certified antiderivatives (db8ef8da), with p = e u:  F_1(p) = e^{-4} G_1(u),  G_1(u) = u(2u^2+3)/(3(1+u^2)^{3/2});
+ F_2(p) = e^{-2} G_2(u),  G_2(u) = u^3/(3(1+u^2)^{3/2}).  Both G_k are increasing (derivative g_k >= 0) and odd, with
+ lim_{u -> +inf} G_1 = 2/3 (leading term 2u^3/(3u^3)), lim_{u -> +inf} G_2 = 1/3.  Hence for any U- <= U+:
+ 0 <= G_k(U+) - G_k(U-) <= G_k(+inf) - G_k(-inf) = 2 G_k(+inf),  i.e.  DeltaG_1 <= 4/3,  DeltaG_2 <= 2/3,  equivalently
+ int_R (1+u^2)^{-5/2} du = 4/3  and  int_R u^2 (1+u^2)^{-5/2} du = 2/3.
