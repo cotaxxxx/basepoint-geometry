@@ -1,0 +1,261 @@
+{
+  "evidence_commit": "ff1e1a5351e2c8ed4bd816e168a08f5b17310e88",
+  "evidence_parent": "0c1189f9af5eb221abfc518b110e11dda345b4b0",
+  "repository": "cotaxxxx/basepoint-geometry",
+  "branch": "codex/l43-independent-audit-20261009",
+  "governance": "Submitted for CHAT AUDIT only; no countersign, FREEZE, or Code execution permission",
+  "artifacts": [
+    {
+      "name": "l43_graph_majorant_exact.py",
+      "path": "tools/d_ob_p2/ftq_cert/l43_independent_audit_2026_10_09/l43_graph_majorant_exact.py",
+      "sha256": "6187c2b0c22d3e1b75ede72da3f470185eb6d93722b25265974ce2e01488cf18",
+      "git_blob": "5ab1f7d2ca4343f43c9e520253ec9d904e791397",
+      "bytes": 9304,
+      "lines": 216,
+      "repository": "cotaxxxx/basepoint-geometry",
+      "branch": "codex/l43-independent-audit-20261009",
+      "full_commit": "ff1e1a5351e2c8ed4bd816e168a08f5b17310e88",
+      "parent_commit": "0c1189f9af5eb221abfc518b110e11dda345b4b0",
+      "immutable_url": "https://github.com/cotaxxxx/basepoint-geometry/blob/ff1e1a5351e2c8ed4bd816e168a08f5b17310e88/tools/d_ob_p2/ftq_cert/l43_independent_audit_2026_10_09/l43_graph_majorant_exact.py",
+      "readback": "Full file content and Git blob independently read back at the evidence commit and matched",
+      "state": "UNCHANGED from initial pinned delivery",
+      "execution": "Previously executed, fixed SHA verified; not rerun in this follow-up",
+      "dependencies": [
+        "Python 3.11.16",
+        "SymPy 1.14.0",
+        "accompanying analytic paper proof"
+      ]
+    },
+    {
+      "name": "exact_checks.stdout.txt",
+      "path": "tools/d_ob_p2/ftq_cert/l43_independent_audit_2026_10_09/exact_checks.stdout.txt",
+      "sha256": "8790c7912043b4c68f5a75fb2b51aa8895b41407d299e1b1db2d964556f9d2d8",
+      "git_blob": "2dcfc808918f5310b051b6cc8afd8adff334ec4e",
+      "bytes": 2099,
+      "lines": 47,
+      "repository": "cotaxxxx/basepoint-geometry",
+      "branch": "codex/l43-independent-audit-20261009",
+      "full_commit": "ff1e1a5351e2c8ed4bd816e168a08f5b17310e88",
+      "parent_commit": "0c1189f9af5eb221abfc518b110e11dda345b4b0",
+      "immutable_url": "https://github.com/cotaxxxx/basepoint-geometry/blob/ff1e1a5351e2c8ed4bd816e168a08f5b17310e88/tools/d_ob_p2/ftq_cert/l43_independent_audit_2026_10_09/exact_checks.stdout.txt",
+      "readback": "Full file content and Git blob independently read back at the evidence commit and matched",
+      "state": "UNCHANGED from initial pinned delivery",
+      "execution": "Unedited output of the fixed script",
+      "dependencies": [
+        "6187c2b0c22d3e1b75ede72da3f470185eb6d93722b25265974ce2e01488cf18",
+        "EXECUTION_PROVENANCE.json"
+      ]
+    },
+    {
+      "name": "exact_checks.json",
+      "path": "tools/d_ob_p2/ftq_cert/l43_independent_audit_2026_10_09/exact_checks.json",
+      "sha256": "2c3a1e4230ed98bf82df8dab800b4835894daa27ba538706362506b8966c546a",
+      "git_blob": "5dd85c2c2041fb065ad5554cc66d6aed59477120",
+      "bytes": 6249,
+      "lines": 288,
+      "repository": "cotaxxxx/basepoint-geometry",
+      "branch": "codex/l43-independent-audit-20261009",
+      "full_commit": "ff1e1a5351e2c8ed4bd816e168a08f5b17310e88",
+      "parent_commit": "0c1189f9af5eb221abfc518b110e11dda345b4b0",
+      "immutable_url": "https://github.com/cotaxxxx/basepoint-geometry/blob/ff1e1a5351e2c8ed4bd816e168a08f5b17310e88/tools/d_ob_p2/ftq_cert/l43_independent_audit_2026_10_09/exact_checks.json",
+      "readback": "Full file content and Git blob independently read back at the evidence commit and matched",
+      "state": "UNCHANGED from initial pinned delivery",
+      "execution": "Unedited output of the fixed script",
+      "dependencies": [
+        "6187c2b0c22d3e1b75ede72da3f470185eb6d93722b25265974ce2e01488cf18",
+        "EXECUTION_PROVENANCE.json"
+      ]
+    },
+    {
+      "name": "exact_checks.stderr.txt",
+      "path": "tools/d_ob_p2/ftq_cert/l43_independent_audit_2026_10_09/exact_checks.stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "git_blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "bytes": 0,
+      "lines": 0,
+      "repository": "cotaxxxx/basepoint-geometry",
+      "branch": "codex/l43-independent-audit-20261009",
+      "full_commit": "ff1e1a5351e2c8ed4bd816e168a08f5b17310e88",
+      "parent_commit": "0c1189f9af5eb221abfc518b110e11dda345b4b0",
+      "immutable_url": "https://github.com/cotaxxxx/basepoint-geometry/blob/ff1e1a5351e2c8ed4bd816e168a08f5b17310e88/tools/d_ob_p2/ftq_cert/l43_independent_audit_2026_10_09/exact_checks.stderr.txt",
+      "readback": "Full file content and Git blob independently read back at the evidence commit and matched",
+      "state": "ADDED or UPDATED in the follow-up evidence commit",
+      "execution": "Unedited output of the fixed script",
+      "dependencies": [
+        "6187c2b0c22d3e1b75ede72da3f470185eb6d93722b25265974ce2e01488cf18",
+        "EXECUTION_PROVENANCE.json"
+      ]
+    },
+    {
+      "name": "reproduction_manifest.json",
+      "path": "tools/d_ob_p2/ftq_cert/l43_independent_audit_2026_10_09/reproduction_manifest.json",
+      "sha256": "05ccc26e54868a964a94b13f3ffa665971ac5cf86507e097926d6ec353fbd316",
+      "git_blob": "e126fda7aae6e1674e106b107d8acaa9ffdc6479",
+      "bytes": 475,
+      "lines": 12,
+      "repository": "cotaxxxx/basepoint-geometry",
+      "branch": "codex/l43-independent-audit-20261009",
+      "full_commit": "ff1e1a5351e2c8ed4bd816e168a08f5b17310e88",
+      "parent_commit": "0c1189f9af5eb221abfc518b110e11dda345b4b0",
+      "immutable_url": "https://github.com/cotaxxxx/basepoint-geometry/blob/ff1e1a5351e2c8ed4bd816e168a08f5b17310e88/tools/d_ob_p2/ftq_cert/l43_independent_audit_2026_10_09/reproduction_manifest.json",
+      "readback": "Full file content and Git blob independently read back at the evidence commit and matched",
+      "state": "UNCHANGED from initial pinned delivery",
+      "execution": "Not an executable mathematical certificate",
+      "dependencies": [
+        "see the source pins and scopes in this manifest"
+      ]
+    },
+    {
+      "name": "EXECUTION_PROVENANCE.json",
+      "path": "tools/d_ob_p2/ftq_cert/l43_independent_audit_2026_10_09/EXECUTION_PROVENANCE.json",
+      "sha256": "27764700d3353197f222844c94e3664d082a1b824107a9d67e86f3fc601b620e",
+      "git_blob": "6a13cf4d745a51d110b37d138aef559a90864379",
+      "bytes": 2581,
+      "lines": 56,
+      "repository": "cotaxxxx/basepoint-geometry",
+      "branch": "codex/l43-independent-audit-20261009",
+      "full_commit": "ff1e1a5351e2c8ed4bd816e168a08f5b17310e88",
+      "parent_commit": "0c1189f9af5eb221abfc518b110e11dda345b4b0",
+      "immutable_url": "https://github.com/cotaxxxx/basepoint-geometry/blob/ff1e1a5351e2c8ed4bd816e168a08f5b17310e88/tools/d_ob_p2/ftq_cert/l43_independent_audit_2026_10_09/EXECUTION_PROVENANCE.json",
+      "readback": "Full file content and Git blob independently read back at the evidence commit and matched",
+      "state": "ADDED or UPDATED in the follow-up evidence commit",
+      "execution": "Not an executable mathematical certificate",
+      "dependencies": [
+        "see the source pins and scopes in this manifest"
+      ]
+    },
+    {
+      "name": "EXACT_CHECK_MAP.md",
+      "path": "tools/d_ob_p2/ftq_cert/l43_independent_audit_2026_10_09/EXACT_CHECK_MAP.md",
+      "sha256": "cdbe0097a9b583b70a086ee89283f66f6a4c9f2dbf5b6edbc4870493118dcc0d",
+      "git_blob": "a3215e0cdf19ed925b3c4fd7024b34bf1282ff1f",
+      "bytes": 6202,
+      "lines": 94,
+      "repository": "cotaxxxx/basepoint-geometry",
+      "branch": "codex/l43-independent-audit-20261009",
+      "full_commit": "ff1e1a5351e2c8ed4bd816e168a08f5b17310e88",
+      "parent_commit": "0c1189f9af5eb221abfc518b110e11dda345b4b0",
+      "immutable_url": "https://github.com/cotaxxxx/basepoint-geometry/blob/ff1e1a5351e2c8ed4bd816e168a08f5b17310e88/tools/d_ob_p2/ftq_cert/l43_independent_audit_2026_10_09/EXACT_CHECK_MAP.md",
+      "readback": "Full file content and Git blob independently read back at the evidence commit and matched",
+      "state": "ADDED or UPDATED in the follow-up evidence commit",
+      "execution": "Not an executable mathematical certificate",
+      "dependencies": [
+        "see the source pins and scopes in this manifest"
+      ]
+    },
+    {
+      "name": "D_OB_P2_L43_INDEPENDENT_AUDIT_2026_10_09.md",
+      "path": "tools/d_ob_p2/ftq_cert/l43_independent_audit_2026_10_09/D_OB_P2_L43_INDEPENDENT_AUDIT_2026_10_09.md",
+      "sha256": "9fc500bd486d325451ae049806673bdef400987c06f07cc16a4c174130e1b615",
+      "git_blob": "3f95ef5b82980affcc1e453393308acd099544ad",
+      "bytes": 33170,
+      "lines": 660,
+      "repository": "cotaxxxx/basepoint-geometry",
+      "branch": "codex/l43-independent-audit-20261009",
+      "full_commit": "ff1e1a5351e2c8ed4bd816e168a08f5b17310e88",
+      "parent_commit": "0c1189f9af5eb221abfc518b110e11dda345b4b0",
+      "immutable_url": "https://github.com/cotaxxxx/basepoint-geometry/blob/ff1e1a5351e2c8ed4bd816e168a08f5b17310e88/tools/d_ob_p2/ftq_cert/l43_independent_audit_2026_10_09/D_OB_P2_L43_INDEPENDENT_AUDIT_2026_10_09.md",
+      "readback": "Full file content and Git blob independently read back at the evidence commit and matched",
+      "state": "ADDED or UPDATED in the follow-up evidence commit",
+      "execution": "Not an executable mathematical certificate",
+      "dependencies": [
+        "see the source pins and scopes in this manifest"
+      ]
+    },
+    {
+      "name": "H43_ENDPOINT_LEMMA.md",
+      "path": "tools/d_ob_p2/ftq_cert/l43_independent_audit_2026_10_09/H43_ENDPOINT_LEMMA.md",
+      "sha256": "b1a906edeb21cef356d3d7810dbdc11d30773364620b174a425c441b826d6276",
+      "git_blob": "303d1d7c6aa1640590eb83434888c8c19ab44c3a",
+      "bytes": 11262,
+      "lines": 198,
+      "repository": "cotaxxxx/basepoint-geometry",
+      "branch": "codex/l43-independent-audit-20261009",
+      "full_commit": "ff1e1a5351e2c8ed4bd816e168a08f5b17310e88",
+      "parent_commit": "0c1189f9af5eb221abfc518b110e11dda345b4b0",
+      "immutable_url": "https://github.com/cotaxxxx/basepoint-geometry/blob/ff1e1a5351e2c8ed4bd816e168a08f5b17310e88/tools/d_ob_p2/ftq_cert/l43_independent_audit_2026_10_09/H43_ENDPOINT_LEMMA.md",
+      "readback": "Full file content and Git blob independently read back at the evidence commit and matched",
+      "state": "ADDED or UPDATED in the follow-up evidence commit",
+      "execution": "Not an executable mathematical certificate",
+      "dependencies": [
+        "see the source pins and scopes in this manifest"
+      ]
+    },
+    {
+      "name": "E43_CORRECTION_NOTICE_2026_10_09.md",
+      "path": "tools/d_ob_p2/ftq_cert/l43_independent_audit_2026_10_09/E43_CORRECTION_NOTICE_2026_10_09.md",
+      "sha256": "eadeda81783078826f51e7dd9baf8499997ed57c573e2aad4cfd23c2bbffd2d6",
+      "git_blob": "75068f4ba0a903ba811138592a78f1f182389dd6",
+      "bytes": 1789,
+      "lines": 27,
+      "repository": "cotaxxxx/basepoint-geometry",
+      "branch": "codex/l43-independent-audit-20261009",
+      "full_commit": "ff1e1a5351e2c8ed4bd816e168a08f5b17310e88",
+      "parent_commit": "0c1189f9af5eb221abfc518b110e11dda345b4b0",
+      "immutable_url": "https://github.com/cotaxxxx/basepoint-geometry/blob/ff1e1a5351e2c8ed4bd816e168a08f5b17310e88/tools/d_ob_p2/ftq_cert/l43_independent_audit_2026_10_09/E43_CORRECTION_NOTICE_2026_10_09.md",
+      "readback": "Full file content and Git blob independently read back at the evidence commit and matched",
+      "state": "ADDED or UPDATED in the follow-up evidence commit",
+      "execution": "Not an executable mathematical certificate",
+      "dependencies": [
+        "see the source pins and scopes in this manifest"
+      ]
+    },
+    {
+      "name": "HANDOFF_NOTES.md",
+      "path": "tools/d_ob_p2/ftq_cert/l43_independent_audit_2026_10_09/HANDOFF_NOTES.md",
+      "sha256": "ebe36df980edd6435de370e222b4d2537507a89ca92f45431578105ca15d18a4",
+      "git_blob": "22601a5c3e587e172b65c0c9c6e66a868e02b20f",
+      "bytes": 4219,
+      "lines": 56,
+      "repository": "cotaxxxx/basepoint-geometry",
+      "branch": "codex/l43-independent-audit-20261009",
+      "full_commit": "ff1e1a5351e2c8ed4bd816e168a08f5b17310e88",
+      "parent_commit": "0c1189f9af5eb221abfc518b110e11dda345b4b0",
+      "immutable_url": "https://github.com/cotaxxxx/basepoint-geometry/blob/ff1e1a5351e2c8ed4bd816e168a08f5b17310e88/tools/d_ob_p2/ftq_cert/l43_independent_audit_2026_10_09/HANDOFF_NOTES.md",
+      "readback": "Full file content and Git blob independently read back at the evidence commit and matched",
+      "state": "ADDED or UPDATED in the follow-up evidence commit",
+      "execution": "Not an executable mathematical certificate",
+      "dependencies": [
+        "see the source pins and scopes in this manifest"
+      ]
+    },
+    {
+      "name": "source_manifest.json",
+      "path": "tools/d_ob_p2/ftq_cert/l43_independent_audit_2026_10_09/source_manifest.json",
+      "sha256": "bb4caa9a0795b4f40242aa136f6f9fd5f746a848b70185b3283948f7b812b58d",
+      "git_blob": "279332bc6801702004395109d0f70d8d7b18bce7",
+      "bytes": 17910,
+      "lines": 370,
+      "repository": "cotaxxxx/basepoint-geometry",
+      "branch": "codex/l43-independent-audit-20261009",
+      "full_commit": "ff1e1a5351e2c8ed4bd816e168a08f5b17310e88",
+      "parent_commit": "0c1189f9af5eb221abfc518b110e11dda345b4b0",
+      "immutable_url": "https://github.com/cotaxxxx/basepoint-geometry/blob/ff1e1a5351e2c8ed4bd816e168a08f5b17310e88/tools/d_ob_p2/ftq_cert/l43_independent_audit_2026_10_09/source_manifest.json",
+      "readback": "Full file content and Git blob independently read back at the evidence commit and matched",
+      "state": "UPDATED",
+      "execution": "Not executable",
+      "dependencies": [
+        "All artifacts listed by this source/hash manifest"
+      ]
+    },
+    {
+      "name": "SHA256SUMS",
+      "path": "tools/d_ob_p2/ftq_cert/l43_independent_audit_2026_10_09/SHA256SUMS",
+      "sha256": "500bb3ba0f56428f63fb05e5f22fbf698cbdb03cd066c841691adfc514af6f89",
+      "git_blob": "76f5a724f1d65f7ed854abe856fdeedc104dd7f6",
+      "bytes": 1098,
+      "lines": 12,
+      "repository": "cotaxxxx/basepoint-geometry",
+      "branch": "codex/l43-independent-audit-20261009",
+      "full_commit": "ff1e1a5351e2c8ed4bd816e168a08f5b17310e88",
+      "parent_commit": "0c1189f9af5eb221abfc518b110e11dda345b4b0",
+      "immutable_url": "https://github.com/cotaxxxx/basepoint-geometry/blob/ff1e1a5351e2c8ed4bd816e168a08f5b17310e88/tools/d_ob_p2/ftq_cert/l43_independent_audit_2026_10_09/SHA256SUMS",
+      "readback": "Full file content and Git blob independently read back at the evidence commit and matched",
+      "state": "UPDATED",
+      "execution": "Not executable",
+      "dependencies": [
+        "All artifacts listed by this source/hash manifest"
+      ]
+    }
+  ]
+}
