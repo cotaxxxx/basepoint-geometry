@@ -1,0 +1,61 @@
+{
+  "schema": "cft-code-execution-provenance-v1",
+  "purpose": "First and only authorized execution of the Code c_FT certificate (STATIC AUDIT PASS, run permission per CHAT AUDIT ledger 2026-10-09)",
+  "source_pin": {
+    "repository": "cotaxxxx/basepoint-geometry",
+    "branch": "claude/d-ob-p2-resumable-i8dgpn",
+    "path": "tools/d_ob_p2/ftq_cert/cft_cert.py",
+    "commit": "31368987ca2a9b99d8765a418b45ba26fd81a925",
+    "git_blob": "ea4dc1475b03a993fbaf5aa397bea2feb62f4960",
+    "sha256": "0e4161ff20eb1934e088bca569e092344cae72ee68af9a4d906fd1953ae95b98"
+  },
+  "frozen_predeclare": {
+    "path": "tools/d_ob_p2/predeclare/CFT_PREDECLARE_DRAFT.md",
+    "commit": "b3127b4e987f2869392daa3ee0d7b1841380272d",
+    "git_blob": "e2ed7391ca5d65ccecacfd531605ecf1bac48bf0",
+    "sha256": "d63430c6768ada4f0fd397066c8281755a2ac014624706149fba036181bc458a"
+  },
+  "executed_file": {
+    "relative_path": "<isolated-dir>/cft_cert.py",
+    "sha256": "0e4161ff20eb1934e088bca569e092344cae72ee68af9a4d906fd1953ae95b98",
+    "git_hash_object": "ea4dc1475b03a993fbaf5aa397bea2feb62f4960",
+    "copy_verified_before_run": "blob and SHA-256 matched the source pin before execution"
+  },
+  "isolation": {
+    "directory": "new empty directory created immediately before the copy; only the certificate copy was present at run time",
+    "absolute_path_recorded": false
+  },
+  "host": {
+    "label": "code-cloud-session",
+    "hostname_recorded": false
+  },
+  "command": "python3 -I cft_cert.py > stdout.txt 2> stderr.txt   (run from inside the isolated directory)",
+  "environment": {
+    "python": "3.11.15",
+    "sympy": "1.14.0",
+    "os": "Linux 6.18.44-fc-v80",
+    "architecture": "x86_64",
+    "python_implementation": "CPython"
+  },
+  "timing_utc": {
+    "start": "2026-10-09T09:41:14Z",
+    "end": "2026-10-09T09:41:16Z"
+  },
+  "exit_code": 0,
+  "outputs": {
+    "stdout.txt": {
+      "sha256": "12968e4a258b5d638746319ed045611308df16e4608f9035a9ef95a4abab889b",
+      "lines": 21
+    },
+    "stderr.txt": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    }
+  },
+  "run_count": 1,
+  "worktree": {
+    "before": "clean at HEAD 31368987ca2a9b99d8765a418b45ba26fd81a925",
+    "after": "unchanged except the addition of this evidence directory"
+  },
+  "note": "Outputs stored unmodified. Evidence of an execution, not a CHAT AUDIT verdict; c_FT is not formally set until CHAT AUDIT of this evidence."
+}

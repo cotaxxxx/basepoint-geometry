@@ -1,0 +1,21 @@
+(K1) Delta = S''_lb - U_far - U_near equals the contract 43 run value: PASS Delta = 1622585478106563/345696260672000000
+(K1) Delta > 0: PASS 
+(K2) polynomial division: x^4(1-x)^4 = (x^6-4x^5+5x^4-4x^2+4)(1+x^2) - 4: PASS 
+(K2) int_0^1 x^4(1-x)^4/(1+x^2) dx == 22/7 - pi  (exact symbolic): PASS 
+(K2) P_hi == 2*(22/7)*(93/200) as an exact Fraction: PASS P_hi = 1023/350
+(K2) P_hi > 0: PASS 
+(K3) c_FT = Delta/P_hi is an exact Fraction and c_FT > 0: PASS 
+(K4) m0 == min(c_FT, 13/2000) (exact comparison): PASS c_FT <= 13/2000, m0 = c_FT
+(K5) Delta = 1622585478106563/345696260672000000  (~0.004693674)
+(K5) P_hi  = 1023/350  (~2.922857143)
+(K5) c_FT  = 540861826035521/336806928254720000  (~0.001605851)   [exact rational, no rounding]
+(K5) m0    = 540861826035521/336806928254720000  (~0.001605851)   [c_FT <= 13/2000, m0 = c_FT]
+SCOPE OF THIS CERTIFICATE RUN
+  machine-checked here: (K1) exact recomputation of Delta and equality with the contract 43 run value; (K2) polynomial division and the
+    exact integral identity for 22/7 - pi, and P_hi as an exact Fraction; (K3) c_FT exact and positive; (K4) m0 by exact comparison.
+  paper steps relied on (NOT machine-verified here): positivity of x^4(1-x)^4/(1+x^2) on (0,1) (so 22/7 - pi > 0); (R1) H >= Delta/(2 pi lambda)
+    from 2 pi lambda H = int G (H-43-1(i) closure c4d49d81) and int G >= S''_lb - U_north - U_near (22'' v1.2; closure record v1 incl. R-G);
+    lambda <= 93/200 from the frozen box; the rho = 0 endpoint via NP-T (9.1) and continuity of H (P1 Lemma 6.1(iii)).
+  external items NOT re-verified by this run: the CHAT AUDIT states of S''_lb, U_north, U_near, R-G and the 22'' closure record; the
+    Boundary Pair Lemma (8.1) in the R J form; FT_q discharge; D-P2.  This run does not certify D-P2.
+RESULT: ALL IMPLEMENTED CHECKS PASS; c_FT and m0 as printed are subject to CHAT AUDIT of this run; NOT a D-P2 certification
