@@ -1,6 +1,6 @@
 # Contract 43 — H-43-1(i) evidence closure document (Code, 2026-10-09)
 
-Status: SUBMITTED FOR CHAT AUDIT.  H-43-1(i) source collation: PASS (chat); this document is the evidence closure requested by chat.
+Status: SUBMITTED FOR CHAT AUDIT (addendum 1: §3(C) FT_q (3.2) pin and connection to the surface-integral representation).  H-43-1(i) source collation: PASS (chat); this document is the evidence closure requested by chat.
 Contract 43: FROZEN (machine checks CLOSED by the authorized run bd512f53).  c_FT UNSET.  D-P2 NOT_CERTIFIED.  Nothing here changes those states.
 
 ## 1. Obligation (as fixed in predeclare v3.4.1 §4, commit 97d85f5914e23f593fc2a41baeb883645f5ce994)
@@ -47,6 +47,29 @@ Corollary 4.3 (line 79, uniform integrability of C2/(wD)).  Their internal proof
   integrals, and the improper-integral representation are H-43-1(ii): CLOSED by chat ruling on Astra's lemma ((3.E1), (3.E3)-(3.E6)).
 - Consequence used by Contract 43: K_H = (calF_xi(rho-) - calF_xi(-rho+))/(2 rho) = (1/(2 rho)) integral_{-rho}^{rho} calF_xixi dxi a.e. in (mu, phi),
   and the (xi, mu, phi) integrals may be reordered (nonnegative majorant, Tonelli).  This is where (I) and (B) are consumed by the N3 chain (S0).
+### (C) Connection to the surface-integral representation (FT_q §3 (3.2)) — addendum 1 (chat CONDITIONAL PASS item)
+Source pin: `cotaxxxx/bg-oblate-spheroid`, `analysis/D_OB_P2_D_AN1_FT_Q_DRAFT.md`, commit 20c5c59bd74f940fe0b1e05892bd2169e09d4fde,
+git blob 1c449fb4fb791f750668c44605156454cfff42af, SHA-256 46443f0e981f360e57fb70d99754b0e480042d246e22d36732b00b96102a9cd1, 269 lines.
+Lines used: 58 ("For rho>0, P1 Lemma 6.1 gives H(rho,z)=E_rho(rho,z)/rho"), 72 ("Because dA/w=dmu dphi,"),
+74 ("E_rho=(1/(4 pi lambda)) integral integral F_rho dphi dmu.  (3.2)").  P1 Lemma 6.1: P1 note line 107 (pin of §2).
+Chain from (3.2) to the P-unit form used by Contracts 43/45 and by 22'' v1.2 (each step and the evidence it rests on):
+ (C1) Lemma V(a)/(b) with dA/w = dmu dphi (FT_q line 72): for |xi| < rho, E_rho(xi) = (1/(4 pi lambda)) integral_{-1}^{1} integral_0^{2 pi} calF_xi dphi dmu and
+      E_rhorho(xi) = (1/(4 pi lambda)) integral integral calF_xixi dphi dmu.  This is (3.2) at interior base points, i.e. part (I) above.
+ (C2) P1 Lemma 6.1(i) (E even in rho, so E_rho odd) and (iii) (H = E_rho/rho for rho > 0):
+      H = E_rho(rho)/rho = [E_rho(rho) - E_rho(-rho)]/(2 rho).  The boundary values E_rho(+-rho) are the continuous extensions of Lemma V(c), part (B).
+ (C3) FTC on [-rho, rho] for the continuous E_rho (Lemma V(b) inside, Lemma V(c) at the ends; P1 Lemma 6.1(ii) is the same argument):
+      E_rho(rho) - E_rho(-rho) = integral_{-rho}^{rho} E_rhorho(xi) dxi.
+ (C4) Insert (C1) and exchange the xi-integral with the surface integral.  The exchange is justified by Fubini: |calF_xixi| <= (2 pi + 2)/D and
+      int_{-rho}^{rho} int int D^{-1} dphi dmu dxi < infinity (Astra report (3.2)-(3.3); P1 Corollary 4.3 for the uniform bound); the singular set
+      {D = 0} has measure zero.  The pointwise one-sided traces needed to identify the xi-integral of calF_xixi with the trace difference
+      calF_xi(rho-) - calF_xi(-rho+) are H-43-1(ii) (AL (3.E6), CLOSED).  Result:
+      4 pi lambda H = integral_{-1}^{1} integral_0^{2 pi} K_H dphi dmu,   K_H := (1/(2 rho)) integral_{-rho}^{rho} calF_xixi dxi = (calF_xi(rho-) - calF_xi(-rho+))/(2 rho)  a.e.
+ (C5) Reflection y -> -y (phi -> 2 pi - phi) fixes the base points (xi, 0, lambda m) and the surface, so K_H(mu, 2 pi - phi) = K_H(mu, phi) and
+      integral_0^{2 pi} = 2 integral_0^{pi}.  Hence  2 pi lambda H = integral_{-1}^{1} G(mu) dmu,  G(mu) := integral_0^{pi} K_H dphi,
+      which is the P-unit normalization stated in 22'' v1.2 (canonical d445b302, header "Units") and used by Contracts 43/45 (with the outer factor pi
+      coming from R <= pi/2 in contract 44 (N2)).
+ Steps (C1), (C3) inside the open interval are interior statements (part (I)); the endpoint values in (C2)-(C4) are boundary statements (part (B)).
+
 ### What is NOT closed by this document
 - The P1 note's own status (NOT_BINDING, EXTERNAL_AUDIT_PENDING) is unchanged; this document relies on its Lemma V(b)/(c) text as pinned above
   and on Astra's independent re-derivation.  If chat requires the P1 note itself to be audited before (i) is CLOSED, that is a separate gate.
@@ -55,6 +78,7 @@ Corollary 4.3 (line 79, uniform integrability of C2/(wD)).  Their internal proof
 ## 4. Pins of all evidence cited
 | item | repository / path | commit | blob | SHA-256 |
 |---|---|---|---|---|
+| FT_q reduction draft §3 (3.2) | bg-oblate-spheroid / analysis/D_OB_P2_D_AN1_FT_Q_DRAFT.md | 20c5c59bd74f940fe0b1e05892bd2169e09d4fde | 1c449fb4fb791f750668c44605156454cfff42af | 46443f0e981f360e57fb70d99754b0e480042d246e22d36732b00b96102a9cd1 |
 | P1 design note (Lemma V) | bg-oblate-spheroid / analysis/D_OB_P1_DESIGN_NOTE.md | 69e104602e939817b6f4d71df3f6bd63cbc729e0 | f81e120e44a866d206117d4fab5fac627f26ccd1 | 2c304ee6159f6cf7012ca8fb6068d9e14a4bf8a9d01ceb756395d759145012e9 |
 | Astra H-43-1(ii)-E lemma | basepoint-geometry / tools/d_ob_p2/ftq_cert/l43_independent_audit_2026_10_09/H43_ENDPOINT_LEMMA.md | ff1e1a5351e2c8ed4bd816e168a08f5b17310e88 | 303d1d7c6aa1640590eb83434888c8c19ab44c3a | b1a906edeb21cef356d3d7810dbdc11d30773364620b174a425c441b826d6276 |
 | Astra report §3 | same dir / D_OB_P2_L43_INDEPENDENT_AUDIT_2026_10_09.md | ff1e1a5351e2c8ed4bd816e168a08f5b17310e88 | 3f95ef5b82980affcc1e453393308acd099544ad | 9fc500bd486d325451ae049806673bdef400987c06f07cc16a4c174130e1b615 |
