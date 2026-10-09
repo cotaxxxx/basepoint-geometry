@@ -1,0 +1,60 @@
+{
+  "schema": "l43-code-execution-provenance-v1",
+  "purpose": "First and only authorized execution of the frozen Code certificate (Contract 43), per CHAT AUDIT FREEZE ruling of 2026-10-09",
+  "source_pin": {
+    "repository": "cotaxxxx/basepoint-geometry",
+    "branch": "claude/d-ob-p2-resumable-i8dgpn",
+    "path": "tools/d_ob_p2/ftq_cert/north_near_l43_cert.py",
+    "commit": "7f71fb433dfabf2e99dc52d9fa775b0ae50dee30",
+    "git_blob": "3a4ce931b8fbd50ff4db7dda88ae86cea3427dc4",
+    "sha256": "4c2d6eb97c5f74bdca2cd75c22e53fdbac420235b9d69633ee27290e7fdf7fa4"
+  },
+  "frozen_predeclare": {
+    "path": "tools/d_ob_p2/predeclare/CONTRACT43_NEAR_BAND_PREDECLARE_DRAFT.md",
+    "commit": "97d85f5914e23f593fc2a41baeb883645f5ce994",
+    "git_blob": "5f121c5eeff241e6a2a50ae6114a17a158ffac67"
+  },
+  "executed_file": {
+    "relative_path": "<isolated-dir>/north_near_l43_cert.py",
+    "sha256": "4c2d6eb97c5f74bdca2cd75c22e53fdbac420235b9d69633ee27290e7fdf7fa4",
+    "git_hash_object": "3a4ce931b8fbd50ff4db7dda88ae86cea3427dc4",
+    "copy_verified_before_run": "blob and SHA-256 matched the frozen pin before execution"
+  },
+  "isolation": {
+    "directory": "new empty directory created immediately before the copy; only the certificate copy was present at run time",
+    "absolute_path_recorded": false
+  },
+  "host": {
+    "label": "code-cloud-session",
+    "hostname_recorded": false
+  },
+  "command": "python3 -I north_near_l43_cert.py > stdout.txt 2> stderr.txt   (run from inside the isolated directory)",
+  "environment": {
+    "python": "3.11.15",
+    "sympy": "1.14.0",
+    "os": "Linux 6.18.44-fc-v80",
+    "architecture": "x86_64",
+    "python_implementation": "CPython"
+  },
+  "timing_utc": {
+    "start": "2026-10-09T05:42:33Z",
+    "end": "2026-10-09T05:42:35Z"
+  },
+  "exit_code": 0,
+  "outputs": {
+    "stdout.txt": {
+      "sha256": "b377ee8f9787c30c617bac604e9ed094969eec17b1211c8000d3e7d6c49b090b",
+      "lines": 54
+    },
+    "stderr.txt": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    }
+  },
+  "run_count": 1,
+  "worktree": {
+    "before": "clean at HEAD 7f71fb433dfabf2e99dc52d9fa775b0ae50dee30",
+    "after": "unchanged except the addition of this evidence directory"
+  },
+  "note": "Outputs are stored unmodified. This record is evidence of an execution, not a CHAT AUDIT verdict; Contract 43 and D-P2 status are unchanged by this file."
+}

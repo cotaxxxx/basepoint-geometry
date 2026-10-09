@@ -1,0 +1,54 @@
+(A1) N == lambda[xi D^2 + (t/2)(D^2 - (1-L)s^2 - delta)]: PASS 
+(A1) delta == (mu_xi + m) l: PASS 
+(A2) 2h/lambda == D^2 + (1-L)s^2 + delta: PASS 
+(A2) |n|^2 w^2 == w^2 and |e|^2 D^2 == D^2 (unit vectors): PASS 
+(A2) (nu - gamma kappa) w D^2 == N: PASS 
+(A2) Gram: (w^2 D^2 - h^2)(D^2 - (b-xi)^2) - (lambda b D^2 - h(b-xi))^2 == (mu + L s)^2 y^2 D^2: PASS 
+(A3) a^2 == 2 m rho at mu = m - rho  (a^2 <= 2 m rho on the band since mu >= m - rho >= 0): PASS 
+(A3) m - rho >= 112/113 - 15/113 = 97/113: PASS 
+(A3) Jacobian: d/da sqrt(1 - a^2) == -a/sqrt(1 - a^2)  (mu dmu = -a da; db dy = a da dphi): PASS 
+(A3) (9/25)(1-z)^2 - 2z > 0 on z in [0, 15/112]  (|grad g|^2 <= 2 m rho/(m - rho)^2 < 9/25): PASS Bernstein coefficients [9/25, 249/1400, 681/313600]
+(A3) rho/m <= 15/112 on the box: PASS 
+(A4) SOS: (5/4)(s+l)^2 + 5 l^2 - s^2 == (s/2 + 5 l/2)^2: PASS 
+(A4) SOS: 4(s+l)^2 + (4/3) s^2 - l^2 == (4 s + 3 l)^2/3: PASS 
+(A4) (5/4)(9/25) == 9/20;  (21/25)(9/20) == 189/500;  (21/25)*5 == 21/5: PASS 
+(A4) 1/50 - (21/20) z^2 > 0 on [0, 15/112]  ((21/5) l^2 <= (21/20) z^2 delta): PASS Bernstein coefficients [1/50, 1/50, 209/179200]
+(A4) 1/12 - (9/25) L > 0 on [4/25, 8649/40000]  (1 + 4 L k^2 <= 4/3): PASS Bernstein coefficients [193/7500, 16477/3000000]
+(A4) 1 - m == rho^2/(1 + m)  (so l <= 1 - m <= rho^2/(2m)): PASS 
+(A5) N == lambda D^2 (xi + t zeta/2)   [identity (A1) in the zeta form]: PASS 
+(A5) c_g = 51/50 = 1 + 1/50 and 189/500 <= 1  (so (1-L)s^2 <= D^2 + delta/50, zeta >= -c_g delta/D^2): PASS 
+(A6) int_0^pi |cos| == 2 (split at pi/2);  int_0^pi cos^2 == pi/2: PASS 
+(A6) <xi^2> = rho^2/3, <|xi|> = rho/2 (by symmetry), <delta> = 2 rho^2/3: PASS 
+(A6) d/dr[arsinh(r/d) - r/sqrt(r^2+d^2)] == r^2 (r^2+d^2)^(-3/2): PASS 
+(A6) int_0^inf r^3 (r^2+d^2)^(-5/2) dr == 2/(3d): PASS 
+(A6) (1 + x)^2 - (1 + x^2) == 2x >= 0  (sqrt(1+x^2) <= 1 + x, hence arsinh x <= log(1 + 2x)): PASS 
+(A6) w^2 - W(lambda)^2 == (mu^2 - mu_0^2)(1 - L)  with w^2 = mu^2 + L(1 - mu^2): PASS 
+(A6) d/dlambda [lambda/W] == mu_0^2/W^3 > 0;  d/dlambda [lambda^2/W] == lambda(2 mu_0^2 + lambda^2(1 - mu_0^2))/W^3 > 0: PASS 
+(A6) depth: delta^2/d_l <= 2 delta/lambda since d_l = lambda l >= lambda delta/2;  cross: d_l >= delta/5 since lambda >= 2/5: PASS 
+(A7) rho <= r_0 = 15/113 (rho^2 = 1 - m^2 <= 1 - (112/113)^2 = (15/113)^2): PASS 
+(A7) R_e = sqrt(2 m rho) + rho <= sqrt(2 r_0) + r_0 < H_0 = 13/20   (2 r_0 < (H_0 - r_0)^2, m <= 1): PASS 
+(A7) (4/3)^(3/2) < 77/50;  (4/3)^(5/2) < 103/50: PASS 
+(A7) W(93/200)^2 - (89/100)^2 == 211911/127690000 > 0: PASS 
+(A7) 1 + 10 H_0/r_0^2 == 166447/450: PASS 
+(A7) sum_{j<=10} 6^j/j! == 67591/175 > 166447/450  (=> e^6 > 1 + 10 H_0/r_0^2, log(...) < 6): PASS 
+(A7) pi < 22/7: int_0^1 x^4(1-x)^4/(1+x^2) dx == 22/7 - pi > 0: PASS 
+(A8) T_curv = 20682286967199/152962947200000 (~0.135211);  T_cross = 4323211299/110234777000 (~0.039218);  T_depth = 3014712459/59751151250 (~0.050454)
+(A8) U_43^N3 <= 3887073979116207/17284813033600000  (~0.224884)
+(A8) U_43^N3 < 9/40: PASS 9/40 - U = 2008953443793/17284813033600000
+(A8) cross-check against the value stated in the Astra report (independent re-derivation agrees): PASS 
+(C6.0) BUDGET_V12 == S''_lb - U_far,cert: PASS 
+(C6) U_43^N3 < BUDGET_V12 (22'' v1.2 near-band residual): PASS BUDGET_V12 - U = 1622585478106563/345696260672000000
+(C6) final margin S''_lb - U_north,cert - U_43^N3 = 1622585478106563/345696260672000000  (~0.004694)  [exact rational]
+SCOPE OF THIS CERTIFICATE RUN
+  machine-checked here: ring identities (A1), (A2), (A5); SOS identities (A4); Bernstein positivity (A3), (A4); symbolic integrals,
+    antiderivatives and limits (A6); rational constants, enclosures and monotone evaluation points (A7); exact arithmetic (A8).
+  paper steps relied on (stated in the docstring, NOT machine-verified): Cauchy-Schwarz consequence of the Gram identity (A2);
+    mean-value/Lipschitz bound on the convex disk and the triangle inequality for R_e (A3); assembly of (A4) into (1-L)s^2 <= (189/500)r^2
+    + delta/50 and D^2 >= (3/4)(r^2 + L l^2); the zeta-interval and the one-sided majorant (A5); region extension, Tonelli/order of
+    integration, and the rho/R_e/lambda monotonicity used to evaluate at (r_0, H_0, 93/200) (A6)-(A7); normalization (S0) of contract 44.
+  external items, ledger state at the time of this source version (2026-10-09): H-43-1(ii) CLOSED by chat ruling on Astra's independent
+    lemma (H43_ENDPOINT_LEMMA.md, SHA-256 b1a906ed...); Astra deliverables pinned and exact script CHAT AUDIT PASS; 22'' v1.2 pinned
+    (canonical d445b302...).  These are NOT re-verified by this run.
+  external obligations NOT covered by this run: H-43-1(i) formal source pin and evidence closure; the paper steps listed above;
+    the CHAT AUDIT of this run's output and the FREEZE/run-permission bookkeeping.  This run certifies nothing about D-P2.
+RESULT: ALL IMPLEMENTED CHECKS PASS INCLUDING C6; paper steps and external obligations above remain subject to CHAT AUDIT; NOT a D-P2 certification
