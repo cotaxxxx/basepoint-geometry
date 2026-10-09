@@ -1,6 +1,7 @@
 """Contract 43 (north near band) -- Code INDEPENDENT exact certificate of the L43 single-piece chain.
 
-STATUS AT COMMIT: SOURCE ONLY.  NOT EXECUTED.  Syntax checked with ast.parse only (chat permission 2026-10-09; no import, no run).  Execution and use of its output as evidence are authorized only after
+STATUS AT COMMIT: SOURCE ONLY.  NOT EXECUTED.  Syntax checked with ast.parse only (chat permission 2026-10-09; no import, no run).
+BUDGET_V12 set after the canonical 22'' v1.2 pin (chat instruction 2026-10-09); execution still requires the explicit FREEZE and run permission.  Execution and use of its output as evidence are authorized only after
 the FREEZE of predeclare v3 (CONTRACT43_NEAR_BAND_PREDECLARE_DRAFT.md) by explicit chat ruling.
 INDEPENDENCE DECLARATION: this file was written by Code from the predeclare v3 chain (A1)-(A8) and Code's own collation; Code has never
 received or seen Astra's `l43_graph_majorant_exact.py`; nothing here is imported or copied from it.
@@ -31,7 +32,8 @@ the stated interval; "SOS" = exact sum-of-squares identity; "paper" = elementary
        monotonicity in rho and R_e of every term                                                     paper (each term is a product of increasing factors;
                                                                                                     rho^3 log(1 + 10 H_0/rho^2): 3 log(1+x) >= 2x/(1+x))
  (A8)  U_43^{N3} <= T_curv + T_cross + T_depth (exact rationals), sum < 9/40                             exact arithmetic
- (C6)  comparison with the frozen budget text: PENDING until the 22'' v1.2 pin (BUDGET_V12 below is None until then)
+ (C6)  comparison with the frozen budget text 22'' v1.2 (canonical commit d445b302…): U_43^{N3} < BUDGET_V12 = S''_lb - 5481/10000 = 187614363159/817216000000,
+       and the final margin S''_lb - U_north,cert - U_43^{N3} is printed as an exact rational
 """
 from fractions import Fraction as Q
 from itertools import product
@@ -172,10 +174,17 @@ check("(A8) U_43^N3 < 9/40", U43 < Q(9, 40), f"9/40 - U = {Q(9, 40) - U43}")
 check("(A8) cross-check against the value stated in the Astra report (independent re-derivation agrees)", U43 == Q(3887073979116207, 17284813033600000))
 
 # ------------------------------------------------------------------ (C6)
-BUDGET_V12 = None      # set to the pinned 22'' v1.2 near-band residual (Fraction) ONLY after the v1.2 commit/SHA-256 pin; never before.
+# 22'' v1.2 pinned (canonical cotaxxxx/bg-oblate-spheroid, design/d-ob-p2, commit d445b302bd879b5dc5211c7ba310d5aef036f31e,
+# blob 6340cb3e1dcb7387e4044013fb9f77a9cd21788a, SHA-256 3ef26f903d15c11449e583a917723ffcbaff7217b76f3fc65284e02b820b4640; CHAT AUDIT PASS):
+# budget U_north + U_near < S''_lb with S''_lb = 635530452759/817216000000 and certified U_north < 5481/10000 (contract 45 pieces 1-3).
+S_LB = Q(635530452759, 817216000000)
+U_FAR_CERT = Q(5481, 10000)
+BUDGET_V12 = Q(187614363159, 817216000000)      # = S''_lb - 5481/10000, the near-band residual of 22'' v1.2
+check("(C6.0) BUDGET_V12 == S''_lb - U_far,cert", BUDGET_V12 == S_LB - U_FAR_CERT)
 c6_done = BUDGET_V12 is not None
 if c6_done:
-    check("(C6) U_43^N3 < pinned near-band budget", U43 < BUDGET_V12, f"margin = {BUDGET_V12 - U43}")
+    check("(C6) U_43^N3 < BUDGET_V12 (22'' v1.2 near-band residual)", U43 < BUDGET_V12, f"BUDGET_V12 - U = {BUDGET_V12 - U43}")
+    print(f"(C6) final margin S''_lb - U_north,cert - U_43^N3 = {S_LB - U_FAR_CERT - U43}  (~{float(S_LB - U_FAR_CERT - U43):.6f})  [exact rational]")
 else:
     print("(C6) budget comparison: PENDING (22'' v1.2 not pinned; no number is asserted)")
 
