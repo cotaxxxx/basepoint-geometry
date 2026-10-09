@@ -196,8 +196,11 @@ print("  paper steps relied on (stated in the docstring, NOT machine-verified): 
 print("    mean-value/Lipschitz bound on the convex disk and the triangle inequality for R_e (A3); assembly of (A4) into (1-L)s^2 <= (189/500)r^2")
 print("    + delta/50 and D^2 >= (3/4)(r^2 + L l^2); the zeta-interval and the one-sided majorant (A5); region extension, Tonelli/order of")
 print("    integration, and the rho/R_e/lambda monotonicity used to evaluate at (r_0, H_0, 93/200) (A6)-(A7); normalization (S0) of contract 44.")
-print("  external obligations NOT covered: H-43-1(i) formal pin and closure; H-43-1(ii) (Astra independent lemma, Lemma V boundary values);")
-print("    Astra deliverables pin/audit; 22'' v1.2 pin; FREEZE and CHAT AUDIT of this run.")
+print("  external items, ledger state at the time of this source version (2026-10-09): H-43-1(ii) CLOSED by chat ruling on Astra's independent")
+print("    lemma (H43_ENDPOINT_LEMMA.md, SHA-256 b1a906ed...); Astra deliverables pinned and exact script CHAT AUDIT PASS; 22'' v1.2 pinned")
+print("    (canonical d445b302...).  These are NOT re-verified by this run.")
+print("  external obligations NOT covered by this run: H-43-1(i) formal source pin and evidence closure; the paper steps listed above;")
+print("    the CHAT AUDIT of this run's output and the FREEZE/run-permission bookkeeping.  This run certifies nothing about D-P2.")
 if not ok:
     print("RESULT: SOME CERTIFICATE CHECK FAILED -- NOT CERTIFIED"); raise SystemExit(1)
 if not c6_done:
