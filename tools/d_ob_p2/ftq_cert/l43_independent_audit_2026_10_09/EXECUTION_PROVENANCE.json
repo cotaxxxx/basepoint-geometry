@@ -1,0 +1,56 @@
+{
+  "script_sha256": "6187c2b0c22d3e1b75ede72da3f470185eb6d93722b25265974ce2e01488cf18",
+  "device": "daybreak-works",
+  "device_id": "fc5b5e63-ea7a-4512-a840-f95669ec2172",
+  "final_start_record": {
+    "timestamp": "10/09/2026, 07:41:34",
+    "toolName": "start_process",
+    "arguments": {
+      "command": "/home/daybreak/basepoint-geometry-artifacts/ftq-c7743c7-independent-20261009-01/venv311/bin/python -I /home/daybreak/basepoint-geometry-artifacts/l43-independent-20261009-01/l43_graph_majorant_exact.py --json /home/daybreak/basepoint-geometry-artifacts/l43-independent-20261009-01/exact_checks.json > /home/daybreak/basepoint-geometry-artifacts/l43-independent-20261009-01/exact_checks.stdout.txt 2> /home/daybreak/basepoint-geometry-artifacts/l43-independent-20261009-01/exact_checks.stderr.txt",
+      "timeout_ms": 3000
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": "Process started with PID 910823 (shell: /bin/bash)\nInitial output:\n"
+        }
+      ]
+    },
+    "duration": 655
+  },
+  "completion_record": {
+    "timestamp": "10/09/2026, 07:42:10",
+    "toolName": "read_process_output",
+    "arguments": {
+      "pid": 910823,
+      "length": 20,
+      "timeout_ms": 1000
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": "[Reading 0 new lines (total: 0 lines)]\n\n(No output in requested range)\n✅ Process completed with exit code 0 (runtime: 0.65s)"
+        }
+      ]
+    },
+    "duration": 0
+  },
+  "output_file_metadata_tool_result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "size: 6249\ncreated: \"2026-10-08T22:29:59.348Z\"\nmodified: \"2026-10-08T22:41:34.464Z\"\naccessed: \"2026-10-08T22:42:13.351Z\"\nisDirectory: false\nisFile: true\npermissions: 664\nfileType: text\nlineCount: 288\nlastLine: 287\nappendPosition: 288"
+      },
+      {
+        "type": "text",
+        "text": "\n[executed on device: daybreak-works (fc5b5e63-ea7a-4512-a840-f95669ec2172)]"
+      }
+    ],
+    "isError": false
+  },
+  "timestamp_note": "Tool-call timestamps were emitted as locale strings without an explicit timezone offset; they are preserved literally. The output file's modified time is independently recorded in UTC. File modification time is not substituted for process start time.",
+  "earlier_execution_attempts": "Earlier development runs occurred at tool-history times 10/09/2026, 07:29:59 and 07:38:45. They are not the pinned 6187c2b0... run and their outputs are not submitted as its evidence.",
+  "retrieval_date": "2026-10-09"
+}

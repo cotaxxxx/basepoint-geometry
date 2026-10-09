@@ -2,6 +2,10 @@
 
 日付：2026-10-09（Asia/Tokyo）。作成：この会話の Codex。
 
+追補版：2026-10-09。初版 commit `0c1189f9af5eb221abfc518b110e11dda345b4b0` を保存し、
+Judge の案A採用と chat 数学監査 PASS（条件付き）の伝達を受けて §3.1・§7・納品記録を追記した。
+Code の26検査一致は照合所見であり countersign ではない。exact スクリプトと既存出力は変更していない。
+
 **数学的結論：訂正後の near band で Q0–Q7 に必要な局所構造と積分上界を証明した。**
 本稿の新しい解析的評価は
 
@@ -12,13 +16,18 @@ U_{43}^{N3}\le
 <\frac{187614363159}{817216000000}.
 \]
 
-ただし、新証明の独立 countersign、Contract 43 への正式採用、22″ v1.2 の commit・freeze は別工程である。
-本稿はこれらを実行・代行しない。**Contract 43 の正式台帳は OPEN、D-P2 は NOT_CERTIFIED のまま。**
+Judge は本連鎖を Contract 43 の証明構造として採用した（ユーザー伝達、2026-10-09）。
+chat の数学監査は条件付き PASS。Predeclare v3 の設計 PASS と v3.1 の pin 更新監査 PASS は
+今回の正式指示で確認した。§3.1 の新追補、Astra exact スクリプトの CHAT AUDIT、
+22″ v1.2 の正式 pin、明示的 FREEZE 裁定は別工程である。Code 証明書は未実行・実行禁止のまま。
+**Contract 43 の正式台帳は OPEN、D-P2 は NOT_CERTIFIED のまま。**
 
 ## 0. 原典・訂正・監査範囲
 
 原典の取得先は `cotaxxxx/basepoint-geometry` と `cotaxxxx/bg-oblate-spheroid`。
 全ファイルの repository / path / commit / Git blob / SHA-256 / 行数は同梱 `source_manifest.json` に記録した。
+追補で照合した統治文書、Code 所見、成果物ハッシュ、残存義務も同 manifest の更新版に記録した。
+初版 manifest は commit `0c1189f9af5eb221abfc518b110e11dda345b4b0` に保存されている。
 Code ブランチの取得時点は `a11def1e4eab235e4340fa5950899b0d4e7e3dee`。
 既存の PASS 判定を新補題の証明には用いず、以下で幾何と積分評価を独立に導出する。
 
@@ -56,10 +65,19 @@ Q0「N3 の ξ 平均表式がこの帯で可積分に成立するか」を最�
 **E-43-2：** 上記 `63bfc769...` は SHA-256 であって Git blob ではない。
 
 この監査記録には「Contract 43 領域を far Piece 1 区間と誤記、E-43-1 で訂正」を記録する。
-中央台帳自体は変更していない。Astra・Code の送付先を照会したが特定できず、
-両者への直接送信・受領は未確認。転送用訂正文を同梱した。送付済みとは扱わない。
+中央台帳自体は変更していない。E-43 訂正通知は「本会話からは未送付・監査側で自己適用済み」。
+本報告が chat・Code に共有され、双方が本文を照合したことは今回のユーザー伝達で確認した。
+これを本会話から訂正通知を直接送信した事実に置き換えない。
 
-Contract 43 predeclare 本体と 22″ v1.2 の凍結ファイルは取得時点で未確認。
+初版では Contract 43 predeclare 本体は未確認だった。追補では次を取得・照合した：
+`tools/d_ob_p2/predeclare/CONTRACT43_NEAR_BAND_PREDECLARE_DRAFT.md`、
+commit `a6479efe3d173a5952087f9bd3df67da02856fb5`、
+Git blob `f25c6330b90a91f1434ca203173631f988c670da`、
+SHA-256 `8fc20d790325724e88c72533aa3b6dad6efb4cd2b5b169271370c9b0ce6f6403`（144行、NOT FROZEN）。
+その §5 に保存された H-43-1(i)/(ii) の義務を照合対象とし、(C1)–(C5) を新証明の前提には使わない。
+さらに正式指示に従い predeclare v3.1（commit `06f5bd2b69ce94a0dbe65dc6ff9a1c7025f0bf10`）
+の §4–6 を原文照合した。Git blob は `9cb0becdfb8b84ab602cb8ba83fd0d386ff24a03`。
+H-43-1(ii) の現在の義務は同 §4 と今回の正式指示による。22″ v1.2 の凍結ファイルは未提示。
 far 上界と設計予算は今回の比較の入力であり、その全証明を本稿で再監査したとは主張しない。
 
 ## 1. 定義と結論一覧
@@ -193,6 +211,122 @@ G(\mu)=\int_0^\pi K_H\,d\phi.                             \tag{3.5}
 \]
 正部分は平均の外から内へ Jensen の片側不等式で移す。平均の係数を落とさない。
 rho=0 は帯の測度が零。平均自体は `xi=rho z`, `dz/2` として解釈し、以下の一様評価で端点に接続する。
+
+### 3.1 独立補題 H-43-1(ii)-E：端点トレース・Lemma V 境界値・広義積分
+
+**義務の区別。** predeclare v3.1 §4 の H-43-1(i) は微分と面積分の交換、(ii) は帯境界での片側極限、
+Lemma V 境界値との一致、および広義積分表示である。a.e. の FTC、Tonelli、pairing だけで
+これら全体を履行したとはしない。本補題は、今回指定された ξ→±rho の端点も含めて明文化する。
+
+**主張。** `rho>0`、lambda,m,rho を固定し、`p_xi=(xi,0,lambda m)` とする。
+表面積分領域 B も ξ に関して固定する。B は (0.1) の半帯、または φ を `[0,2pi)` にした全帯。
+`d sigma=dmu dphi=dA/w` と置く。
+
+1. `calF_xi(.,xi)` は ξ→rho−、ξ→−rho＋で片側トレースを持つ。非対角では通常の境界公式に一致する。
+2. `j=1,2` について、境界の一点を除いて定義した密度を用いれば
+   \[
+   \partial_\xi^j\mathcal F(\cdot,\xi)
+   \longrightarrow \partial_\xi^j\mathcal F(\cdot,\pm\rho)
+   \quad\text{in }L^1(B,d\sigma).                         \tag{3.E1}
+   \]
+3. これらの境界積分は、P1 design note §5 の Lemma V が定める境界値の B への制限と一致する。
+   表面の一致点を小球で除いた広義積分は絶対収束し、その極限は同じ値である。
+4. ξ の端点を切り詰めた FTC の極限として (3.4) が成立し、表面積分とも交換できる。
+5. 固定 rho>0 での外端 `mu=m-rho` の両側極限、cap 端 `mu=1` の内側極限、および
+   rho→0 で縮退する帯の積分寄与は、以下の意味で連続に接続する。
+
+**証明 A：内点での微分交換。** `|xi|<rho` なら `xi^2+m^2<1` なので p_xi は楕円体の内点。
+ξ の任意のコンパクト内区間上では表面全体で D に正の下界がある。
+`alpha^2` と R は gamma=1 で解析的に延長できる（P1 §3.2）。
+従って固定 B の積分は二回まで ξ 微分でき、
+\[
+\frac{d^j}{d\xi^j}\int_B\mathcal F\,d\sigma
+=\int_B\partial_\xi^j\mathcal F\,d\sigma,\qquad j=1,2.    \tag{3.E2}
+\]
+ここで m や rho、帯の境界を ξ と同時に動かしていない。
+これは内部積分の Tonelli とは別の、微分交換の証明である。
+
+**証明 B：一階密度のトレース。** `alpha=arccos gamma` として
+\[
+\mathcal F_\xi=-\lambda b\alpha^2-2hR\gamma_\xi,
+\quad |\mathcal F_\xi|\le C_{\rm tr}:=\frac{\pi^2}{4}+\pi
+<\frac{275}{49}.                                        \tag{3.E3}
+\]
+(2.1) の射影評価による `|gamma_xi|<=1/D`、`h<=wD`、`w<=1` を用いた。
+各 `x!=p_+` に対して ξ→rho− で通常の公式に点ごとに収束し、反対端も同様。
+(3.E3) と支配収束で j=1 の (3.E1) が従う。
+対角点でさえ、**ξ の一方向に限った**トレースは明示できる：
+\[
+w_*:=\sqrt{m^2+L\rho^2},\quad \gamma_*:=\frac{\lambda\rho}{w_*},
+\quad
+\mathcal F_\xi(p_+,\rho-)=-\lambda\rho(\arccos\gamma_*)^2,
+\quad
+\mathcal F_\xi(p_-,-\rho+)=+\lambda\rho(\arccos\gamma_*)^2. \tag{3.E4}
+\]
+例えば x=p_+ では `D=rho-xi`, `h=lambda rho(rho-xi)` なので gamma は一定であり、直接微分で得られる。
+**対角における密度の共同連続性は主張しない。** Lemma V も x=p を除外して積分を定義する。
+従って「Lemma V と一致」とは境界積分の一致であり、対角の密度に経路非依存の値を割り当てることではない。
+
+**証明 C：二階密度の一様可積分性。** `C_{\rm der}=2pi+2<58/7` とし (3.2) を用いる。
+任意の可測集合 A⊂B の平面射影を A' とすると、`|A'|=int_A mu d sigma<=sigma(A)`。
+平面の任意の可測集合 V に対して layer-cake により
+\[
+\int_V\frac{du}{|u-(\xi,0)|}
+\le\int_0^\infty\min(|V|,\pi r^2)r^{-2}\,dr
+=2\sqrt{\pi|V|}.
+\]
+よって
+\[
+\int_A|\mathcal F_{\xi\xi}|\,d\sigma
+\le\frac{2C_{\rm der}\sqrt\pi}{\mu_0}\sqrt{\sigma(A)}
+\le\frac{26216}{679}\sqrt{\sigma(A)},\qquad \mu_0=97/113. \tag{3.E5}
+\]
+定数は全パラメータ・ξ に一様。通常の境界公式への a.e. 収束と (3.E5) から j=2 の (3.E1) が従う。
+これは Vitali の定理、または一致点付近の小円板を (3.E5) で一様に捨て、
+その補集合で一様収束を用いる直接の切除論法で証明できる。
+
+**証明 D：Lemma V との一致と広義積分。** P1 §5 の定義は
+\[
+E_\beta(p)=\frac1{4\pi\lambda}
+\int_{\partial K\setminus\{p\}}\partial_p^\beta\mathcal F(x,p)\,\frac{dA}w.
+\]
+ξ 微分は同じ固定方向 e_x の p 微分であり、密度も測度も同一である。
+全帯 B の外側は `mu<m-rho` なので、固定 rho>0 では全ての ξ に対して `D>=lambda rho`。
+従って B 内では (3.E1)、B 外では通常の支配収束を使い、全表面の境界値も上記 E_beta と一致する。
+原典の統治上の地位を変更せず、この接続に必要な収束をここで独立に証明した。
+
+境界 p=p_± で一致点の半径 epsilon 小球を除くと、二階密度の除外部分の絶対積分は
+`<=2pi C_{\rm der} epsilon/mu_0`（平面の半径 epsilon 円板へ拡大）。一階密度は (3.E3) で制御される。
+従って球切除による広義積分は絶対収束し、(3.E1) の値と一致する。
+ξ 方向も (3.2) の表面積分が一様に有限なので
+\[
+\int_B[\mathcal F_\xi(\rho-)-\mathcal F_\xi(-\rho+)]\,d\sigma
+=\lim_{\epsilon\downarrow0}\int_{-\rho+\epsilon}^{\rho-\epsilon}
+\int_B\mathcal F_{\xi\xi}\,d\sigma\,d\xi
+=\int_B\int_{-\rho}^{\rho}\mathcal F_{\xi\xi}\,d\xi\,d\sigma. \tag{3.E6}
+\]
+したがって端点で欠損項・集中質量を加えずに (3.4)–(3.6) を使用できる。
+
+**証明 E：帯境界。** 固定 rho>0 では `mu=m-rho` において `D>=lambda rho>0`。
+その近傍でも正の下界があるため G の near 側・far 側の片側極限は同じ境界値に一致する。
+cap 端 `mu=1` でも `D>=lambda(1-m)>0` なので内側極限が存在する。
+これらの正の下界を rho→0 に一様なものとは主張しない。
+内部の緯度 `mu=m` では (3.E3) により `|K_H|<=C_{\rm tr}/rho`（固定 rho）であり、
+方位角の二点を除く収束と支配収束により G の両側極限を接続できる。
+rho→0 では、ここでは B を (0.1) の半帯として、(3.2)–(3.3) から
+\[
+\int_{m-\rho}^1|G(\mu)|\,d\mu
+\le\int_B|K_H|\,d\sigma
+\le\frac{C_{\rm der}\pi R_e}{\mu_0}\longrightarrow0.              \tag{3.E7}
+\]
+これは縮退する **near 帯の寄与** のみを零に接続するもので、全体の H の軸端値を零とはしない。
+以上で補題を証明した。∎
+
+**契約判定との関係。** 旧 §3 の a.e. FTC だけから H-43-1 全体の履行を宣言するのは不十分だった。
+追補では (3.E2) が固定母数における微分交換、(3.E1)・(3.E6)・(3.E7) が端点・帯境界・広義積分を担う。
+H-43-1(i) の数学的論証は既に CHAT AUDIT で確認済みと正式指示に記載されている。
+本補題は (ii) の新たな独立提出であり、その CHAT AUDIT は未了。H-43-1(ii) は OPEN のまま。
+本稿が判定権限を代行するものではない。
 
 ## 4. ρ に依存しない点ごとの可積分包絡
 
@@ -393,6 +527,14 @@ B_{\rm near}-\frac9{40}
 書面上の現行予算 `104/625` を、この新しい設計予算に黙って置換しない。
 既存の上界が旧予算を超えることは、真の寄与が旧予算を超える証明でもない。
 
+**最終余裕の薄さ。** 固定した丸め定数での余裕は
+`Delta=3740763159/817216000000`（表示用近似 0.00458）であり、
+`Delta/S''_lb=415640351/70614494751`、すなわち S″_lb の **0.58% より大きく 0.60% より小さい**。
+南側の下界減少を epsilon_S、far と near の上界増加を epsilon_F, epsilon_N とすると、
+この定数組で正の有理 gap を維持するには `epsilon_S+epsilon_F+epsilon_N<Delta` が必要である。
+いずれかの入力を修正するときは和を exact に再計算する。c_FT を設定する段階でも、
+この Delta とその P 単位から H 単位への換算を明記する。
+
 ## 8. Exact 証明書と再現性
 
 新規検算コード：`l43_graph_majorant_exact.py`。
@@ -400,6 +542,8 @@ SHA-256：`6187c2b0c22d3e1b75ede72da3f470185eb6d93722b25265974ce2e01488cf18`。
 実行環境：daybreak-works、Python 3.11.16、SymPy 1.14.0。
 `python -I` による実行結果：**46 checks PASS、exit 0、stderr 空**。
 出力原文と構造化結果を同梱する。浮動小数点による判定・数値求積・格子探索はない。
+この46検査は初版の代数・積分定数に対する既存の実行記録である。
+今回スクリプトを変更・再実行しておらず、新設 §3.1 は紙の解析証明として別途監査に提出する。
 
 固定区間での Bernstein 係数は以下の通り。内部二分割も不要。
 
@@ -489,12 +633,19 @@ pi 上界使用箇所と全域定数は §7、端点は §3・§6・§9 に明�
 方式(B)の実行、格子に基づく定数選択、細分割 Riemann 上和は行っていない。
 §9 の eta 分割は漸近定理の証明用で、予算証明の追加積分片ではない。
 
-**推奨する次の一手は一つ：** Code と独立監査者が (5.5)→(5.7)→(6.5) の三式、
-特に `dmu dphi=db dy/mu` と外側 pi を照合し、本稿を Contract 43 の正式証明書として採用可能か判定する。
-新たな診断格子を先に回す必要はない。
+**Judge 決定の記録（ユーザー伝達、2026-10-09）：** 案A、本稿の単一片連鎖を採用。
+Code の (C1)–(C5) 系統は SHELVED とし履歴を保持する。二経路並走を新たに開始しない。
+Code は本文から独立証明書を実装し、Astra 側スクリプト受領後も複写しない。
+Code 証明書の実行は四つの FREEZE 条件と CHAT AUDIT の明示裁定の後に限る。
+設計 PASS のみでは実行許可にならない。Code の既存26検査一致は照合所見であり countersign ではない。
+Code↔監査側の分解・方針・note・報告共有は正式指示で許可済み。証明書コードは相互複写しない。
 
-残存事項：新補題の独立 countersign、Contract 43 predeclare との正式対応、
-22″ v1.2 の完全 pin・freeze、設計正質量と far 証明の依存関係の最終照合。
+**次の最小単位：** chat が新設 §3.1 を H-43-1(ii) の義務と照合して判定する。
+旧 §3 の a.e. FTC と、新しい端点・帯境界の補題を区別して審査する。
+
+FREEZE 条件1（v3 設計 PASS）は充足済み。残存条件は成果物5点の pin と exact スクリプト CHAT AUDIT、
+§3.1 の独立補題確認、22″ v1.2 の完全 pin であり、FREEZE は CHAT AUDIT の明示裁定のみ。
+本納品は pin を提供するが、受領だけで条件2の CHAT AUDIT や FREEZE を充足したとはしない。
 これらが終わるまで c_FT は UNSET、Boundary Pair Lemma は OPEN、D-P2 は NOT_CERTIFIED。
 
 ## 11. 自己訂正と証拠の区分

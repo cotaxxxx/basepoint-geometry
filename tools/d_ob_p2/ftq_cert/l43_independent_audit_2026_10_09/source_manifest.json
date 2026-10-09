@@ -1,96 +1,370 @@
-[
-  {
-    "repository": "cotaxxxx/basepoint-geometry",
-    "path": "tools/d_ob_p2/ftq_cert/CONTRACT45_PIECE3_AUDIT_PACKAGE.md",
-    "retrieval_commit": "a11def1e4eab235e4340fa5950899b0d4e7e3dee",
-    "git_blob": "392884f0ffc4e54171b0db52f5b0d1189e04be9b",
-    "sha256": "eab9f63827c6b81e1615e9f08cffc878b7cf13295908e55d544c27169eb0eaad",
-    "bytes": 8120,
-    "lines": 108
+{
+  "schema": "l43-source-and-artifact-manifest-v2",
+  "date": "2026-10-09",
+  "repository": "cotaxxxx/basepoint-geometry",
+  "branch": "codex/l43-independent-audit-20261009",
+  "path_prefix": "tools/d_ob_p2/ftq_cert/l43_independent_audit_2026_10_09/",
+  "initial_delivery_commit": "0c1189f9af5eb221abfc518b110e11dda345b4b0",
+  "initial_manifest": {
+    "commit": "0c1189f9af5eb221abfc518b110e11dda345b4b0",
+    "git_blob": "2450ddff80bf7067a409452be96072ed76a130e8",
+    "sha256": "e5b1866fc92c6477d08f20fe73a5118ba099fbaa70d4a90bfa8ca7271a5b2e61"
   },
-  {
-    "repository": "cotaxxxx/basepoint-geometry",
-    "path": "tools/d_ob_p2/ftq_cert/north_far_piece1_cert.py",
-    "retrieval_commit": "a11def1e4eab235e4340fa5950899b0d4e7e3dee",
-    "git_blob": "7944d8b825e1d2a4eeed8a4a79f4927497f69893",
-    "sha256": "ad564945f7a11f6d61e892116382e365d45334ab1d29981b5c65d13c7e2d9256",
-    "bytes": 6988,
-    "lines": 81,
-    "origin_commit": "99c9b62aae9a6baa14e95b1892cab8c9da28d17a"
+  "self_hash_rule": "The SHA-256 and Git blob of this manifest are recorded in SHA256SUMS and FULL_PIN_TABLE.md, not inside itself. All full delivery commits are in the subsequent pin-table commit.",
+  "certificate_source_pin": {
+    "commit": "0c1189f9af5eb221abfc518b110e11dda345b4b0",
+    "path": "tools/d_ob_p2/ftq_cert/l43_independent_audit_2026_10_09/l43_graph_majorant_exact.py",
+    "git_blob": "5ab1f7d2ca4343f43c9e520253ec9d904e791397",
+    "sha256": "6187c2b0c22d3e1b75ede72da3f470185eb6d93722b25265974ce2e01488cf18",
+    "bytes": 9304,
+    "lines": 216
   },
-  {
-    "repository": "cotaxxxx/basepoint-geometry",
-    "path": "tools/d_ob_p2/ftq_cert/north_far_piece2_cert.py",
-    "retrieval_commit": "a11def1e4eab235e4340fa5950899b0d4e7e3dee",
-    "git_blob": "85b00c4e599ee71016d9a1fe5ff8d227b822a0fa",
-    "sha256": "8910105df4e9acddb9d273710fe60503edac2cd0ee280840cf0eb1a13552f678",
-    "bytes": 12277,
-    "lines": 164,
-    "origin_commit": "7ba339a8c54278dd0165020f394fdb583ca7e0da"
+  "mathematical_sources": [
+    {
+      "repository": "cotaxxxx/basepoint-geometry",
+      "path": "tools/d_ob_p2/ftq_cert/CONTRACT45_PIECE3_AUDIT_PACKAGE.md",
+      "retrieval_commit": "a11def1e4eab235e4340fa5950899b0d4e7e3dee",
+      "git_blob": "392884f0ffc4e54171b0db52f5b0d1189e04be9b",
+      "sha256": "eab9f63827c6b81e1615e9f08cffc878b7cf13295908e55d544c27169eb0eaad",
+      "bytes": 8120,
+      "lines": 108
+    },
+    {
+      "repository": "cotaxxxx/basepoint-geometry",
+      "path": "tools/d_ob_p2/ftq_cert/north_far_piece1_cert.py",
+      "retrieval_commit": "a11def1e4eab235e4340fa5950899b0d4e7e3dee",
+      "git_blob": "7944d8b825e1d2a4eeed8a4a79f4927497f69893",
+      "sha256": "ad564945f7a11f6d61e892116382e365d45334ab1d29981b5c65d13c7e2d9256",
+      "bytes": 6988,
+      "lines": 81,
+      "origin_commit": "99c9b62aae9a6baa14e95b1892cab8c9da28d17a"
+    },
+    {
+      "repository": "cotaxxxx/basepoint-geometry",
+      "path": "tools/d_ob_p2/ftq_cert/north_far_piece2_cert.py",
+      "retrieval_commit": "a11def1e4eab235e4340fa5950899b0d4e7e3dee",
+      "git_blob": "85b00c4e599ee71016d9a1fe5ff8d227b822a0fa",
+      "sha256": "8910105df4e9acddb9d273710fe60503edac2cd0ee280840cf0eb1a13552f678",
+      "bytes": 12277,
+      "lines": 164,
+      "origin_commit": "7ba339a8c54278dd0165020f394fdb583ca7e0da"
+    },
+    {
+      "repository": "cotaxxxx/basepoint-geometry",
+      "path": "tools/d_ob_p2/ftq_cert/north_far_piece3_cert.py",
+      "retrieval_commit": "a11def1e4eab235e4340fa5950899b0d4e7e3dee",
+      "git_blob": "3beb1e7b0597f9072211a25cf7fb09fc4a323d4a",
+      "sha256": "308e626e0f864222c6e1176ac4d3a69333186c59aaa100a1d7965c727581fada",
+      "bytes": 11405,
+      "lines": 162,
+      "origin_commit": "9cb723c0b424297f3ce572109daf312fbe42b675"
+    },
+    {
+      "repository": "cotaxxxx/basepoint-geometry",
+      "path": "tools/d_ob_p2/ftq_cert/n3_identities_cert.py",
+      "retrieval_commit": "a11def1e4eab235e4340fa5950899b0d4e7e3dee",
+      "git_blob": "6a40bede832c462917f16ae024437c6c93f93b98",
+      "sha256": "a5ba8a338b6d17af33df1b2e3765f155edf7d9ebbecd8e4727a5c5844f0ea66c",
+      "bytes": 6620,
+      "lines": 96,
+      "origin_commit": "79588e2e9373c06aa80589a5ab7ffe1611be99d7"
+    },
+    {
+      "repository": "cotaxxxx/basepoint-geometry",
+      "path": "tools/d_ob_p2/ftq_cert/n3_identities_cert.py",
+      "retrieval_commit": "2b53e1375163fef1fca56af1bd83905948673f72",
+      "git_blob": "3c22bfca6ee715f3135934f819e23775d533021d",
+      "sha256": "63bfc769c3db49d8d728d099e5efefec3e509fd4796f7926133c4ec7628508c2",
+      "bytes": 5459,
+      "lines": 84
+    },
+    {
+      "repository": "cotaxxxx/bg-oblate-spheroid",
+      "path": "analysis/D_OB_P1_DESIGN_NOTE.md",
+      "retrieval_commit": "69e104602e939817b6f4d71df3f6bd63cbc729e0",
+      "git_blob": "f81e120e44a866d206117d4fab5fac627f26ccd1",
+      "sha256": "2c304ee6159f6cf7012ca8fb6068d9e14a4bf8a9d01ceb756395d759145012e9",
+      "bytes": 15515,
+      "lines": 164
+    },
+    {
+      "repository": "cotaxxxx/bg-oblate-spheroid",
+      "path": "analysis/D_OB_P2_D_AN1_FT_Q_PAIR_SCALE_MAJORANT_DRAFT.md",
+      "retrieval_commit": "69e104602e939817b6f4d71df3f6bd63cbc729e0",
+      "git_blob": "ad8b13c1e8cbac301138f3f0384cf58f1ec529b0",
+      "sha256": "7132b4f4ab8384da524f9f2467a6ca163a1414968adb0edd44a5014ca819700a",
+      "bytes": 3813,
+      "lines": 81
+    },
+    {
+      "repository": "cotaxxxx/bg-oblate-spheroid",
+      "path": "analysis/D_OB_P2_D_AN1_FT_Q_DRAFT.md",
+      "retrieval_commit": "20c5c59bd74f940fe0b1e05892bd2169e09d4fde",
+      "git_blob": "1c449fb4fb791f750668c44605156454cfff42af",
+      "sha256": "46443f0e981f360e57fb70d99754b0e480042d246e22d36732b00b96102a9cd1",
+      "bytes": 9510,
+      "lines": 269
+    },
+    {
+      "repository": "cotaxxxx/bg-oblate-spheroid",
+      "path": "analysis/D_OB_P2_D_AN1_FT_Q_CONTRACT_20_DOUBLE_PRIME_TO_23_DOUBLE_PRIME_V1_1.md",
+      "retrieval_commit": "b1a10ea6f0ef127aaf4a40a93070cf270d03e073",
+      "git_blob": "49e658b0487123249eb81d70bde1ef188ff640d7",
+      "sha256": "db975daba9d712246ed5e27465437f34450b356f453729a5fb78ec8ceab468cb",
+      "bytes": 2891,
+      "lines": 55
+    }
+  ],
+  "followup_governance_sources": [
+    {
+      "repository": "cotaxxxx/basepoint-geometry",
+      "path": "tools/d_ob_p2/predeclare/CONTRACT43_NEAR_BAND_PREDECLARE_DRAFT.md",
+      "retrieval_commit": "06f5bd2b69ce94a0dbe65dc6ff9a1c7025f0bf10",
+      "git_blob": "9cb0becdfb8b84ab602cb8ba83fd0d386ff24a03",
+      "sha256": "4fbb22236a9d583895ebb1808f018d15a07b70a99db492f285990844cb610bfe",
+      "bytes": 17415,
+      "lines": 160,
+      "usage": "Governance scope only; not a mathematical proof premise."
+    },
+    {
+      "repository": "cotaxxxx/basepoint-geometry",
+      "path": "tools/d_ob_p2/ftq_cert/CONTRACT43_ASTRA_COLLATION_NOTE.md",
+      "retrieval_commit": "ec3282fa3850b2ab51c46321603ce80f47743d62",
+      "git_blob": "fe5897035fcd9d5831ccab563b2d82011bab744c",
+      "sha256": "07e1c86f258fb6929e90c1a03a9da3ebff8b3025a1dabe8a34d29cde9c7a436e",
+      "bytes": 4691,
+      "lines": 43,
+      "usage": "Reported independent collation; not a countersign or an execution result observed by this audit."
+    }
+  ],
+  "lemma_v": {
+    "source_reference": "mathematical_sources: analysis/D_OB_P1_DESIGN_NOTE.md",
+    "section": "§5, Lemma V (line 83); definitions §1; analytic prerequisites §§3–4",
+    "branch_statement": "design/d-ob-p1 is the Base branch stated by the document. Retrieval used an immutable commit; current branch-head membership is not asserted.",
+    "source_status": "CHAT_ANALYTIC_DERIVATION_PASS / EXTERNAL_AUDIT_PENDING / NOT_BINDING",
+    "usage": "Existing boundary-integral definition retained; the required restricted L1 convergence is independently proved in H43_ENDPOINT_LEMMA.md."
   },
-  {
-    "repository": "cotaxxxx/basepoint-geometry",
-    "path": "tools/d_ob_p2/ftq_cert/north_far_piece3_cert.py",
-    "retrieval_commit": "a11def1e4eab235e4340fa5950899b0d4e7e3dee",
-    "git_blob": "3beb1e7b0597f9072211a25cf7fb09fc4a323d4a",
-    "sha256": "308e626e0f864222c6e1176ac4d3a69333186c59aaa100a1d7965c727581fada",
-    "bytes": 11405,
-    "lines": 162,
-    "origin_commit": "9cb723c0b424297f3ce572109daf312fbe42b675"
+  "artifacts": [
+    {
+      "path": "tools/d_ob_p2/ftq_cert/l43_independent_audit_2026_10_09/l43_graph_majorant_exact.py",
+      "sha256": "6187c2b0c22d3e1b75ede72da3f470185eb6d93722b25265974ce2e01488cf18",
+      "git_blob": "5ab1f7d2ca4343f43c9e520253ec9d904e791397",
+      "bytes": 9304,
+      "lines": 216,
+      "repository": "cotaxxxx/basepoint-geometry",
+      "branch": "codex/l43-independent-audit-20261009",
+      "delivery_commit_reference": "FULL_PIN_TABLE.md (written after the evidence commit to avoid a self-referential commit hash)",
+      "state": "UNCHANGED from initial pinned delivery",
+      "first_pinned_commit": "0c1189f9af5eb221abfc518b110e11dda345b4b0",
+      "execution": "Previously executed, fixed SHA verified; not rerun in this follow-up",
+      "dependencies": [
+        "Python 3.11.16",
+        "SymPy 1.14.0",
+        "accompanying analytic paper proof"
+      ]
+    },
+    {
+      "path": "tools/d_ob_p2/ftq_cert/l43_independent_audit_2026_10_09/exact_checks.stdout.txt",
+      "sha256": "8790c7912043b4c68f5a75fb2b51aa8895b41407d299e1b1db2d964556f9d2d8",
+      "git_blob": "2dcfc808918f5310b051b6cc8afd8adff334ec4e",
+      "bytes": 2099,
+      "lines": 47,
+      "repository": "cotaxxxx/basepoint-geometry",
+      "branch": "codex/l43-independent-audit-20261009",
+      "delivery_commit_reference": "FULL_PIN_TABLE.md (written after the evidence commit to avoid a self-referential commit hash)",
+      "state": "UNCHANGED from initial pinned delivery",
+      "first_pinned_commit": "0c1189f9af5eb221abfc518b110e11dda345b4b0",
+      "execution": "Unedited output of the fixed script",
+      "dependencies": [
+        "6187c2b0c22d3e1b75ede72da3f470185eb6d93722b25265974ce2e01488cf18",
+        "EXECUTION_PROVENANCE.json"
+      ]
+    },
+    {
+      "path": "tools/d_ob_p2/ftq_cert/l43_independent_audit_2026_10_09/exact_checks.json",
+      "sha256": "2c3a1e4230ed98bf82df8dab800b4835894daa27ba538706362506b8966c546a",
+      "git_blob": "5dd85c2c2041fb065ad5554cc66d6aed59477120",
+      "bytes": 6249,
+      "lines": 288,
+      "repository": "cotaxxxx/basepoint-geometry",
+      "branch": "codex/l43-independent-audit-20261009",
+      "delivery_commit_reference": "FULL_PIN_TABLE.md (written after the evidence commit to avoid a self-referential commit hash)",
+      "state": "UNCHANGED from initial pinned delivery",
+      "first_pinned_commit": "0c1189f9af5eb221abfc518b110e11dda345b4b0",
+      "execution": "Unedited output of the fixed script",
+      "dependencies": [
+        "6187c2b0c22d3e1b75ede72da3f470185eb6d93722b25265974ce2e01488cf18",
+        "EXECUTION_PROVENANCE.json"
+      ]
+    },
+    {
+      "path": "tools/d_ob_p2/ftq_cert/l43_independent_audit_2026_10_09/exact_checks.stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "git_blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "bytes": 0,
+      "lines": 0,
+      "repository": "cotaxxxx/basepoint-geometry",
+      "branch": "codex/l43-independent-audit-20261009",
+      "delivery_commit_reference": "FULL_PIN_TABLE.md (written after the evidence commit to avoid a self-referential commit hash)",
+      "state": "ADDED or UPDATED in the follow-up evidence commit",
+      "execution": "Unedited output of the fixed script",
+      "dependencies": [
+        "6187c2b0c22d3e1b75ede72da3f470185eb6d93722b25265974ce2e01488cf18",
+        "EXECUTION_PROVENANCE.json"
+      ]
+    },
+    {
+      "path": "tools/d_ob_p2/ftq_cert/l43_independent_audit_2026_10_09/reproduction_manifest.json",
+      "sha256": "05ccc26e54868a964a94b13f3ffa665971ac5cf86507e097926d6ec353fbd316",
+      "git_blob": "e126fda7aae6e1674e106b107d8acaa9ffdc6479",
+      "bytes": 475,
+      "lines": 12,
+      "repository": "cotaxxxx/basepoint-geometry",
+      "branch": "codex/l43-independent-audit-20261009",
+      "delivery_commit_reference": "FULL_PIN_TABLE.md (written after the evidence commit to avoid a self-referential commit hash)",
+      "state": "UNCHANGED from initial pinned delivery",
+      "first_pinned_commit": "0c1189f9af5eb221abfc518b110e11dda345b4b0",
+      "execution": "Not an executable mathematical certificate",
+      "dependencies": [
+        "see the source pins and scopes in this manifest"
+      ]
+    },
+    {
+      "path": "tools/d_ob_p2/ftq_cert/l43_independent_audit_2026_10_09/EXECUTION_PROVENANCE.json",
+      "sha256": "27764700d3353197f222844c94e3664d082a1b824107a9d67e86f3fc601b620e",
+      "git_blob": "6a13cf4d745a51d110b37d138aef559a90864379",
+      "bytes": 2581,
+      "lines": 56,
+      "repository": "cotaxxxx/basepoint-geometry",
+      "branch": "codex/l43-independent-audit-20261009",
+      "delivery_commit_reference": "FULL_PIN_TABLE.md (written after the evidence commit to avoid a self-referential commit hash)",
+      "state": "ADDED or UPDATED in the follow-up evidence commit",
+      "execution": "Not an executable mathematical certificate",
+      "dependencies": [
+        "see the source pins and scopes in this manifest"
+      ]
+    },
+    {
+      "path": "tools/d_ob_p2/ftq_cert/l43_independent_audit_2026_10_09/EXACT_CHECK_MAP.md",
+      "sha256": "cdbe0097a9b583b70a086ee89283f66f6a4c9f2dbf5b6edbc4870493118dcc0d",
+      "git_blob": "a3215e0cdf19ed925b3c4fd7024b34bf1282ff1f",
+      "bytes": 6202,
+      "lines": 94,
+      "repository": "cotaxxxx/basepoint-geometry",
+      "branch": "codex/l43-independent-audit-20261009",
+      "delivery_commit_reference": "FULL_PIN_TABLE.md (written after the evidence commit to avoid a self-referential commit hash)",
+      "state": "ADDED or UPDATED in the follow-up evidence commit",
+      "execution": "Not an executable mathematical certificate",
+      "dependencies": [
+        "see the source pins and scopes in this manifest"
+      ]
+    },
+    {
+      "path": "tools/d_ob_p2/ftq_cert/l43_independent_audit_2026_10_09/D_OB_P2_L43_INDEPENDENT_AUDIT_2026_10_09.md",
+      "sha256": "9fc500bd486d325451ae049806673bdef400987c06f07cc16a4c174130e1b615",
+      "git_blob": "3f95ef5b82980affcc1e453393308acd099544ad",
+      "bytes": 33170,
+      "lines": 660,
+      "repository": "cotaxxxx/basepoint-geometry",
+      "branch": "codex/l43-independent-audit-20261009",
+      "delivery_commit_reference": "FULL_PIN_TABLE.md (written after the evidence commit to avoid a self-referential commit hash)",
+      "state": "ADDED or UPDATED in the follow-up evidence commit",
+      "execution": "Not an executable mathematical certificate",
+      "dependencies": [
+        "see the source pins and scopes in this manifest"
+      ]
+    },
+    {
+      "path": "tools/d_ob_p2/ftq_cert/l43_independent_audit_2026_10_09/H43_ENDPOINT_LEMMA.md",
+      "sha256": "b1a906edeb21cef356d3d7810dbdc11d30773364620b174a425c441b826d6276",
+      "git_blob": "303d1d7c6aa1640590eb83434888c8c19ab44c3a",
+      "bytes": 11262,
+      "lines": 198,
+      "repository": "cotaxxxx/basepoint-geometry",
+      "branch": "codex/l43-independent-audit-20261009",
+      "delivery_commit_reference": "FULL_PIN_TABLE.md (written after the evidence commit to avoid a self-referential commit hash)",
+      "state": "ADDED or UPDATED in the follow-up evidence commit",
+      "execution": "Not an executable mathematical certificate",
+      "dependencies": [
+        "see the source pins and scopes in this manifest"
+      ]
+    },
+    {
+      "path": "tools/d_ob_p2/ftq_cert/l43_independent_audit_2026_10_09/E43_CORRECTION_NOTICE_2026_10_09.md",
+      "sha256": "eadeda81783078826f51e7dd9baf8499997ed57c573e2aad4cfd23c2bbffd2d6",
+      "git_blob": "75068f4ba0a903ba811138592a78f1f182389dd6",
+      "bytes": 1789,
+      "lines": 27,
+      "repository": "cotaxxxx/basepoint-geometry",
+      "branch": "codex/l43-independent-audit-20261009",
+      "delivery_commit_reference": "FULL_PIN_TABLE.md (written after the evidence commit to avoid a self-referential commit hash)",
+      "state": "ADDED or UPDATED in the follow-up evidence commit",
+      "execution": "Not an executable mathematical certificate",
+      "dependencies": [
+        "see the source pins and scopes in this manifest"
+      ]
+    },
+    {
+      "path": "tools/d_ob_p2/ftq_cert/l43_independent_audit_2026_10_09/HANDOFF_NOTES.md",
+      "sha256": "ebe36df980edd6435de370e222b4d2537507a89ca92f45431578105ca15d18a4",
+      "git_blob": "22601a5c3e587e172b65c0c9c6e66a868e02b20f",
+      "bytes": 4219,
+      "lines": 56,
+      "repository": "cotaxxxx/basepoint-geometry",
+      "branch": "codex/l43-independent-audit-20261009",
+      "delivery_commit_reference": "FULL_PIN_TABLE.md (written after the evidence commit to avoid a self-referential commit hash)",
+      "state": "ADDED or UPDATED in the follow-up evidence commit",
+      "execution": "Not an executable mathematical certificate",
+      "dependencies": [
+        "see the source pins and scopes in this manifest"
+      ]
+    }
+  ],
+  "corrections": {
+    "E-43-1": {
+      "applied": true,
+      "physical_near_domain": "mu in [m-rho,1], s in [m-1,rho], phi in [0,pi], |xi|<=rho",
+      "excluded_wrong_domain": "s in [rho,max(rho,1/10)] is far Piece 1"
+    },
+    "E-43-2": {
+      "applied": true,
+      "git_blob": "3c22bfca6ee715f3135934f819e23775d533021d",
+      "sha256": "63bfc769c3db49d8d728d099e5efefec3e509fd4796f7926133c4ec7628508c2"
+    },
+    "delivery_status": "Submitted to this conversation and saved in the audit branch; no direct message to external recipients was sent by this session. Self-applied in the report."
   },
-  {
-    "repository": "cotaxxxx/basepoint-geometry",
-    "path": "tools/d_ob_p2/ftq_cert/n3_identities_cert.py",
-    "retrieval_commit": "a11def1e4eab235e4340fa5950899b0d4e7e3dee",
-    "git_blob": "6a40bede832c462917f16ae024437c6c93f93b98",
-    "sha256": "a5ba8a338b6d17af33df1b2e3765f155edf7d9ebbecd8e4727a5c5844f0ea66c",
-    "bytes": 6620,
-    "lines": 96,
-    "origin_commit": "79588e2e9373c06aa80589a5ab7ffe1611be99d7"
+  "preserved_normalization": {
+    "measure": "dmu dphi = db dy / mu",
+    "xi_average": "(1/(2rho)) integral_{-rho}^{rho}, rho>0; zero-width band handled by a limit",
+    "outer_factor": "pi",
+    "units": "P, same as Contract 45 far",
+    "singular_points": [
+      "(s,phi,xi)=(0,0,rho)",
+      "(s,phi,xi)=(0,pi,-rho)"
+    ]
   },
-  {
-    "repository": "cotaxxxx/basepoint-geometry",
-    "path": "tools/d_ob_p2/ftq_cert/n3_identities_cert.py",
-    "retrieval_commit": "2b53e1375163fef1fca56af1bd83905948673f72",
-    "git_blob": "3c22bfca6ee715f3135934f819e23775d533021d",
-    "sha256": "63bfc769c3db49d8d728d099e5efefec3e509fd4796f7926133c4ec7628508c2",
-    "bytes": 5459,
-    "lines": 84
+  "execution_evidence": {
+    "raw_stdout": "exact_checks.stdout.txt",
+    "machine_json": "exact_checks.json",
+    "raw_stderr": "exact_checks.stderr.txt",
+    "original_manifest": "reproduction_manifest.json",
+    "retrieved_process_record": "EXECUTION_PROVENANCE.json",
+    "passed": 46,
+    "failed": 0,
+    "observed_exit_code": 0,
+    "rerun_this_followup": false
   },
-  {
-    "repository": "cotaxxxx/bg-oblate-spheroid",
-    "path": "analysis/D_OB_P1_DESIGN_NOTE.md",
-    "retrieval_commit": "69e104602e939817b6f4d71df3f6bd63cbc729e0",
-    "git_blob": "f81e120e44a866d206117d4fab5fac627f26ccd1",
-    "sha256": "2c304ee6159f6cf7012ca8fb6068d9e14a4bf8a9d01ceb756395d759145012e9",
-    "bytes": 15515,
-    "lines": 164
+  "independence": {
+    "code_certificate_commit_from_instruction": "213ec4bb107701d0d962738db824845721f5f299",
+    "code_certificate_read_or_copied_or_executed_in_this_followup": false,
+    "collation_note_usage": "Coordination only; not a proof premise or countersign"
   },
-  {
-    "repository": "cotaxxxx/bg-oblate-spheroid",
-    "path": "analysis/D_OB_P2_D_AN1_FT_Q_PAIR_SCALE_MAJORANT_DRAFT.md",
-    "retrieval_commit": "69e104602e939817b6f4d71df3f6bd63cbc729e0",
-    "git_blob": "ad8b13c1e8cbac301138f3f0384cf58f1ec529b0",
-    "sha256": "7132b4f4ab8384da524f9f2467a6ca163a1414968adb0edd44a5014ca819700a",
-    "bytes": 3813,
-    "lines": 81
-  },
-  {
-    "repository": "cotaxxxx/bg-oblate-spheroid",
-    "path": "analysis/D_OB_P2_D_AN1_FT_Q_DRAFT.md",
-    "retrieval_commit": "20c5c59bd74f940fe0b1e05892bd2169e09d4fde",
-    "git_blob": "1c449fb4fb791f750668c44605156454cfff42af",
-    "sha256": "46443f0e981f360e57fb70d99754b0e480042d246e22d36732b00b96102a9cd1",
-    "bytes": 9510,
-    "lines": 269
-  },
-  {
-    "repository": "cotaxxxx/bg-oblate-spheroid",
-    "path": "analysis/D_OB_P2_D_AN1_FT_Q_CONTRACT_20_DOUBLE_PRIME_TO_23_DOUBLE_PRIME_V1_1.md",
-    "retrieval_commit": "b1a10ea6f0ef127aaf4a40a93070cf270d03e073",
-    "git_blob": "49e658b0487123249eb81d70bde1ef188ff640d7",
-    "sha256": "db975daba9d712246ed5e27465437f34450b356f453729a5fb78ec8ceab468cb",
-    "bytes": 2891,
-    "lines": 55
-  }
-]
+  "uncompleted_obligations": [
+    "CHAT AUDIT of the five deliverables and exact-script/report consistency",
+    "CHAT AUDIT of independent H-43-1(ii)-E; status remains OPEN",
+    "22 double-prime v1.2 commit/blob/SHA-256 pin",
+    "Explicit CHAT AUDIT FREEZE ruling; Code certificate execution remains prohibited",
+    "c_FT, Boundary Pair Lemma and D-P2 certification remain separate open matters"
+  ],
+  "governance": "Contract 43 OPEN / H-43-1(ii) OPEN / D-P2 NOT_CERTIFIED; mathematical derivation and artifact delivery do not constitute a countersign."
+}
