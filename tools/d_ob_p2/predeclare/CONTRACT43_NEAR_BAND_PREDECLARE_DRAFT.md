@@ -1,9 +1,10 @@
-# Contract 43 — North near band — PREDECLARE DRAFT v3.2 (FREEZE candidate)
+# Contract 43 — North near band — PREDECLARE DRAFT v3.3 (FREEZE candidate, 3 of 4 conditions met)
 
 STATUS: DRAFT v3 / SUBMITTED FOR CHAT DESIGN AUDIT / NOT FROZEN / NOT AUTHORIZED FOR CERTIFICATE EXECUTION.
 Contract 43 OPEN (countersign in progress).  D-P2 NOT_CERTIFIED.  No diagnostic value appears in this document.
 Supersedes v2 (3665f33e, CONDITIONAL PASS).  v3 (459abecf) design audit: CHAT AUDIT PASS (FREEZE condition 1 of 4); v3.1 (06f5bd2b) pin update audit PASS; v3.2 = Astra pins filled
-(verified by Code readback in the same repository), Lemma V source pin filled; still NOT FROZEN.  Basis: chat instruction "Predeclare v3 作成・独立証明書準備 (CHAT AUDIT 裁定統合版)".
+(verified by Code readback in the same repository), Lemma V source pin filled; v3.3 = ledger update per chat ruling (FREEZE condition 2 PASS, condition 3 CLOSED);
+still NOT FROZEN (condition 4, 22'' v1.2 pin, PENDING).  Basis: chat instruction "Predeclare v3 作成・独立証明書準備 (CHAT AUDIT 裁定統合版)".
 The formal proof route of Contract 43 is the Astra L43 single-piece chain (5.5) -> (5.7) -> (6.5) -> §7.  The former route (C1)-(C5)
 is SHELVED: preserved at commit a6479efe3d173a5952087f9bd3df67da02856fb5, not an alternative route of this contract, not used here.
 Any change of the main chain is re-submitted to CHAT AUDIT before implementation.
@@ -38,12 +39,12 @@ Code verification (2026-10-09): every row below was read back by Code at commit 
 byte count and line count all match Astra's `delivery_pins.json`.  This is a pin verification, NOT the CHAT AUDIT of the content.
 | # | item (path = prefix + name) | git blob | SHA-256 | lines | state |
 |---|---|---|---|---|---|
-| 1 | `l43_graph_majorant_exact.py` | 5ab1f7d2ca4343f43c9e520253ec9d904e791397 | 6187c2b0c22d3e1b75ede72da3f470185eb6d93722b25265974ce2e01488cf18 | 216 | pinned; Astra-stated SHA now matched to the file; executed by Astra (46 PASS / exit 0, per its raw log); CHAT AUDIT of the script PENDING; not executed by Code |
+| 1 | `l43_graph_majorant_exact.py` | 5ab1f7d2ca4343f43c9e520253ec9d904e791397 | 6187c2b0c22d3e1b75ede72da3f470185eb6d93722b25265974ce2e01488cf18 | 216 | pinned; SHA matched to the file; executed by Astra (46 PASS / exit 0, raw log); CHAT AUDIT of script/report consistency PASS (FREEZE condition 2); not executed by Code |
 | 2 | `exact_checks.stdout.txt` (raw stdout) | 2dcfc808918f5310b051b6cc8afd8adff334ec4e | 8790c7912043b4c68f5a75fb2b51aa8895b41407d299e1b1db2d964556f9d2d8 | 47 | pinned; with `exact_checks.json` (5dd85c2c…, 2c3a1e42…, 288), `exact_checks.stderr.txt` (empty), `EXECUTION_PROVENANCE.json` (6a13cf4d…, 27764700…, 56) |
 | 3 | `source_manifest.json` | 279332bc6801702004395109d0f70d8d7b18bce7 | bb4caa9a0795b4f40242aa136f6f9fd5f746a848b70185b3283948f7b812b58d | 370 | pinned |
 | 4 | `D_OB_P2_L43_INDEPENDENT_AUDIT_2026_10_09.md` | 3f95ef5b82980affcc1e453393308acd099544ad | 9fc500bd486d325451ae049806673bdef400987c06f07cc16a4c174130e1b615 | 660 | pinned (updated version; main bound unchanged) |
 | 5 | `E43_CORRECTION_NOTICE_2026_10_09.md` | 75068f4ba0a903ba811138592a78f1f182389dd6 | eadeda81783078826f51e7dd9baf8499997ed57c573e2aad4cfd23c2bbffd2d6 | 27 | pinned; self-applied in item 4; no direct external sending |
-| + | `H43_ENDPOINT_LEMMA.md` (H-43-1(ii) independent lemma) | 303d1d7c6aa1640590eb83434888c8c19ab44c3a | b1a906edeb21cef356d3d7810dbdc11d30773364620b174a425c441b826d6276 | 198 | pinned; CHAT AUDIT PENDING; H-43-1(ii) OPEN |
+| + | `H43_ENDPOINT_LEMMA.md` (H-43-1(ii) independent lemma) | 303d1d7c6aa1640590eb83434888c8c19ab44c3a | b1a906edeb21cef356d3d7810dbdc11d30773364620b174a425c441b826d6276 | 198 | pinned; CHAT AUDIT done; H-43-1(ii) CLOSED by chat ruling (FREEZE condition 3) |
 | + | `EXACT_CHECK_MAP.md` / `HANDOFF_NOTES.md` / `SHA256SUMS` / `reproduction_manifest.json` | a3215e0c… / 22601a5c… / 76f5a724… / e126fda7… | cdbe0097… / ebe36df9… / 500bb3ba… / 05ccc26e… | 94 / 56 / 12 / 12 | pinned (auxiliary) |
 | + | `FULL_PIN_TABLE.md` / `delivery_pins.json` at fcbfdaa6 | fc4f904e65edf2ce6ea00721bdc58f8fbc333e11 / c918fbcbec54d78c4aa9ee148ea6a87f3565649d | 3af88bd4211846b07e7e997120980f4e20e3e63742c7152a78cde1608d9a1919 / c0059a562e3215a9ddcf4b476ffde2831401ef3497c95a538fd599d2c52774a0 | 60 / 261 | pinned (index) |
 
@@ -117,9 +118,9 @@ No boundary, constant or threshold is chosen from a diagnostic.
 ## 4. Analytic obligations
  H-43-1(i)  interchange of differentiation and the surface integral in the FT_q density derivation: the mathematical argument of Astra §3 is
             confirmed by chat; the formal pin of the source statement and the final evidence closure are separate and remain to be recorded.
- H-43-1(ii) OPEN.  Astra's independent lemma H-43-1(ii)-E received and pinned (§0.3, `H43_ENDPOINT_LEMMA.md`); it must establish
-            (a) existence of the one-sided limits at the band boundary, (b) agreement with the Lemma V boundary values, (c) justification of the
-            improper-integral representation.  Its CHAT AUDIT is pending; Code does not close (ii).  Astra §3's a.e. FTC statement alone does not close (ii).
+ H-43-1(ii) CLOSED (chat ruling 2026-10-09) on the basis of Astra's independent lemma H-43-1(ii)-E (§0.3, `H43_ENDPOINT_LEMMA.md`,
+            SHA-256 b1a906ed…), which establishes (a) the one-sided limits at the band boundary, (b) agreement with the Lemma V boundary values,
+            (c) the improper-integral representation.  Code did not close (ii) and relies only on the chat ruling for this status.
             Lemma V source pin (named by the Astra lemma, verified by Code in the read-only canonical clone): `cotaxxxx/bg-oblate-spheroid`,
             `analysis/D_OB_P1_DESIGN_NOTE.md`, commit 69e104602e939817b6f4d71df3f6bd63cbc729e0, blob f81e120e44a866d206117d4fab5fac627f26ccd1,
             SHA-256 2c304ee6159f6cf7012ca8fb6068d9e14a4bf8a9d01ceb756395d759145012e9, 164 lines, §5 "Lemma V" (E_beta(p) = (1/(4 pi lambda))
@@ -134,8 +135,11 @@ S''_lb - 5481/10000 = 187614363159/817216000000 and 9/40 is below it by 37407631
 alone exceeds the budget; this contract does not change that fact and does not replace the frozen text.
 
 ## 6. Governance
- FREEZE requires all four: (1) v3 design audit CHAT AUDIT PASS; (2) Astra five deliverables pinned and the exact script CHAT AUDITED;
- (3) H-43-1(ii) independent lemma confirmed; (4) 22'' v1.2 commit/SHA-256 pinned.  FREEZE only by explicit chat ruling.
+ FREEZE requires all four: (1) v3 design audit CHAT AUDIT PASS — MET (459abecf); (2) Astra five deliverables pinned and the exact script
+ CHAT AUDITED — MET (pins §0.3, chat ruling 2026-10-09); (3) H-43-1(ii) independent lemma confirmed — MET (CLOSED by chat ruling);
+ (4) 22'' v1.2 commit/blob/SHA-256 pinned — PENDING.  FREEZE only by explicit chat ruling.  Sequence after this: Judge/user commit of 22'' v1.2
+ in the canonical repository -> CHAT AUDIT of its pin -> Code fills §0.4 #6 and (C6) and sets BUDGET_V12 in the certificate -> CHAT AUDIT FREEZE
+ ruling -> first execution of the certificate.
  Code certificate `ftq_cert/north_near_l43_cert.py`: source committed (static review by chat done; S-1/S-2/R-S1 applied); syntax check by ast.parse
  permitted and done; EXECUTION and use of its output as evidence only after FREEZE.  Its final line distinguishes machine-checked items, paper
  steps and external obligations, and reads "C6 PENDING; NOT CERTIFIED" while 22'' v1.2 is unpinned.
@@ -168,7 +172,8 @@ alone exceeds the budget; this contract does not change that fact and does not r
       (C1)-(C5), appendices A and B are preserved at this commit and are NOT used in this contract.
  v2  3665f33e82ee1cfa5a1ea1166d8cf1d8bcb3958a  CONDITIONAL PASS; superseded by v3.
  v3  459abecf3249ace4789e4a94708218fa0128363e  design audit CHAT AUDIT PASS (FREEZE condition 1/4).
- v3.2 this document: §0.3 Astra pins filled from the evidence commit ff1e1a53 / pin commit fcbfdaa6 and verified by Code readback;
+ v3.3 this document: ledger update only (condition 2 PASS, condition 3 CLOSED, FREEZE 3/4); no mathematical change.
+ v3.2 e4e58f6138521a84c3ef81dd861bf6f5da6d6263: §0.3 Astra pins filled from the evidence commit ff1e1a53 / pin commit fcbfdaa6 and verified by Code readback;
       §4 Lemma V source pin filled and verified; H-43-1(ii) stays OPEN pending CHAT AUDIT of the Astra lemma; 22'' v1.2 still PENDING.
  v3.1 06f5bd2b69ce94a0dbe65dc6ff9a1c7025f0bf10 pin update audit PASS: §0.4 v1.1 row completed with full commit/blob/SHA-256 verified in the canonical clone; §6 certificate status updated.
  v3  content: R-1 former route removed (history kept); R-2 pin tables with PENDING; R-3 this list; R-4 S''_lb rows separated;
