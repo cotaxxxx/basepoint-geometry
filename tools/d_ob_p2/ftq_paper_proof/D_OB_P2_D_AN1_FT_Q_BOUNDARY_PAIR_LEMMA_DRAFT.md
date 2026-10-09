@@ -1,9 +1,11 @@
-# D-OB P2 / D-AN-1 FT_q — Boundary Pair Lemma (8.1) as a corollary of the certified chain — PAPER PROOF v1
+# D-OB P2 / D-AN-1 FT_q — Boundary Pair Lemma (8.1) as a corollary of the certified chain — PAPER PROOF v1.1
 
 Status: v1 / PAPER AUDIT PASS (CHAT AUDIT, on draft 44e57db9) / submitted for fixing as the formal record.  Route approved by CHAT AUDIT
 (O2: corollary of the certified chain; no pointwise R J sign required).  O3: the FT_q §3-§4 identities are used with their derivation and conditions
-stated in §2.  c_FT / m0: SET (CHAT AUDIT ledger).  FT_q: closure record and Judge ruling pending.  P1 Lemma V NOT_BINDING remains at the D-P2 gate.
-D-P2 NOT_CERTIFIED.  v1 differs from draft 44e57db9 only in status wording (title, this header, §6).
+stated in §2.  c_FT / m0: SET (CHAT AUDIT ledger).  FT_q: DISCHARGED (conditional on P1 external audit), Judge ruling 2026-10-09 (案A); (8.1) CLOSED.
+P1 Lemma V NOT_BINDING remains at the D-P2 gate.
+D-P2 NOT_CERTIFIED.  v1 differs from draft 44e57db9 only in status wording (title, this header, §6); v1.1 differs from v1 (6d106cbd) only in the
+title and the FT_q status in this header.
 
 ## 0. Notation warning (symbol collision)
 FT_q uses G for the ANGLE function G(gamma) = (arccos gamma)^2 (density F = h G(gamma), G' = -2R).  Contracts 21''/43/45 and 22'' use G(mu) for the
