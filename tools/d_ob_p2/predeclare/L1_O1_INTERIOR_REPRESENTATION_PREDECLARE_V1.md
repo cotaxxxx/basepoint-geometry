@@ -90,7 +90,7 @@ C-S  Symbolic collation (SymPy; exact rational arithmetic only; to be run only a
           PASS iff both residuals expand to 0.
      S-2  R2: independently derive gamma_rho and gamma_b from the general-interior h and D^2 of A2 (rho,z independent).
           Use [FTq] (5.1) only as a derivation template, not as an established interior identity or by merely replacing m with z/lambda.
-          Compare the independently derived formulas with the candidate general-interior expressions; PASS iff residuals are exactly 0
+          S-2 compares the paper-derived gamma_rho and gamma_b from I-9 against independent SymPy derivatives of A2 h and D^2; PASS iff residuals are exactly 0
           after D^2 reduction, in both R1 stages G and L.
      S-3  N_J = w D^3 J (I-10) reduces to a polynomial in (b, lambda, mu, rho, z) with no odd power of D left, and N_J - (A2 b^2 + A1 b + A0) = 0
           with A2, A1, A0 transcribed verbatim from [FTq] lines of (5.2).                                        PASS iff both hold exactly.
