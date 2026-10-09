@@ -29,15 +29,15 @@ I-9. At fixed z,mu,b, h_rho=-lambda*b, (D^2)_rho=2(rho-b), D_rho=(rho-b)/D. At f
  gamma_rho=-lambda*b/(wD)-h*(rho-b)/(wD^3);
  gamma_b=-lambda*rho/(wD)+h*rho/(wD^3).
 These are derived from A, not imported from FTq (5.1).
-I-10. Define J=lambda*(a^2-b^2)*gamma_b-h*gamma_rho. Substitution gives the exact general-interior factored numerator
+I-10. The factored expression below is independently derived from the I-9 derivatives. The expanded A2/A1/A0 displayed afterward are verbatim transcription targets from pinned FTq (5.2), not independently derived coefficients. Define J=lambda*(a^2-b^2)*gamma_b-h*gamma_rho. Substitution gives the exact general-interior factored numerator
  N_J:=w*D^3*J
    =lambda*rho*(a^2-b^2)*(h-lambda*D^2)
     +h*(lambda*b*D^2+h*(rho-b)).
-Every factor is a polynomial in b because h=h0-lambda*rho*b and D^2=D0-2rho*b. The apparent cubic b^3 coefficient cancels: in the first summand the b^3 coefficient is -lambda*rho*(lambda*rho), while the second summand contributes +lambda^2*rho^2, so degree<=2. Thus N_J=A2*b^2+A1*b+A0, where the coefficient definitions below are independent of the FTq boundary factorization:
+Every factor is a polynomial in b because h=h0-lambda*rho*b and D^2=D0-2rho*b. The apparent cubic b^3 coefficient cancels: in the first summand the b^3 coefficient is -lambda*rho*(lambda*rho), while the second summand contributes +lambda^2*rho^2, so degree<=2. Thus N_J=A2*b^2+A1*b+A0, where the coefficients below are the comparison targets transcribed from FTq (5.2), not a separate derivation:
   A2=lambda^2*rho^3-lambda^2*rho+lambda*mu*rho*z;
   A1=lambda^4*mu^2-lambda^3*mu^3*z-2*lambda^3*mu*z-lambda^2*mu^2*rho^2+2*lambda^2*mu^2*z^2-lambda^2*mu^2+lambda^2*z^2+lambda*mu^3*z+lambda*mu*rho^2*z-lambda*mu*z^3+lambda*mu*z-mu^2*z^2;
   A0=lambda^4*mu^4*rho-lambda^4*mu^2*rho-2*lambda^3*mu^3*rho*z+2*lambda^3*mu*rho*z-lambda^2*mu^4*rho+lambda^2*mu^2*rho^3+lambda^2*mu^2*rho*z^2+lambda^2*mu^2*rho-lambda^2*rho^3-lambda^2*rho*z^2+lambda^2*rho+lambda*mu^3*rho*z-3*lambda*mu*rho*z+mu^2*rho*z^2.
-These are the paper coefficient targets transcribed from FTq (5.2); exact coefficient collation remains an S-3 obligation, not yet independently machine-verified. The factored expression above is the direct derivation.
+These A2/A1/A0 are transcribed comparison targets from FTq (5.2). Only the factored N_J expression above is independently derived on paper; equality with the transcribed targets is pending the authorized S-3 check.
 I-11. For b-paired points, h_plus=h0-lambda*rho*b, h_minus=h0+lambda*rho*b, D_plus^2=D0-2rho*b, D_minus^2=D0+2rho*b.
 Direct difference of squares yields
  h_plus^2*D_minus^2-h_minus^2*D_plus^2
@@ -52,7 +52,7 @@ Provided the denominator is positive (I-12), rationalization gives
  =4rho*b*[h0*c(mu)+lambda^2*rho^2*b^2]/
  [w*D_plus*D_minus*(h_plus*D_minus+h_minus*D_plus)].
 This is an interior identity, not an imported boundary formula.
-I-12. Both paired surface points are on bd(K), while p lies in int(K). P1 Lemma 3.1 yields h_plus,h_minus>0, and I-2 yields D_plus,D_minus>=d_*>0. Hence h_plus*D_minus+h_minus*D_plus>0. Also w>=lambda>0, so the entire denominator in I-11 is strictly positive. No quantitative lower bound is claimed.
+I-12. Fix any boundary x with outward unit normal nu and the interior point p. By I-2, the Euclidean ball B(p,d_*) is contained in K (its closed ball is contained as well by the uniform distance bound). Thus p+d_*nu belongs to K. The supporting-plane inequality for the convex ellipsoid K at x gives nu·(p+d_*nu-x)<=0, hence nu·(x-p)>=d_*. Therefore h=w*nu·(x-p)>=w*d_*>=lambda*d_*>=lambda*delta_L1/5>0. The same argument applies separately to both b-paired boundary points, giving h_plus,h_minus>=lambda*d_*. With D_plus,D_minus>=d_*>0 from I-2, h_plus*D_minus+h_minus*D_plus>0. Since w>=lambda>0, the complete denominator of I-11 is strictly positive. This proof does not invoke P1 Lemma 3.1; dependence on P1 Lemma 3.4 for derivative bounds remains.
 
 ## D. Boundary consistency, not an interior assumption
 Only here put rho=rho_b, z=lambda*m, rho_b^2+m^2=1, corresponding to r->1.
@@ -65,4 +65,4 @@ At r=1 the denominator may vanish at a coincident surface point; this section as
 C-P paper items I-1–I-12 have been addressed, conditional on the P1 lemmas explicitly noted above. S-1–S-5 in Stage G/L and D-1–D-3 are NOT EXECUTED. No O1 completion certificate is claimed, no numerical evaluation or interval calculation performed. No FTq boundary-only sign factorization was used in I-1–I-12. Axis rho=0, O4, remains outside O1.
 
 ## F. Relevance to the L1 positivity mountain (O2/O3/O6)
-O1-1 supplies an exactly normalized, signed azimuthally averaged kernel G_p(mu), so O2 and O3 can estimate favorable and unfavorable latitude contributions without replacing the entire outside integral by its absolute value. I-10 supplies a general-interior quadratic N_J in b, and I-11 supplies a rationalized gamma-pair difference with a strictly positive denominator, allowing later sign-correlation analysis of the secant term. These are algebraic materials, not a positivity proof: the interior validity of FTq's integration-by-parts R*J representation is explicitly NOT an O1 claim, and any use of it requires its own justification. O6 still requires a uniform strict lower bound and coverage of the full L1 compact domain, including endpoints and the separate axis obligation.
+O1-1 supplies an exactly normalized, signed azimuthally averaged kernel G_p(mu), so O2 and O3 can estimate favorable and unfavorable latitude contributions without replacing the entire outside integral by its absolute value. The quantitative estimate h>=lambda*d_* is also a usable input to O2/O3 bounds. I-10 supplies a general-interior quadratic N_J in b, and I-11 supplies a rationalized gamma-pair difference with a strictly positive denominator, allowing later sign-correlation analysis of the secant term. These are algebraic materials, not a positivity proof: the interior validity of FTq's integration-by-parts R*J representation is explicitly NOT an O1 claim, and any use of it requires its own justification. O6 still requires a uniform strict lower bound and coverage of the full L1 compact domain, including endpoints and the separate axis obligation.
