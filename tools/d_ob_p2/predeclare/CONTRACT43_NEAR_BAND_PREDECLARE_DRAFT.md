@@ -1,10 +1,10 @@
-# Contract 43 — North near band — PREDECLARE DRAFT v3.3 (FREEZE candidate, 3 of 4 conditions met)
+# Contract 43 — North near band — PREDECLARE DRAFT v3.4 (FREEZE candidate, 4 of 4 conditions met; FREEZE ruling pending)
 
 STATUS: DRAFT v3 / SUBMITTED FOR CHAT DESIGN AUDIT / NOT FROZEN / NOT AUTHORIZED FOR CERTIFICATE EXECUTION.
 Contract 43 OPEN (countersign in progress).  D-P2 NOT_CERTIFIED.  No diagnostic value appears in this document.
 Supersedes v2 (3665f33e, CONDITIONAL PASS).  v3 (459abecf) design audit: CHAT AUDIT PASS (FREEZE condition 1 of 4); v3.1 (06f5bd2b) pin update audit PASS; v3.2 = Astra pins filled
 (verified by Code readback in the same repository), Lemma V source pin filled; v3.3 = ledger update per chat ruling (FREEZE condition 2 PASS, condition 3 CLOSED);
-still NOT FROZEN (condition 4, 22'' v1.2 pin, PENDING).  Basis: chat instruction "Predeclare v3 作成・独立証明書準備 (CHAT AUDIT 裁定統合版)".
+v3.4 = canonical 22'' v1.2 pin (condition 4 PASS), (C6) number fixed, Lemma V dependency note; still NOT FROZEN until the explicit chat ruling.  Basis: chat instruction "Predeclare v3 作成・独立証明書準備 (CHAT AUDIT 裁定統合版)".
 The formal proof route of Contract 43 is the Astra L43 single-piece chain (5.5) -> (5.7) -> (6.5) -> §7.  The former route (C1)-(C5)
 is SHELVED: preserved at commit a6479efe3d173a5952087f9bd3df67da02856fb5, not an alternative route of this contract, not used here.
 Any change of the main chain is re-submitted to CHAT AUDIT before implementation.
@@ -51,7 +51,7 @@ byte count and line count all match Astra's `delivery_pins.json`.  This is a pin
 ### 0.4 Budget evidence
 | # | item | commit | git blob | SHA-256 | state |
 |---|---|---|---|---|---|
-| 6 | 22'' v1.2 budget document (Judge adopted) | PENDING | PENDING | PENDING | PENDING (not committed/pinned; (C6) number stays PENDING) |
+| 6 | 22'' v1.2 budget document: `analysis/D_OB_P2_D_AN1_FT_Q_CONTRACT_20_DOUBLE_PRIME_TO_23_DOUBLE_PRIME_V1_2.md` in `cotaxxxx/bg-oblate-spheroid`, branch `design/d-ob-p2` | d445b302bd879b5dc5211c7ba310d5aef036f31e | 6340cb3e1dcb7387e4044013fb9f77a9cd21788a | 3ef26f903d15c11449e583a917723ffcbaff7217b76f3fc65284e02b820b4640 | CHAT AUDIT raw pin PASS (FREEZE condition 4); byte-identical to the audited draft 1b5a4199; 101 lines; Code read-only readback agrees; drafting-gate deviation EXEC-22-V12-GATE-001 recorded by chat, commit not reverted |
 | — | 22'' v1.1 (frozen text in force): `analysis/D_OB_P2_D_AN1_FT_Q_CONTRACT_20_DOUBLE_PRIME_TO_23_DOUBLE_PRIME_V1_1.md` in `cotaxxxx/bg-oblate-spheroid` (verified by Code in the read-only canonical clone) | b1a10ea6f0ef127aaf4a40a93070cf270d03e073 | 49e658b0487123249eb81d70bde1ef188ff640d7 | db975daba9d712246ed5e27465437f34450b356f453729a5fb78ec8ceab468cb | FROZEN; official budget 104/625 |
 
 ## 1. Region, variables, normalization (frozen sources)
@@ -126,18 +126,24 @@ No boundary, constant or threshold is chosen from a diagnostic.
             SHA-256 2c304ee6159f6cf7012ca8fb6068d9e14a4bf8a9d01ceb756395d759145012e9, 164 lines, §5 "Lemma V" (E_beta(p) = (1/(4 pi lambda))
             int_{bd K \ {p}} partial_p^beta F dA/w; (a) absolute convergence, (b) C^2 on int K, (c) continuity of E_beta on closure(K) via Vitali);
             recorded status in the source: CHAT_ANALYTIC_DERIVATION_PASS / EXTERNAL_AUDIT_PENDING / NOT_BINDING (not changed here).
+            Dependency note: H-43-1(ii) CLOSED relies on the Lemma V boundary-value DEFINITION of that source and on the independent L^1 convergence
+            proved in the Astra lemma; the source's own NOT_BINDING status is not upgraded by this contract, and the closure of (ii) does not
+            certify the P1 note.  If the P1 note is later revised, the pin above identifies the version used.
  L43-I (paper): nonnegativity => Tonelli for the order xi, then (phi, mu); {D = 0} is two points (surface-measure zero).
 
-## 5. Budget clause (C6)
-U_near,cert is compared by exact rational arithmetic with the budget text in force at submission.  OFFICIAL NUMBER: PENDING until the
-22'' v1.2 commit and SHA-256 are pinned (row 0.4 #6).  For information only, not a budget statement: under the v1.2 design value S''_lb (row 0.2),
-S''_lb - 5481/10000 = 187614363159/817216000000 and 9/40 is below it by 3740763159/817216000000.  Under the frozen v1.1 text (104/625) the far band
-alone exceeds the budget; this contract does not change that fact and does not replace the frozen text.
+## 5. Budget clause (C6) — FIXED by the canonical 22'' v1.2 pin (row 0.4 #6)
+Budget text in force (22'' v1.2, commit d445b302…):  U_north + U_near < S''_lb,  S''_lb = 635530452759/817216000000, with
+U_north < 5481/10000 certified (row 0.1).  Hence the near-band comparison value is
+  BUDGET_V12 := S''_lb - 5481/10000 = 187614363159/817216000000,
+and the certificate asserts  U_43^{N3} < BUDGET_V12  by exact rational comparison and prints the final margin  S''_lb - 5481/10000 - U_43^{N3}
+as an exact rational.  Expected (Astra value, Code collation): margin >= 3740763159/817216000000 if U_43^{N3} <= 3887073979116207/17284813033600000.
+The superseded v1.1 condition U < 207/5000 (and the derived figure 104/625) is not used; see v1.2 amendment record.
 
 ## 6. Governance
  FREEZE requires all four: (1) v3 design audit CHAT AUDIT PASS — MET (459abecf); (2) Astra five deliverables pinned and the exact script
  CHAT AUDITED — MET (pins §0.3, chat ruling 2026-10-09); (3) H-43-1(ii) independent lemma confirmed — MET (CLOSED by chat ruling);
- (4) 22'' v1.2 commit/blob/SHA-256 pinned — PENDING.  FREEZE only by explicit chat ruling.  Sequence after this: Judge/user commit of 22'' v1.2
+ (4) 22'' v1.2 commit/blob/SHA-256 pinned — MET (d445b302…, CHAT AUDIT raw pin PASS).  All four conditions are met; FREEZE itself only by
+ explicit chat ruling naming the frozen commits (this predeclare and the certificate source).  Sequence after this: Judge/user commit of 22'' v1.2
  in the canonical repository -> CHAT AUDIT of its pin -> Code fills §0.4 #6 and (C6) and sets BUDGET_V12 in the certificate -> CHAT AUDIT FREEZE
  ruling -> first execution of the certificate.
  Code certificate `ftq_cert/north_near_l43_cert.py`: source committed (static review by chat done; S-1/S-2/R-S1 applied); syntax check by ast.parse
@@ -161,7 +167,7 @@ alone exceeds the budget; this contract does not change that fact and does not r
 | A H-43-1 original meaning | §4 |
 | B, C, D (former route) | see a6479efe; outside this contract |
 | R-1 former route removed | this document |
-| R-2 external evidence pins | §0.3 filled and Code-verified (v3.2); §0.4 #6 (22'' v1.2) still PENDING |
+| R-2 external evidence pins | §0.3 filled and Code-verified (v3.2); §0.4 #6 canonical v1.2 pin filled (v3.4) |
 | R-3 audit states of former versions | §8 |
 | R-4 S''_lb source vs input separated | §0.2 |
 
@@ -172,7 +178,9 @@ alone exceeds the budget; this contract does not change that fact and does not r
       (C1)-(C5), appendices A and B are preserved at this commit and are NOT used in this contract.
  v2  3665f33e82ee1cfa5a1ea1166d8cf1d8bcb3958a  CONDITIONAL PASS; superseded by v3.
  v3  459abecf3249ace4789e4a94708218fa0128363e  design audit CHAT AUDIT PASS (FREEZE condition 1/4).
- v3.3 this document: ledger update only (condition 2 PASS, condition 3 CLOSED, FREEZE 3/4); no mathematical change.
+ v3.4 this document: §0.4 #6 canonical v1.2 pin (d445b302, blob 6340cb3e, SHA 3ef26f90), (C6) fixed to BUDGET_V12 = 187614363159/817216000000,
+      §4 Lemma V dependency note, §6 FREEZE 4/4 (ruling pending); no mathematical change.
+ v3.3 b4f04601175e83f63d36a1c7ecbf43e107d99733 CHAT AUDIT PASS (submission C): ledger update only (condition 2 PASS, condition 3 CLOSED, FREEZE 3/4); no mathematical change.
  v3.2 e4e58f6138521a84c3ef81dd861bf6f5da6d6263: §0.3 Astra pins filled from the evidence commit ff1e1a53 / pin commit fcbfdaa6 and verified by Code readback;
       §4 Lemma V source pin filled and verified; H-43-1(ii) stays OPEN pending CHAT AUDIT of the Astra lemma; 22'' v1.2 still PENDING.
  v3.1 06f5bd2b69ce94a0dbe65dc6ff9a1c7025f0bf10 pin update audit PASS: §0.4 v1.1 row completed with full commit/blob/SHA-256 verified in the canonical clone; §6 certificate status updated.
