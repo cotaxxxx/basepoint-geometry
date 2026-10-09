@@ -1,6 +1,6 @@
 # Contract 43 — paper-step correspondence table (Code, 2026-10-09)
 
-Status: SUBMITTED FOR CHAT AUDIT.  Maps every step that the frozen certificate (7f71fb43, run bd512f53) declares as "paper" (not machine-verified)
+Status: SUBMITTED FOR CHAT AUDIT (addendum 1: row H1 extended to Lemma V(a)(b)(c) with interior/boundary roles).  Maps every step that the frozen certificate (7f71fb43, run bd512f53) declares as "paper" (not machine-verified)
 to the document and location where it is proved, and to its audit state.  Machine-checked items are listed for completeness.  No new mathematics.
 Legend: AR = Astra report D_OB_P2_L43_INDEPENDENT_AUDIT_2026_10_09.md (ff1e1a53, SHA 9fc500bd…); AL = Astra H43_ENDPOINT_LEMMA.md (SHA b1a906ed…);
 CN = Code collation note CONTRACT43_ASTRA_COLLATION_NOTE.md (ec3282fa, SHA 07e1c86f…); PD = frozen predeclare v3.4.1 (97d85f59); P1 = P1 design note (69e10460);
@@ -20,7 +20,7 @@ C44 = n3_identities_cert.py (79588e2); RUN = Code certificate run output stdout.
 ## B. Analytic obligations outside the certificate
 | # | obligation | where | state |
 |---|---|---|---|
-| H1 | H-43-1(i) interchange of differentiation and surface integral, interior points | P1 Lemma V(b) (line 93); AL Proof A (3.E2); evidence closure document CONTRACT43_H43_1_I_EVIDENCE_CLOSURE.md | source collation PASS (chat); closure document submitted |
+| H1 | H-43-1(i) interchange of differentiation and surface integral | P1 Lemma V (lines 86, 89, 91, 93, 95): (a) line 91 absolute convergence of E_beta for every p in closure(K) (interior and boundary); (b) line 93 differentiation under the integral, INTERIOR base points \|xi\| < rho only; (c) line 95 continuity of E_beta on closure(K), used for the BOUNDARY base points xi = +-rho as limits (no interchange claimed there). AL Proof A (3.E2) (interior); FT_q (3.2) line 74 and the chain (C1)-(C5) in CONTRACT43_H43_1_I_EVIDENCE_CLOSURE.md §3(C) | source collation PASS (chat); closure document + addendum submitted |
 | H2 | H-43-1(ii) one-sided limits, Lemma V boundary values, improper integral | AL Proofs B–E, (3.E1), (3.E3)–(3.E7); P1 Lemma V(c) (line 95) | CLOSED (chat ruling) |
 | H3 | Lemma V source itself | P1 note §5 | CHAT_ANALYTIC_DERIVATION_PASS / EXTERNAL_AUDIT_PENDING / NOT_BINDING (not upgraded by Contract 43) |
 | H4 | contract 44 (N1–N3) pointwise inequalities | C44 (44.2), paper step R in [1, pi/2], R_gamma in [-1, 0] from P1 §3.2 | PASS (earlier CHAT AUDIT) |
