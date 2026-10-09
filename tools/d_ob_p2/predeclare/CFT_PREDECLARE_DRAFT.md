@@ -1,6 +1,7 @@
-# c_FT and m0 — PREDECLARE DRAFT v0 (Code, 2026-10-09)
+# c_FT and m0 — PREDECLARE DRAFT v1 (Code, 2026-10-09)
 
-STATUS: DRAFT / SUBMITTED FOR CHAT AUDIT / NOT FROZEN / certificate NOT written, NOT executed.  No numerical value of c_FT or m0 is stated in this
+STATUS: DRAFT v1 / SUBMITTED FOR CHAT AUDIT / NOT FROZEN (FREEZE on HOLD) / certificate NOT written, NOT executed.
+v0 14e58047: rules (R1)-(R5) and checks (K1)-(K5) unchanged in v1; v1 adds the FREEZE conditions (§5) and the paper basis of pi < 22/7 in (K2).  No numerical value of c_FT or m0 is stated in this
 document; the rule that produces them is declared here and the value is produced only by the certificate after FREEZE.  D-P2 NOT_CERTIFIED.
 
 ## 1. Target (frozen sources)
@@ -28,11 +29,22 @@ rationally; then m0 = min(c_FT, 13/2000)".  13/2000 is the NP-T endpoint margin 
 ## 4. Certificate plan (tools/d_ob_p2/ftq_cert/cft_cert.py; written after this predeclare's PASS, executed after FREEZE)
  (K1) recompute Delta from the three pinned fractions and assert equality with 1622585478106563/345696260672000000 (the value printed by run bd512f53);
  (K2) assert pi < 22/7 by the exact integral identity (sympy) and P_hi = 2*(22/7)*(93/200) as an exact Fraction;
+      paper basis of pi < 22/7 (independent of the machine check): for x in (0, 1) the integrand x^4 (1 - x)^4/(1 + x^2) is continuous, nonnegative and
+      not identically zero, so its integral over [0, 1] is strictly positive; polynomial division gives
+      x^4 (1 - x)^4/(1 + x^2) = x^6 - 4 x^5 + 5 x^4 - 4 x^2 + 4 - 4/(1 + x^2), whose integral over [0, 1] is 1/7 - 2/3 + 1 - 4/3 + 4 - pi = 22/7 - pi.
+      Hence 22/7 - pi > 0.  The machine check (sympy integral equality) only confirms the algebra; the inequality rests on the positivity argument.
  (K3) c_FT = Delta/P_hi as an exact Fraction; assert c_FT > 0;
  (K4) m0 = min(c_FT, 13/2000) by exact comparison; print which branch is taken;
  (K5) print c_FT and m0 exactly; scope block as in the contract 43 certificate (machine-checked vs paper vs external).
  Execution: one run, isolated directory, python3 -I, provenance as for contract 43.
 
-## 5. Not claimed
+## 5. FREEZE conditions (all required; FREEZE only by explicit CHAT AUDIT ruling)
+ (F1) CHAT AUDIT PASS of this predeclare (v1 or later).
+ (F2) CHAT AUDIT PASS of the 22'' closure record v1 (V1_2_NUMERIC_CONDITION_CLOSURE_RECORD.md, version containing §4 R-G).
+ (F3) R-G CLOSED: the South density G_P and the North density G_K coincide for a.e. mu (closure record §4), as ruled by CHAT AUDIT.  Without R-G the
+      South bound S''_lb and the North bounds U_north, U_near are statements about two different functions and the inputs (I2)-(I4) do not combine.
+ Until (F1)-(F3) hold: no FREEZE, no certificate file, no execution.
+
+## 6. Not claimed
 This predeclare does not prove the Boundary Pair Lemma (8.1) in the R J form of FT_q §8 (see the Boundary Pair Lemma design note), does not discharge
 FT_q, and does not certify D-P2.
