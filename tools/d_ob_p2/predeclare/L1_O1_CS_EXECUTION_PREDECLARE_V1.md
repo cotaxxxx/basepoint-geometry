@@ -5,17 +5,21 @@ Parent O1 PREDECLARE v1.1 FREEZE: commit 1e0c772545357bca6da3f3aa23f203b3206f40f
 The O1 paper derivation (I-1–I-12, C-P) is separately authorized. This file authorizes no numerical evaluation, diagnostics, sampling, interval computation, or script execution.
 
 ## 1. Pinned environment and paths
+- Execution environment: the authorized ChatGPT container runtime (not GitHub Actions or a user's machine); versions must be verified there before any C-S run. If the versions differ, STOP with ENV FAIL.
 - Interpreter: CPython 3.13.5.
 - SymPy: 1.14.0.
 - These versions were inspected from the available environment metadata; no SymPy algebra was executed.
 - Script (to be created ONLY after CHAT audit and Judge execution authorization): `tools/d_ob_p2/o1_cert/o1_interior_symbolic_check.py`.
 - Log (same authorization): `tools/d_ob_p2/o1_cert/o1_interior_symbolic_check.stdout.txt`.
-- Inputs pinned by O1 v1.1: P1 commit 69e104602e939817b6f4d71df3f6bd63cbc729e0, FTq commit 20c5c59bd74f940fe0b1e05892bd2169e09d4fde, O1 FREEZE above.
+- Inputs pinned by O1 v1.1: P1 in cotaxxxx/bg-oblate-spheroid commit 69e104602e939817b6f4d71df3f6bd63cbc729e0, FTq in cotaxxxx/bg-oblate-spheroid commit 20c5c59bd74f940fe0b1e05892bd2169e09d4fde, O1 FREEZE in cotaxxxx/basepoint-geometry as above.
+- L0 parameter source: cotaxxxx/bg-oblate-spheroid commit 3cabe008 (short pin as supplied by Judge; full SHA not independently established).
 - No dependencies other than Python standard library and SymPy 1.14.0. All arithmetic symbolic/exact; `Float`, `evalf`, numerical substitution, sampling and plotting forbidden.
 
 ## 2. Symbol and algebra protocol
+- S-1-G geometry from P1 line 9, fixed verbatim in mathematical notation: x(mu,phi)=(a cos(phi),a sin(phi),lambda*mu), nu=(lambda*a*cos(phi),lambda*a*sin(phi),mu)/w, b=a*cos(phi), a=sqrt(1-mu**2).
 - Stage G: independent symbols `lambda,mu,rho,z,b`; `a2=1-mu**2`, `w2=lambda**2*a2+mu**2`, `h=lambda*(1-rho*b)-z*mu`, `D2=a2+rho**2+(lambda*mu-z)**2-2*rho*b`. Derivatives in rho and b hold all other Stage-G symbols fixed.
-- Stage L: substitute `rho=r*rho_b(tau)`, `z=lambda*r*m(tau)` AFTER Stage-G expressions have been formed. Keep `r,tau,lambda,mu,b` symbolic, `r` free. Use the pinned L1 parameter definitions and the identity `rho_b(tau)**2+m(tau)**2=1` only to simplify the parameterization; NEVER set `r=1` in Stage L.
+- Stage L source definitions: rho_b(tau)=(1-tau**2)/(1+tau**2), m(tau)=2*tau/(1+tau**2) (L0 commit 3cabe008).
+- Stage L: substitute `rho=r*rho_b(tau)`, `z=lambda*r*m(tau)` AFTER Stage-G expressions have been formed. Keep `r,tau,lambda,mu,b` symbolic, `r` free. Use the pinned L1 parameter definitions; NEVER set `r=1` in Stage L.
 - The paper I-9 expressions are independent comparison targets for S-2. SymPy independently differentiates `h/(w*sqrt(D2))` using A2; FTq (5.1), including any `m -> z/lambda` substitution, is NOT a comparison target.
 - Rationalize expressions in `D` using `D**2=D2`; `w**2=w2`. Compare exact polynomial numerators after clearing denominators, never by approximate evaluation.
 - For S-3, transcribe the three A2,A1,A0 coefficients from pinned FTq (5.2) verbatim, and compare each coefficient. Do not redefine target coefficients from the computed result.
