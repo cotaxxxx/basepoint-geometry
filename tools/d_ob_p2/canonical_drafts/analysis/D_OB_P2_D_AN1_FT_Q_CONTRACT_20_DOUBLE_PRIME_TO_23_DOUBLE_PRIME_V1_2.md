@@ -60,8 +60,8 @@ the v1.1 budget was therefore unattainable by the certified north route, which i
 
 ## Reference values (not part of the certification clause)
 Certified (CHAT AUDIT PASS) north-far bound: U_north < 5481/10000 (exact sum of pieces 1-3: 99c9b62a..., 7ba339a8..., 9cb723c0...).
-Astra L43 near-band bound (independent report, CHAT AUDIT of script/report consistency PASS; Code certificate not yet executed; Contract 43
-not frozen): U_near <= 3887073979116207/17284813033600000 < 9/40.
+Astra L43 near-band bound (independent report; exact script CHAT AUDIT PASS; H-43-1(ii) CLOSED; Code certificate NOT EXECUTED; Contract 43
+NOT FROZEN): U_near <= 3887073979116207/17284813033600000 < 9/40.
 Residual after the far band: S''_lb - 5481/10000 = 187614363159/817216000000; margin over 9/40: 3740763159/817216000000 > 0.
 These values do not certify 22''; certification requires the frozen Contract 43 certificate run and CHAT AUDIT.
 
@@ -86,6 +86,14 @@ Then bound north far and near contributions to obtain U<207/5000.
 Changed: section 22'' (condition, regions, coverage/overlap statement, south evidence rows, superseded-budget note); header Status/Units/Adoption;
 Reference values section (new); Ledger (status words only).  Unchanged (verbatim): 20'', 21'', 23'', "Corrections and next work unit".
 Adopted: CHAT recommendation and Judge adoption, 2026-10-09 ("案A").  Drafted by Code; CHAT AUDIT and Judge approval precede any canonical commit.
+Lapsed text (R-V1): the sections reproduced verbatim above (in particular 21'' "Prove C_out >= -U with a uniform explicit rational U" and the
+"Corrections and next work unit" line "Then bound north far and near contributions to obtain U<207/5000") still carry the v1.1 instruction
+U < 207/5000.  That instruction is LAPSED in v1.2: the operative certification condition is the amended 22'' (U_north + U_near < S''_lb).
+The verbatim text is preserved for the record and for the unchanged mathematical content of 20'', 21'', 23''; it is not to be read as a budget.
+Ledger correction recorded by CHAT (deviation CHAT-22-V11-BUDGET-001): the v1.1 written budget was U < 207/5000, not 104/625.
+Evidence state at drafting (R-V2): Astra exact script `l43_graph_majorant_exact.py` (SHA-256 6187c2b0...) CHAT AUDIT PASS for script/report
+consistency; H-43-1(ii) CLOSED by CHAT ruling on Astra's independent lemma (H43_ENDPOINT_LEMMA.md, SHA-256 b1a906ed...); Code certificate
+`tools/d_ob_p2/ftq_cert/north_near_l43_cert.py` (commit 213ec4bb...) NOT EXECUTED; Contract 43 NOT FROZEN (FREEZE 3/4: condition 4 = pin of this document).
 
 ## Ledger
 20'' CLOSED (upgraded); 21'' OPEN; 22'' AMENDED (v1.2: U_north + U_near < S''_lb; OPEN until certified); 23'' FIXED.
