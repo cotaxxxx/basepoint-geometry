@@ -1,8 +1,9 @@
-# D-OB P2 / D-AN-1 FT_q — Boundary Pair Lemma (8.1) as a corollary of the certified chain — PAPER PROOF DRAFT
+# D-OB P2 / D-AN-1 FT_q — Boundary Pair Lemma (8.1) as a corollary of the certified chain — PAPER PROOF v1
 
-Status: DRAFT / SUBMITTED FOR CHAT AUDIT.  Route approved by CHAT AUDIT (O2: corollary of the certified chain; no pointwise R J sign required).
-O3: the FT_q §3-§4 identities are used with their derivation and conditions stated in §2.  c_FT: formal value on HOLD (independent re-run pending);
-this draft uses the symbol c_FT := Delta/P_hi of the frozen rule (R3) and quotes the run value only as pending.  D-P2 NOT_CERTIFIED.
+Status: v1 / PAPER AUDIT PASS (CHAT AUDIT, on draft 44e57db9) / submitted for fixing as the formal record.  Route approved by CHAT AUDIT
+(O2: corollary of the certified chain; no pointwise R J sign required).  O3: the FT_q §3-§4 identities are used with their derivation and conditions
+stated in §2.  c_FT / m0: SET (CHAT AUDIT ledger).  FT_q: closure record and Judge ruling pending.  P1 Lemma V NOT_BINDING remains at the D-P2 gate.
+D-P2 NOT_CERTIFIED.  v1 differs from draft 44e57db9 only in status wording (title, this header, §6).
 
 ## 0. Notation warning (symbol collision)
 FT_q uses G for the ANGLE function G(gamma) = (arccos gamma)^2 (density F = h G(gamma), G' = -2R).  Contracts 21''/43/45 and 22'' use G(mu) for the
@@ -53,9 +54,9 @@ Hence (8.1) holds with strict inequality, and (8.2) H > c_FT for rho > 0.  The c
 rho = 0 (m = 1): H(0, lambda) = E_rhorho(0, lambda) > 13/2000 (NP-T, FT_q (9.1)); also H is continuous on M_lambda (P1 Lemma 6.1(iii)), so H >= c_FT at
 rho = 0 by continuity.  m0 := min(c_FT, 13/2000) (22'' frozen formula); the c_FT certificate run reports the branch c_FT <= 13/2000.
 
-## 6. Values (pending)
-c_FT = m0 = 540861826035521/336806928254720000 as printed by the authorized run 87b7c5af (stdout SHA-256 12968e4a...).  Formal fixing of this value is
-on HOLD until the CHAT AUDIT independent re-run; this draft does not fix it.
+## 6. Values
+c_FT = m0 = 540861826035521/336806928254720000 as printed by the authorized run 87b7c5af (stdout SHA-256 12968e4a...); status SET per the CHAT AUDIT
+ledger.
 
 ## 7. Not claimed
 No pointwise sign of R J; no claim about FT_q discharge beyond (8.1)/(8.2); P1 note status unchanged (NOT_BINDING, carried to the D-P2 gate);
