@@ -1,7 +1,7 @@
-# D-OB P2 / D-AN-1 FT_q — closure record v1 (Code draft, 2026-10-09)
+# D-OB P2 / D-AN-1 FT_q — closure record v1.1 (Code, 2026-10-09)
 
-Status: v1 DRAFT / SUBMITTED FOR CHAT AUDIT.  After CHAT AUDIT, to be put to the Judge for a conditional DISCHARGED ruling of the FT_q node.
-This record does NOT certify D-P2 and does NOT discharge any other D-AN-1 node.  D-P2 NOT_CERTIFIED.
+Status: v1.1 / FT_q DISCHARGED (conditional) by Judge ruling 2026-10-09 (案A).  v1.1 differs from v1 (5401235e) only in status wording
+(title, this header, §8).  This record does NOT certify D-P2 and does NOT discharge any other D-AN-1 node.  D-P2 NOT_CERTIFIED.
 
 ## 1. Target (frozen node statement)
 D-AN-1 predeclare v1.2 (`cotaxxxx/bg-oblate-spheroid`, `analysis/D_OB_P2_D_AN1_PREDECLARE_V1_2.md`, commit e9c8b1caa3ad502a3d01dafe354b61108787eed2,
@@ -65,6 +65,9 @@ NOT established by this record:
    "PAPER-PROOF DRAFT / AWAITING CHAT AUDIT", while the FT_q draft cites "AUDIT PASS / CROSS-CHECK".  §3.2 does not depend on NP-T (primary route is
    Lemma 6.1(iii) continuity), so this affects only the optional cross-check.
 
-## 8. Proposed ruling for the Judge (after CHAT AUDIT)
-FT_q: DISCHARGED (conditional), m0 = 540861826035521/336806928254720000, conditional on the external audit of the P1 note results in §5.
-Boundary Pair Lemma: CLOSED.  D-P2: NOT_CERTIFIED.
+## 8. Judge ruling 2026-10-09: 案A
+FT_q: DISCHARGED (conditional).  m0 = 540861826035521/336806928254720000 (~0.0016059); H >= m0 on the whole frozen face, strict for rho > 0.
+Condition: external audit of the P1 note 69e104602e939817b6f4d71df3f6bd63cbc729e0 (Lemma V, Lemma 6.1, Lemma 3.4, Lemma 4.2, Corollary 4.3),
+handled at the D-P2 certification gate.  Records relied on: this closure record v1 (5401235e, blob 68ca00a3..., SHA-256 5add6f2b...) and
+Boundary Pair Lemma v1 FIXED (6d106cbd, blob b6aa355b...).  Boundary Pair Lemma (8.1): CLOSED.  L3: unblocked (no longer waiting on FT_q).
+D-P2: NOT_CERTIFIED.  The §7 item on the predeclare v1.2 FREEZE label was not addressed by this ruling and remains open as recorded in §7.
