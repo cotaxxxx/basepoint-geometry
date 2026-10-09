@@ -1,4 +1,4 @@
-# D-OB P2 / D-AN-1 — QM–L3–L1 reverse feasibility report (Code, independent of Astra; 2026-10-09)
+# D-OB P2 / D-AN-1 — QM–L3–L1 reverse feasibility report v1.1 (Code, independent of Astra; 2026-10-09)
 
 Status: READ-ONLY INVESTIGATION / EXACT RATIONAL ARITHMETIC ONLY / SUBMITTED FOR CHAT AUDIT.  No H, E or kernel evaluation, no sampling, no
 interval computation of H, no producer/checker, no change to canonical files, m0 unchanged (SET), L1 PAUSED, D-P2 NOT_CERTIFIED.
@@ -17,7 +17,7 @@ with pi and ln enclosed by exact rational inequalities (3 < pi < 22/7; exact Tay
   far-field term 25 C3 d (1 + 2 ln(1/d)) with C3 > 8900 dominates; any lower bound of size O(1) on H gives delta0 of order 10^-4 at best.
 - **L1 obstacle (third item) is independent:** both known counterexample points (pointwise-pair at delta = 31/256, G1 at delta = 255/16384) lie in the
   L1 layer for every admissible delta0; they refute the pointwise and fixed-mu routes only, not G2, E_rho > 0 or H > 0.
-- **Recommendation: ROUTE C** (redesign the L3–L1 connection; the QM modulus as used by the frozen L3 text cannot produce a useful layer).
+- **Recommendation (corrected in §9): UNDETERMINED.**  v1 said ROUTE C; after collation with the Astra report, ROUTE C is only conditional on the unknown L1 reach delta_L1 >= 10^-3.
 
 ## §2. Source and audit ledger (pins read back by Code in the read-only canonical clone `cotaxxxx/bg-oblate-spheroid`)
 | source | commit | blob | SHA-256 | file header status | ledger status |
@@ -90,3 +90,22 @@ succeed there; (ii) at 10^-4–10^-6 the required factor is 4·10^3–2.7·10^5,
 Sigma, including both counterexample regions.  The binding constraint is the QM modulus (item 2 of the instruction's §14), compounded by the L1
 structure (item 3); the FT_q bound (item 1) is not the limiting factor.
 Remaining mathematical obstacles: U1 and U2 of §7; the audit-label discrepancies of §2.
+
+## §9. Collation with the Astra report and correction of §8 (Code, 2026-10-09; v1.1)
+Astra report `D_OB_P2_QM_L3_L1_REVERSE_FEASIBILITY_REPORT.md` (received as a file; verdict UNDETERMINED) was collated by Code with exact arithmetic.
+Every rational claim in it was re-derived and holds: the log bounds 23/10 < ln 10 < 7/3 via S_12/U_12; the constants A = 50 C2 and B = 25 C3 bounds;
+omega_E(3/2·10^-10) < 4460503/2800000000 < m0 with margin 2697499776449883/210504330159200000000; omega_E(1/6250000000) > 4097/2500000 > m0;
+the closed form (5.2) and all six T_n and R_n brackets (outward-rounded integers); |q|^2 <= 1835829/7980625 < 1/4 (hence |p - q| <= (4/15) delta);
+the boundary-point-independent distance bound |p - q| >= lambda(1 - r) >= delta/5 and omega_E(1/5000) > 65897/100 > 3175/7; the (rho, z) of both
+counterexample points; and 8704 = 1088·8 from |R_gamma gamma| <= 544 in QM-1 (lines 50, 100, 210 of the QM-1 draft), above 97% of C3.
+Consistency with this report: Code's brackets are nested inside Astra's (e.g. T_1 in [124960, 125045] inside (124845, 126414.5); T_6 in [6.3757, 6.3798]
+inside (6.3688, 6.4620)); Code's threshold bracket [10^-10, 2·10^-10) contains Astra's sharper (1.5·10^-10, 1.6·10^-10).  Astra's admissible
+delta0 = 3/20000000000 is the better choice.  Astra's §5.3 strengthens Code's §5: the ceiling argument holds for EVERY admissible boundary point q,
+not only the radial one.  Astra resolves the label discrepancies of §2 by later pinned documents (FT_q, QM, QM-1 headers citing QM / L3-MRA /
+predeclare v1.2 as AUDIT PASS / FROZEN); Code accepts that resolution.
+**Correction of §8.**  Code's ROUTE C recommendation was stronger than the evidence.  The decisive unknown is the analytic reach delta_L1 of L1/G2,
+which no source establishes.  Corrected verdict (agreeing with Astra): **UNDETERMINED**, with the conditional table: ROUTE A if L1 proves
+delta_L1 <= 3/20000000000; re-choose delta0 below the threshold if delta_L1 < d*; changes to FT_q, QM or the conversion if delta_L1 >= d*;
+ROUTE C-type change (QM modulus or connection scheme) necessary if delta_L1 >= 10^-3.  Code's §1 observation that the L1 layer then covers
+essentially all of Sigma remains correct as a statement about the layer, but it does not by itself decide the route.
+Neither report verified the negative signs of the two counterexamples (no independent pin); both take them from the instruction.
