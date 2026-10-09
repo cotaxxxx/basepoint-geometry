@@ -1,4 +1,4 @@
-# Contract 43 — North near band — PREDECLARE DRAFT v3.4 (FREEZE candidate, 4 of 4 conditions met; FREEZE ruling pending)
+# Contract 43 — North near band — PREDECLARE DRAFT v3.4.1 (FREEZE candidate, 4 of 4 conditions met; FREEZE ruling pending)
 
 STATUS: DRAFT v3 / SUBMITTED FOR CHAT DESIGN AUDIT / NOT FROZEN / NOT AUTHORIZED FOR CERTIFICATE EXECUTION.
 Contract 43 OPEN (countersign in progress).  D-P2 NOT_CERTIFIED.  No diagnostic value appears in this document.
@@ -148,7 +148,9 @@ The superseded v1.1 condition U < 207/5000 (and the derived figure 104/625) is n
  ruling -> first execution of the certificate.
  Code certificate `ftq_cert/north_near_l43_cert.py`: source committed (static review by chat done; S-1/S-2/R-S1 applied); syntax check by ast.parse
  permitted and done; EXECUTION and use of its output as evidence only after FREEZE.  Its final line distinguishes machine-checked items, paper
- steps and external obligations, and reads "C6 PENDING; NOT CERTIFIED" while 22'' v1.2 is unpinned.
+ steps and external obligations.  Historical note: while 22'' v1.2 was unpinned (versions 213ec4bb and earlier) that line read
+ "C6 PENDING; NOT CERTIFIED"; since the budget-setting version (212e1a6b and later) BUDGET_V12 is fixed and the run reports the (C6)
+ comparison and the exact final margin; the result line still states that paper steps and external obligations remain subject to CHAT AUDIT.
  Independence: Code and Astra may share decompositions, notes and mathematical reports (both directions opened by chat); certificate CODE is
  never copied in either direction; the Code implementation and the Astra implementation remain separate evidence.
  Method (B) not used.  Diagnostics NOT_EVIDENCE, not cited.
@@ -178,7 +180,8 @@ The superseded v1.1 condition U < 207/5000 (and the derived figure 104/625) is n
       (C1)-(C5), appendices A and B are preserved at this commit and are NOT used in this contract.
  v2  3665f33e82ee1cfa5a1ea1166d8cf1d8bcb3958a  CONDITIONAL PASS; superseded by v3.
  v3  459abecf3249ace4789e4a94708218fa0128363e  design audit CHAT AUDIT PASS (FREEZE condition 1/4).
- v3.4 this document: §0.4 #6 canonical v1.2 pin (d445b302, blob 6340cb3e, SHA 3ef26f90), (C6) fixed to BUDGET_V12 = 187614363159/817216000000,
+ v3.4.1 this document: §6 historical wording of the certificate's old "C6 PENDING" result line clarified (chat static audit); no other change.
+ v3.4 b5ec78eb8dfd9c71ee16abd5c6a3ea414d49a76a: §0.4 #6 canonical v1.2 pin (d445b302, blob 6340cb3e, SHA 3ef26f90), (C6) fixed to BUDGET_V12 = 187614363159/817216000000,
       §4 Lemma V dependency note, §6 FREEZE 4/4 (ruling pending); no mathematical change.
  v3.3 b4f04601175e83f63d36a1c7ecbf43e107d99733 CHAT AUDIT PASS (submission C): ledger update only (condition 2 PASS, condition 3 CLOSED, FREEZE 3/4); no mathematical change.
  v3.2 e4e58f6138521a84c3ef81dd861bf6f5da6d6263: §0.3 Astra pins filled from the evidence commit ff1e1a53 / pin commit fcbfdaa6 and verified by Code readback;
