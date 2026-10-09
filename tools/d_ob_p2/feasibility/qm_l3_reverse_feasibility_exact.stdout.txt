@@ -1,0 +1,38 @@
+== certified constants
+pi < 22/7 (exact identity, see docstring) and pi > 3: PASS (paper; used as rational bounds only)
+ln 10 in [17988946039/7812500000, 2302585092997/1000000000000]
+m0 = 540861826035521/336806928254720000 ~ 0.00160585
+
+== Task B: delta0 from the frozen condition omega_E(delta0) < m0
+certified admissible: omega_E(1/10000000000) <= 733827712952132341/700000000000000000000 ~ 0.00104833 < m0
+certified inadmissible: omega_E(1/5000000000) >= 20336022688821109/10000000000000000000 ~ 0.0020336 > m0
+(B1) omega_E upper bound at the admissible delta0 is < m0: PASS 
+(B2) omega_E lower bound at the inadmissible point is > m0 (so the threshold lies between): PASS 
+=> the largest admissible delta0 from the frozen condition lies in [1/10000000000, 1/5000000000)  (~[1e-10, 2e-10))
+remark: with the exact conversion |p_in - p_b| <= 1 - r = delta/(1+r) and r >= 7/8 on Sigma, the effective distance is <= (8/15) delta,
+        which enlarges the admissible delta0 by at most the factor 15/8; this does not change any conclusion below.
+
+== Task C: required lower bound m_required(delta) = omega_E(delta) for the candidate widths
+a-priori ceiling of any boundary lower bound: H <= sup|E_rhorho| <= (25/2) C2 <= 3175/7 ~ 453.571  (QM (3.1))
+| delta | omega_E(delta) in [lo, hi] (exact rationals) | R = omega_E/m0 in | connect with current m0? | attainable by ANY m0 <= (25/2)C2? |
+| 10^-1 | [124960, 125045] | [7.78155e+07, 7.78681e+07] | NO (omega_lo > m0) | NO (omega_lo > ceiling) |
+    exact: omega_lo = 39050031645459/312500000 ; omega_hi = 87531221295297439/700000000000
+| 10^-2 | [22748.3, 22763.1] | [1.41659e+07, 1.41751e+07] | NO (omega_lo > m0) | NO (omega_lo > ceiling) |
+    exact: omega_lo = 4549654050620533/200000000000 ; omega_hi = 159341942590501317/7000000000000
+| 10^-3 | [3300.05, 3302.18] | [2.05502e+06, 2.05634e+06] | NO (omega_lo > m0) | NO (omega_lo > ceiling) |
+    exact: omega_lo = 660010607593169/200000000000 ; omega_hi = 46230532777141039/14000000000000
+| 10^-4 | [432.528, 432.805] | [269345, 269517] | NO (omega_lo > m0) | not excluded |
+    exact: omega_lo = 8650558101242847/20000000000000 ; omega_hi = 302963385180909073/700000000000000
+| 10^-5 | [53.5051, 53.5392] | [33318.8, 33340] | NO (omega_lo > m0) | not excluded |
+    exact: omega_lo = 2675252531638501/50000000000000 ; omega_hi = 374774106476112951/7000000000000000
+| 10^-6 | [6.37573, 6.37978] | [3970.31, 3972.84] | NO (omega_lo > m0) | not excluded |
+    exact: omega_lo = 12751462151865161/2000000000000000 ; omega_hi = 63797832538759547/10000000000000000
+(C1) at delta = 10^-1 ... 10^-6 the frozen condition fails for the current m0: PASS 
+largest k with omega_E(10^-k) > (25/2)C2 (no boundary bound whatsoever can connect at that width): k = 3
+
+== Task D: counterexample points lie in the L1 layer delta in [delta0, 15/64]
+pointwise-pair (r=15/16): delta = 31/256 ~ 0.121094;  in [1/10000000000, 15/64]: True;  r in [7/8,1]: True
+G1 (r=127/128): delta = 255/16384 ~ 0.015564;  in [1/10000000000, 15/64]: True;  r in [7/8,1]: True
+(D1) both counterexample points are in the L1 layer for any admissible delta0: PASS 
+
+RESULT: ALL EXACT CHECKS PASS
