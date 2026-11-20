@@ -1,2 +1,0 @@
-{'ledger': 'nodes.csv (h_1,h_2,h_3 at the Lobatto nodes)', 'rows': 37539, 'points': 37539, 'misses': 0, 'tol': 3e-10, 'worst_violation': 0.0, 'min_enclosure_width': 1.0444324294311969e-09, 'min_slack_inside': 3.239630785856207e-13, 'examples': []}
-{'ledger': 'central.csv (h_axis on shape boxes)', 'rows': 1609, 'points': 7695, 'misses': 0, 'tol': 1e-08, 'worst_violation': 0.0, 'min_enclosure_width': 0.0036984693281448718, 'min_slack_inside': 0.0018468800011284042, 'examples': []}
