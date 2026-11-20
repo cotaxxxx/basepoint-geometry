@@ -41,3 +41,20 @@ def shape(s, t):
 
 def hess_matrix(o):
     return np.array([[o[4], o[7], o[8]], [o[7], o[5], o[9]], [o[8], o[9], o[6]]])
+
+
+_big = None
+
+
+def ev_big(l, q, n):
+    """single item, nodes n=(nt,nphi), parallel over tau-chunks (for strongly anisotropic shapes)."""
+    global _big
+    if _big is None:
+        _big = ctypes.CDLL(os.path.join(_here, "libtriax_big.so"))
+        _big.triax_eval_big.argtypes = [_dp, _dp, ctypes.c_int, _dp, _dp, ctypes.c_int, _dp, _dp, _dp]
+        _big.triax_eval_big.restype = None
+    x, w, c, s = _nodes(*n)
+    out = np.empty(10)
+    _big.triax_eval_big(np.ascontiguousarray(l, dtype=float), np.ascontiguousarray(q, dtype=float),
+                        n[0], x, w, n[1], c, s, out)
+    return out
