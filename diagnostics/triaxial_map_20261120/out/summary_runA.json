@@ -1,17 +1,17 @@
 {
- "n_shapes": 1021,
+ "n_shapes": 1353,
  "n_errors": 0,
- "n_interior_shapes": 948,
+ "n_interior_shapes": 1280,
  "point_kinds": {
   "axis1": 263,
-  "axis2": 398
+  "axis2": 576
  },
  "index_axis1": {
   "1": 263
  },
  "index_axis2": {
   "1": 16,
-  "2": 382
+  "2": 560
  },
  "index_axis3": {},
  "n_offaxis_shapes": 0,
@@ -29,11 +29,11 @@
   "center_index=0, pairs(e1,e2,e3)=(1,0,0)": 162,
   "center_index=0, pairs(e1,e2,e3)=(1,1,0)": 75,
   "center_index=1, pairs(e1,e2,e3)=(0,0,0)": 266,
-  "center_index=1, pairs(e1,e2,e3)=(0,1,0)": 307,
-  "center_index=2, pairs(e1,e2,e3)=(0,0,0)": 75
+  "center_index=1, pairs(e1,e2,e3)=(0,1,0)": 485,
+  "center_index=2, pairs(e1,e2,e3)=(0,0,0)": 229
  },
- "min_h3": 1.3333333333333075,
- "min_pole3": 0.3084251375340491,
+ "min_h3": 0.9825847724538089,
+ "min_pole3": 0.20435841395689197,
  "min_h2_minus_h1_interior": 0.020279904755981126,
  "min_h3_minus_h2_interior": 0.08876840637477512,
  "axis1_points": {
@@ -43,26 +43,26 @@
   "E33_min": 0.8922499081479263
  },
  "axis2_points": {
-  "n": 382,
+  "n": 560,
   "E11_max": -0.03663616249864123,
-  "E22_max": -0.0023961949265563828,
+  "E22_max": -0.0002831820589428524,
   "E33_min": 0.9215767561094244
  },
  "boundary_critical_kinds": {
-  "pole1": 948,
-  "pole2": 948,
-  "pole3": 948
+  "pole1": 1280,
+  "pole2": 1280,
+  "pole3": 1280
  },
  "boundary_min_absN": {
   "pole1": 0.0008743437168790296,
   "pole2": 0.0005598016224031074,
-  "pole3": 0.34118535625438606
+  "pole3": 0.20435841395689197
  },
  "edge_rows": 73,
  "edge_disagree_with_ruling": [],
- "seconds_total": 2771.711579322815,
+ "seconds_total": 4252.78043961525,
  "algo_counts": {
   "1": 464,
-  "2": 557
+  "2": 889
  }
 }

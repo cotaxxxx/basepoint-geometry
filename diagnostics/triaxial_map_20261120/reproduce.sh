@@ -18,6 +18,8 @@ python3 run_B_curves.py     "$OUT/runB_curves.json"         # Run B/E: curves Z1
 python3 run_C_edges.py      "$OUT/runC_edges.json"          # Run C: splitting near the edges
 python3 run_D_sphere.py     "$OUT/runD_sphere.json"         # Run D: neighbourhood of the sphere
 python3 run_E_far.py        "$OUT/runE_far.json"            # Run E: far grid
+python3 run_E_reversal.py  "$OUT/runE_reversal.json"       # Run E addendum: reversal of h_1 < h_2
+python3 check_flat_log.py   "$OUT/check_flat_log.json"      # leading-log check at the centre
 python3 flat_limit.py       "$OUT/flat_limit.json"          # leading-log flat limit
 python3 probe_monotone.py   "$OUT/probe_monotone.json"      # exploratory probes (outside the fixed plan)
 python3 probe_ordering.py   "$OUT/probe_ordering.json"

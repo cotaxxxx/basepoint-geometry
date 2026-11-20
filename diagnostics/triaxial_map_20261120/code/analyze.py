@@ -156,7 +156,7 @@ ax.set_xticks([1, 1.5, 2, 2.5, 3, 4]); ax.set_xticklabels(["1", "1.5", "2", "2.5
 ax.set_yticks([1, 1.5, 2, 3, 4, 5, 6, 8]); ax.set_yticklabels(["1", "1.5", "2", "3", "4", "5", "6", "8"])
 ax.minorticks_off()
 ax.set_xlabel("$s = a_2/a_1$"); ax.set_ylabel("$t = a_3/a_2$")
-bb = dict(boxstyle="round,pad=0.25", fc="#fcfcfb", ec="none", alpha=0.9)
+bb = dict(boxstyle="round,pad=0.25", fc="#fcfcfb", ec="none", alpha=1.0)
 ax.text(1.03, 1.13, "$R_A$\n中心だけ\n（極小）", fontsize=8.5, bbox=bb)
 ax.text(1.42, 1.42, "$R_B$：$e_1$ の対（指数 1）\n中心は極小", fontsize=8.5, bbox=bb)
 ax.text(1.05, 2.85, "$R_C$：$e_1$ と $e_2$ の対\n中心は極小", fontsize=8.5, bbox=bb)
